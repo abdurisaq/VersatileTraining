@@ -9,7 +9,22 @@ std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 void VersatileTraining::onLoad()
 {
 	_globalCvarManager = cvarManager;
-	//LOG("Plugin loaded!");
+
+	
+	LOG("Plugin loaded!");
+	
+	this->loadHooks();
+	
+	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
+		VersatileTraining::getTrainingData(cw, params, eventName);
+		});*/
+
+	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
+		auto tw = ((TrainingEditorWrapper)cw.memory_address);
+		GameEditorSaveDataWrapper data = tw.GetTrainingData();
+		TrainingEditorSaveDataWrapper td = data.GetTrainingData();
+		LOG("Training data found: {}", td.GetCode().ToString());
+		});*/
 	// !! Enable debug logging by setting DEBUG_LOG = true in logging.h !!
 	//DEBUGLOG("VersatileTraining debug mode enabled");
 
@@ -46,4 +61,56 @@ void VersatileTraining::onLoad()
 	//});
 	// You could also use std::bind here
 	//gameWrapper->HookEvent("Function TAGame.Ball_TA.Explode", std::bind(&VersatileTraining::YourPluginMethod, this);
+}
+
+void VersatileTraining::loadHooks() {
+
+	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
+		VersatileTraining::getTrainingData(cw, params, eventName);
+		});
+
+	//gameWrapper->HookEventWithCaller("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", std::bind(&VersatileTraining::getTrainingData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+}
+
+TrainingEditorWrapper VersatileTraining::GetTrainingEditor() {
+	auto serv = gameWrapper->GetGameEventAsServer();
+	if (!serv) return { 0 };
+	return TrainingEditorWrapper(serv.memory_address);
+}
+
+void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::string eventName) {
+
+	/*TrainingEditorWrapper tew = GetTrainingEditor();
+	if (!tew) return;
+
+	auto current = tew.GetActiveRoundNumber();*/
+
+	auto tw = ((TrainingEditorWrapper)cw.memory_address);
+	GameEditorSaveDataWrapper data = tw.GetTrainingData();
+	TrainingEditorSaveDataWrapper td = data.GetTrainingData();
+	LOG("Training data found1: {}", td.GetCode().ToString());
+	int totalRounds = tw.GetTotalRounds();
+	LOG("Training num rounds: {}", totalRounds);
+
+	int currentShot = tw.GetActiveRoundNumber();
+	LOG("Training current shot : {}", currentShot);
+	
+}
+
+void VersatileTraining::setTrainingVariables(ActorWrapper cw, void* params, std::string eventName) {
+
+}
+
+void VersatileTraining::restartTraining() {
+	LOG("Restarting training");
+	ServerWrapper server = gameWrapper->GetGameEventAsServer();
+
+	TrainingEditorWrapper tew(server.memory_address);
+
+	
+
+}
+
+void VersatileTraining::onUnload() {
+	LOG("Unloading Versatile Training");
 }

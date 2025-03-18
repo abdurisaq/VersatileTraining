@@ -18,7 +18,12 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 
 	//Boilerplate
 	void onLoad() override;
-	//void onUnload() override; // Uncomment and implement if you need a unload method
+	void onUnload() override; // Uncomment and implement if you need a unload method
+	void loadHooks();
+	void restartTraining();
+	void getTrainingData(ActorWrapper cw, void* params, std::string eventName);
+	void setTrainingVariables(ActorWrapper cw, void* params, std::string eventName);
+	TrainingEditorWrapper GetTrainingEditor();
 
 public:
 	//void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
