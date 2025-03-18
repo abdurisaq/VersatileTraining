@@ -69,6 +69,22 @@ void VersatileTraining::loadHooks() {
 		VersatileTraining::getTrainingData(cw, params, eventName);
 		});
 
+	//gameWrapper->HookEvent("Function TAGame.GameEvent_TrainingEditor_TA.OnInit", [this](std::string eventName) {
+	//	//on init of entering training.
+	//	LOG("Training pack opened");
+	//	TrainingEditorWrapper tew = GetTrainingEditor();
+	//	if (!tew) return;
+	//	GameEditorSaveDataWrapper data = tew.GetTrainingData();
+	//	TrainingEditorSaveDataWrapper td = data.GetTrainingData();
+	//	std::string code = td.GetCode().ToString();
+	//	if (code == "0624-600D-000E-F2A7") {
+	//		cvarManager->executeCommand("sv_training_enabled 1");
+	//	}
+	//	else {
+	//		cvarManager->executeCommand("sv_training_enabled 0");
+	//	}
+	//	});
+
 	//gameWrapper->HookEventWithCaller("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", std::bind(&VersatileTraining::getTrainingData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
@@ -94,6 +110,16 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
 	int currentShot = tw.GetActiveRoundNumber();
 	LOG("Training current shot : {}", currentShot);
+
+	std::string code = td.GetCode().ToString();
+	if (code == "0624-600D-000E-F2A7") {
+		cvarManager->executeCommand("sv_training_enabled 1");
+	}
+	else {
+		cvarManager->executeCommand("sv_training_enabled 0");
+	}
+
+	//executecommand ("sv_training_enabled 1); to turn on custom training variance, and if not turn it off.
 	
 }
 
