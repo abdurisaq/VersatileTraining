@@ -11,7 +11,7 @@ void VersatileTraining::onLoad()
 	_globalCvarManager = cvarManager;
 
 	
-	LOG("Plugin loaded!");
+	LOG("Plugin loaded!!");
 	
 	this->loadHooks();
 	
@@ -112,12 +112,31 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 	LOG("Training current shot : {}", currentShot);
 
 	std::string code = td.GetCode().ToString();
-	if (code == "0624-600D-000E-F2A7") {
+
+	auto foundCode =  trainingData.find(code);
+	if (foundCode != trainingData.end()) {
+		LOG("Training data found: {}", code);
 		cvarManager->executeCommand("sv_training_enabled 1");
+		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(foundCode->second.boostAmounts[0]));
+		//sv_training_player_velocity (1700, 1900);
+		cvarManager->executeCommand("sv_training_player_velocity ("+ std::to_string(foundCode->second.startingVelocityMin[0]) + "," + std::to_string(foundCode->second.startingVelocityMax[0]) + ")");
+
+	}
+	else {
+		LOG("Training data not found: {}", code);
+		cvarManager->executeCommand("sv_training_enabled 0");
+		cvarManager->executeCommand("sv_training_limitboost -1");
+
+	}
+	/*if (code == "0624-600D-000E-F2A7") {
+		cvarManager->executeCommand("sv_training_enabled 1");
+		cvarManager->executeCommand("sv_training_limitboost 100");
 	}
 	else {
 		cvarManager->executeCommand("sv_training_enabled 0");
-	}
+		cvarManager->executeCommand("sv_training_limitboost -1");
+
+	}*/
 
 	//executecommand ("sv_training_enabled 1); to turn on custom training variance, and if not turn it off.
 	
@@ -140,3 +159,4 @@ void VersatileTraining::restartTraining() {
 void VersatileTraining::onUnload() {
 	LOG("Unloading Versatile Training");
 }
+
