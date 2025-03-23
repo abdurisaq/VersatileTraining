@@ -65,27 +65,61 @@ void VersatileTraining::onLoad()
 
 void VersatileTraining::loadHooks() {
 
-	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
+	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
 		VersatileTraining::getTrainingData(cw, params, eventName);
+		});*/
+
+	gameWrapper->HookEventWithCallerPost<GameEditorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.StartEditing", [this](GameEditorWrapper cw, void* params, std::string eventName) {
+		LOG("new training pack opened and editing started--------------");
 		});
 
-	//gameWrapper->HookEvent("Function TAGame.GameEvent_TrainingEditor_TA.OnInit", [this](std::string eventName) {
-	//	//on init of entering training.
-	//	LOG("Training pack opened");
-	//	TrainingEditorWrapper tew = GetTrainingEditor();
-	//	if (!tew) return;
-	//	GameEditorSaveDataWrapper data = tew.GetTrainingData();
-	//	TrainingEditorSaveDataWrapper td = data.GetTrainingData();
-	//	std::string code = td.GetCode().ToString();
-	//	if (code == "0624-600D-000E-F2A7") {
-	//		cvarManager->executeCommand("sv_training_enabled 1");
-	//	}
-	//	else {
-	//		cvarManager->executeCommand("sv_training_enabled 0");
-	//	}
-	//	});
+	
 
-	//gameWrapper->HookEventWithCaller("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", std::bind(&VersatileTraining::getTrainingData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	//gameWrapper->HookEventWithCaller<TrainingEditorWrapper>(
+	//	"Function TAGame.TrainingEditor_TA.SetTracedCrosshairActor",
+	//	[this](TrainingEditorWrapper te, void* params, std::string eventName) {
+	//		ActorWrapper* actor = (ActorWrapper*)params;
+	//		unsigned char physicsType = actor->GetPhysics();
+	//		LOG("Physics type: {}", physicsType);
+	//		/*if (actor && actor->IsA("Car_TA")) {
+	//			LOG("Car is currently focused in the training editor.-----------------------------");
+	//		}
+	//		else if (actor && actor->IsA("Ball_TA")) {
+	//			LOG("Ball is currently focused in the training editor.--------------------");
+	//		}*/
+	//	}
+	//);
+
+	
+
+	/*gamewrapper->hookeventwithcallerpost<gameeditorwrapper>("function tagame.gameevent_trainingeditor_ta.shotselection.startediting", [this](gameeditorwrapper cw, void* params, std::string eventname) {
+		log("new training pack opened and editing started--------------");
+		serverwrapper sw = gamewrapper->getcurrentgamestate();
+		if (!sw) return;
+		gamesettingplaylistwrapper playlist = sw.getplaylist();
+		if (!playlist) return;
+		int playlistid = playlist.getplaylistid();
+		if (playlistid == 20) {
+			log("training editor is open----------------");
+
+		}
+		});*/
+
+	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.OnInit", [this](ActorWrapper cw, void* params, std::string eventName) {
+			
+		LOG("New Training pack opened--------------");
+		ServerWrapper sw = gameWrapper->GetCurrentGameState();
+		if (!sw) return;
+		GameSettingPlaylistWrapper playlist = sw.GetPlaylist();
+		if (!playlist) return;
+		int playlistID = playlist.GetPlaylistId();
+		if (playlistID == 20) {
+			LOG("Training editor is open----------------");
+
+		}
+		});*/
+
+		
 }
 
 TrainingEditorWrapper VersatileTraining::GetTrainingEditor() {
@@ -116,6 +150,9 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 	auto foundCode =  trainingData.find(code);
 	if (foundCode != trainingData.end()) {
 		LOG("Training data found: {}", code);
+		foundCode->second.name = td.GetTM_Name().ToString();
+		foundCode->second.numShots = totalRounds;
+		LOG("loaded training name: {}", foundCode->second.name);
 		cvarManager->executeCommand("sv_training_enabled 1");
 		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(foundCode->second.boostAmounts[0]));
 		//sv_training_player_velocity (1700, 1900);
@@ -160,3 +197,45 @@ void VersatileTraining::onUnload() {
 	LOG("Unloading Versatile Training");
 }
 
+//std::vector<std::pair<int, int>> runLengthEncode(std::vector<int> arr) {
+//
+//	std::vector<std::pair<int, int>> result;
+//	int count = 1;
+//	int pastInt = arr[0];
+//	for (int i = 1; i < arr.size(); i++) {
+//		if (arr[i] == pastInt) {
+//			count++;
+//		}
+//		else {
+//			result.push_back(std::make_pair(pastInt, count));
+//			count = 1;
+//			pastInt = arr[i];
+//		}
+//	}
+//
+//}
+
+//
+//std::string VersatileTraining::encodeTrainingCode(CustomTrainingData data) {
+//
+//	std::string start = "";
+//	std::string header = data.code + "-"+ std::to_string(data.numShots);
+//	std::vector<int>deltaChangeInBoost;
+//	std::vector<int>deltaChangeMinVelocity;
+//	std::vector<int>deltaChangeMaxVelocity;
+//	int pastMinVelocity = 0;
+//	int pastMaxVelocity = 0;
+//	int pastBoost = 0;
+//	for (int boostAmount : data.boostAmounts) {
+//		deltaChangeInBoost.push_back(boostAmount - pastBoost);
+//	}
+//	for (int minVelocity : data.startingVelocityMin) {
+//		deltaChangeMinVelocity.push_back(minVelocity - pastMinVelocity);
+//	}
+//	for (int maxVelocity : data.startingVelocityMax) {
+//		deltaChangeMaxVelocity.push_back(maxVelocity - pastMaxVelocity);
+//	}
+//
+//
+//	return "";
+//}
