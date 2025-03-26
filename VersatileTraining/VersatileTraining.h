@@ -5,8 +5,16 @@
 #include "bakkesmod/plugin/pluginwindow.h"
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 
-
+#define _AMD64_  // Assuming you are targeting 64-bit
 #include <Windows.h>
+#include <Xinput.h>
+#pragma comment(lib, "XInput.lib")
+#include <dinput.h>
+#pragma comment(lib, "dinput8.lib")
+#pragma comment(lib, "dxguid.lib")
+
+
+
 #include <unordered_map>
 #include <vector>
 #include "version.h"
@@ -51,6 +59,12 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	int startingVelocityMin = 10;
 	int startingVelocityMax = 100;
 
+	bool editingVariances = false;
+	int tempBoostAmount = -1;
+	int tempStartingVelocityMin = 10;
+	int tempStartingVelocityMax = 100;
+
+
 	//Boilerplate
 	void onLoad() override;
 	void onUnload() override; // Uncomment and implement if you need a unload method
@@ -63,8 +77,18 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	std::string encodeTrainingCode(CustomTrainingData data);
 	TrainingEditorWrapper GetTrainingEditor();
 	void onGetEditingTraining(GameEditorWrapper caller);
+	void checkForR1Press();
 
+	static BOOL CALLBACK EnumDevicesCallback(const DIDEVICEINSTANCE* instance, VOID* context);
+	void enumerateControllers();
+
+	LPDIRECTINPUT8 dinput;
+	LPDIRECTINPUTDEVICE8 joystick;
+	std::vector<LPDIRECTINPUTDEVICE8> controllers;
+
+	void CleanUp();
 public:
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
+	void Render(CanvasWrapper canvas);
 	//void RenderWindow() override; // Uncomment if you want to render your own plugin window
 };

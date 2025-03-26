@@ -3,7 +3,18 @@
 
 void VersatileTraining::RenderSettings() {
 	ImGui::Text("Versatile Training Settings");
+	if (ImGui::Button("Find Controller")) {
+		HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
+		if (!hwnd) {
+			LOG("Failed to get Rocket League window handle.");
+			return;
+		}
+		else {
+			LOG("Got Rocket League window handle.");
+		}
 
+		//InitDirectInput(hwnd);
+	}
 
 	static char trainingCode[20];
 	ImGui::InputText("custom Training code",trainingCode, IM_ARRAYSIZE(trainingCode));
