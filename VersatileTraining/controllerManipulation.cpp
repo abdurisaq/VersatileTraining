@@ -138,9 +138,10 @@ void VersatileTraining::checkForButtonPress(int buttonIndex) {
 	else if (isButtonPressed && state.isPressed) {
 		auto now = std::chrono::steady_clock::now();
 		std::chrono::duration<double> elapsed = now - state.lastUpdateTime;
-		if (elapsed.count() > 0.5) {
+		if (elapsed.count() > 0.01) {
 			LOG("Button {} held for 0.5 seconds", buttonIndex);
 			buttonCallbacks[buttonIndex]();
+			
 			state.lastUpdateTime = now;
 		}
 	}
@@ -155,13 +156,26 @@ void VersatileTraining::checkForButtonPress(int buttonIndex) {
 void VersatileTraining::initializeCallBacks() {
 
 
-	registerButtonCallback(5, [this]() { IncrementTempBoost(); });
-	registerButtonCallback(6, [this]() { IncrementTempStartingVelocity(); });
+	/*registerButtonCallback(5, [this]() { IncrementTempBoost(); });
+	registerButtonCallback(6, [this]() { IncrementTempStartingVelocity(); });*/
+
+	registerButtonCallback(4, [this]() { rollLeft(); });
+	registerButtonCallback(5, [this]() { rollRight(); });
 }
 
 void VersatileTraining::IncrementTempBoost() {
 	tempBoostAmount++;
+	
 	LOG("Incrementing tempBoostAmount to {}", tempBoostAmount);
+}
+
+void VersatileTraining::rollLeft() {
+	rotationToApply.Roll -= 500;
+	LOG("Rolling left");
+}
+void VersatileTraining::rollRight() {
+	rotationToApply.Roll += 500;
+	LOG("Rolling right");
 }
 void VersatileTraining::IncrementTempStartingVelocity() {
 	tempStartingVelocity++;

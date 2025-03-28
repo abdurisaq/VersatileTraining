@@ -99,6 +99,10 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	std::chrono::steady_clock::time_point lastUpdateTime;
 	static BOOL CALLBACK EnumDevicesCallback(const DIDEVICEINSTANCE* instance, VOID* context);
 	void enumerateControllers();
+
+
+	void rollLeft();
+	void rollRight();
 	
 	LPDIRECTINPUT8 dinput;
 	LPDIRECTINPUTDEVICE8 joystick;
@@ -107,6 +111,14 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 
 	bool changeCarSpawnRotation();
 	bool isCarRotatable = false;
+	struct Input {
+		int index;
+		bool pressed;
+		std::string name;
+	};
+
+	std::map<std::string, Input> m_inputMap;
+	Rotator rotationToApply = { 0,0,0 };
 
 	void CleanUp();
 public:

@@ -38,16 +38,39 @@ void VersatileTraining::onLoad()
 
 
 	initializeCallBacks();
-	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
-		VersatileTraining::getTrainingData(cw, params, eventName);
-		});*/
 
-	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
-		auto tw = ((TrainingEditorWrapper)cw.memory_address);
-		GameEditorSaveDataWrapper data = tw.GetTrainingData();
-		TrainingEditorSaveDataWrapper td = data.GetTrainingData();
-		LOG("Training data found: {}", td.GetCode().ToString());
-		});*/
+	m_inputMap["Up"] = { 0, false, "Up" };
+	m_inputMap["Down"] = { 0, false, "Down" };
+	m_inputMap["Left"] = { 0, false, "Left" };
+	m_inputMap["Right"] = { 0, false, "Right" };
+
+	// Register the arrow keys to update the rotation
+	for (const auto& input : m_inputMap) {
+		cvarManager->registerNotifier(input.first+"pressed", [this](std::vector<std::string> args) {
+			if (editingVariances) {
+				if (args[0] == "Uppressed") {
+					rotationToApply.Pitch += 500;
+					LOG("Up arrow pressed");
+				}
+				if (args[0] == "Downpressed") {
+					rotationToApply.Pitch -= 500;
+					LOG("Down arrow pressed");
+				}
+				if (args[0] == "Leftpressed") {
+					rotationToApply.Roll -= 500;
+					LOG("Left arrow pressed");
+				}
+				if (args[0] == "Rightpressed") {
+					rotationToApply.Roll += 500;
+					LOG("Right arrow pressed");
+				}
+			}
+			
+		}, "button pressed", PERMISSION_ALL
+		);
+		cvarManager->setBind(input.first, input.first + "pressed");
+	}
+	
 	// !! Enable debug logging by setting DEBUG_LOG = true in logging.h !!
 	//DEBUGLOG("VersatileTraining debug mode enabled");
 
@@ -88,13 +111,34 @@ void VersatileTraining::onLoad()
 
 void VersatileTraining::loadHooks() {
 
-	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
+	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
 		VersatileTraining::getTrainingData(cw, params, eventName);
-		});*/
+		});
 
-	gameWrapper->HookEventWithCallerPost<GameEditorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.StartEditing", [this](GameEditorWrapper cw, void* params, std::string eventName) {
+
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.StartEditing", [this](ActorWrapper cw, void* params, std::string eventName) {
 		LOG("new training pack opened and editing started--------------");
 		isCarRotatable = true;
+		if (!cw) {
+			LOG("Caller is invalid");
+			return;
+		}
+
+		TrainingEditorWrapper tw(cw.memory_address);
+		if (tw.IsNull()) {
+			LOG("Failed to get TrainingEditorWrapper");
+			return;
+		}
+
+		GameEditorSaveDataWrapper data = tw.GetTrainingData();
+		TrainingEditorSaveDataWrapper td = data.GetTrainingData();
+
+		LOG("Training pack code : {}", td.GetCode().ToString());
+		LOG("Training pack name : {}", td.GetTM_Name().ToString());
+		LOG("Training pack type : {}", td.GetType());
+		LOG("Training pack difficulty : {}", td.GetDifficulty());
+		LOG("training pack creator name : {}", td.GetCreatorName().ToString());
+		
 		
 		});
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_TrainingEditor_TA.EditorMode.StopEditing", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
@@ -119,6 +163,45 @@ void VersatileTraining::loadHooks() {
 		isCarRotatable = true;
 
 		});
+	//TAGame.GFxHUD_TA.UpdateCarData
+	
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorSetRotation", [this](ActorWrapper cw, void* params, std::string eventName) {
+		if (editingVariances) {
+			if (!cw || cw.IsNull()) {
+				LOG("Server not found");
+				return;
+			}
+
+			Rotator rot = cw.GetRotation();
+			//LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+
+			rot += rotationToApply;
+			rotationToApply = { 0,0,0 };
+			cw.SetRotation(rot);
+			//LOG("Rotation applied: Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+		}
+		});
+
+	///*auto location = cw.GetLocation();
+	//		LOG("Car location: {}", location.X);
+	//		LOG("Car location: {}", location.Y);
+	//		LOG("Car location: {}", location.Z);*/
+	//auto car = gameWrapper->GetCurrentGameState().GetGameCar();
+	// 
+	//if (car) {
+	//	Rotator rot = car.GetRotation();
+	//	LOG("Car rotation: {}", rot.Pitch);
+	//	LOG("Car rotation: {}", rot.Yaw);
+	//	LOG("Car rotation: {}", rot.Roll);
+	//	// Proceed with using the rotation
+	//}
+	//else {
+	//	LOG("Car not found");
+	//	// Handle the case where the car doesn't exist (e.g., log an error or return early)
+	//}
+
+	///*rot.Roll += 23036;
+	//car.SetCarRotation(rot);*/
 	gameWrapper->HookEventWithCallerPost<CarWrapper>("Function TAGame.CameraState_CarRef_TA.GetCarRotation", [this](CarWrapper cw, void* params, std::string eventName) {
 		//LOG("playtest started");
 		if (!cw || cw.IsNull()|| !isCarRotatable) return;
@@ -132,16 +215,26 @@ void VersatileTraining::loadHooks() {
 			if (editingVariances) {
 				//LOG("Training editor actor modified");
 				//checkForR1Press();
+				checkForButtonPress(4);
 				checkForButtonPress(5);
-				checkForButtonPress(6);
+				//checkForButtonPress(6);
 			}
 		}
 	);
+
+	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GFxData_TrainingModeBrowser_TA.GetLocalTrainingFiles",
+		[this](ActorWrapper cw, void* params, std::string eventName) {
+			LOG("GetLocalTrainingFiles called");
+			
+		}
+	);
+
 
 	
 
 		
 }
+
 
 bool VersatileTraining::changeCarSpawnRotation() {
 	auto serv = gameWrapper->GetGameEventAsServer();
@@ -173,11 +266,18 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 	if (!tew) return;
 
 	auto current = tew.GetActiveRoundNumber();*/
-
+	
 	auto tw = ((TrainingEditorWrapper)cw.memory_address);
 	GameEditorSaveDataWrapper data = tw.GetTrainingData();
 	TrainingEditorSaveDataWrapper td = data.GetTrainingData();
-	LOG("Training data found1: {}", td.GetCode().ToString());
+	LOG("Training pack code: {}", td.GetCode().ToString());
+	LOG("Training pack name", td.GetTM_Name().ToString());
+	/*GetCreatorName();
+	GetDescription();*/
+	LOG("Training pack type: {}", td.GetType());
+	LOG("Training pack difficulty: {}", td.GetDifficulty());
+	LOG("Training pack creator name: {}", td.GetCreatorName().ToString());
+	LOG("Training pack description: {}", td.GetDescription().ToString());
 	int totalRounds = tw.GetTotalRounds();
 	LOG("Training num rounds: {}", totalRounds);
 
@@ -204,17 +304,6 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 		cvarManager->executeCommand("sv_training_limitboost -1");
 
 	}
-	/*if (code == "0624-600D-000E-F2A7") {
-		cvarManager->executeCommand("sv_training_enabled 1");
-		cvarManager->executeCommand("sv_training_limitboost 100");
-	}
-	else {
-		cvarManager->executeCommand("sv_training_enabled 0");
-		cvarManager->executeCommand("sv_training_limitboost -1");
-
-	}*/
-
-	//executecommand ("sv_training_enabled 1); to turn on custom training variance, and if not turn it off.
 	
 }
 
