@@ -31,6 +31,11 @@ struct CustomTrainingData {
 	std::vector<int> startingVelocityMax;
 	
 };
+struct ButtonState {
+	bool isPressed;
+	std::chrono::steady_clock::time_point lastUpdateTime;
+};
+
 template <typename T, typename std::enable_if<std::is_base_of<ObjectWrapper, T>::value>::type*>
 void GameWrapper::HookEventWithCallerPost(std::string eventtName, std::function<void(T caller, void* params, std::string eventName)> callback)
 {
@@ -61,8 +66,7 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 
 	bool editingVariances = false;
 	int tempBoostAmount = -1;
-	int tempStartingVelocityMin = 10;
-	int tempStartingVelocityMax = 100;
+	int tempStartingVelocity = 0;
 
 
 	//Boilerplate
@@ -77,14 +81,32 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	std::string encodeTrainingCode(CustomTrainingData data);
 	TrainingEditorWrapper GetTrainingEditor();
 	void onGetEditingTraining(GameEditorWrapper caller);
-	void checkForR1Press();
 
+	//setting up button clicks to specified functions
+	using ButtonCallback = std::function<void()>; 
+
+	std::unordered_map<int, ButtonCallback> buttonCallbacks; 
+	std::unordered_map<int, ButtonState> buttonStates;
+	void registerButtonCallback(int buttonIndex, ButtonCallback callback);
+	void initializeCallBacks();
+	void IncrementTempBoost();
+	void IncrementTempStartingVelocity();
+
+	void checkForR1Press();
+	void checkForButtonPress(int buttonIndex);
+
+	bool R1AlreadyPressed = false;
+	std::chrono::steady_clock::time_point lastUpdateTime;
 	static BOOL CALLBACK EnumDevicesCallback(const DIDEVICEINSTANCE* instance, VOID* context);
 	void enumerateControllers();
-
+	
 	LPDIRECTINPUT8 dinput;
 	LPDIRECTINPUTDEVICE8 joystick;
 	std::vector<LPDIRECTINPUTDEVICE8> controllers;
+
+
+	bool changeCarSpawnRotation();
+	bool isCarRotatable = false;
 
 	void CleanUp();
 public:

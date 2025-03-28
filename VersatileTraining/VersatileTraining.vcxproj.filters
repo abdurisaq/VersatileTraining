@@ -84,6 +84,9 @@
     <ClCompile Include="VersatileTrainingGUI.cpp">
       <Filter>Plugin\src</Filter>
     </ClCompile>
+    <ClCompile Include="controllerManipulation.cpp">
+      <Filter>Plugin\src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui_rangeslider.h">

@@ -35,6 +35,9 @@ void VersatileTraining::onLoad()
 			enumerateControllers();
 		}, "check to see if there's a connected controller", PERMISSION_ALL
 	);
+
+
+	initializeCallBacks();
 	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
 		VersatileTraining::getTrainingData(cw, params, eventName);
 		});*/
@@ -91,9 +94,12 @@ void VersatileTraining::loadHooks() {
 
 	gameWrapper->HookEventWithCallerPost<GameEditorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.StartEditing", [this](GameEditorWrapper cw, void* params, std::string eventName) {
 		LOG("new training pack opened and editing started--------------");
+		isCarRotatable = true;
+		
 		});
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_TrainingEditor_TA.EditorMode.StopEditing", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
 		LOG("stopped editing");
+		isCarRotatable = false;
 		});
 
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.Ball_GameEditor_TA.EditingEnd", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
@@ -104,12 +110,30 @@ void VersatileTraining::loadHooks() {
 		LOG("ball is being edited");
 		editingVariances = false;
 		});
+	//TAGame.GameEvent_TrainingEditor_TA.EventPlaytestStarted
+	/*gameWrapper->HookEvent("Function TAGame.GameEvent_TrainingEditor_TA.EventPlaytestStarted", [this](std::string eventName) {
+		isCarRotatable = false;
+
+		});*/
+	gameWrapper->HookEvent("Function TAGame.GameEvent_TrainingEditor_TA.EndPlayTest", [this](std::string eventName) {
+		isCarRotatable = true;
+
+		});
+	gameWrapper->HookEventWithCallerPost<CarWrapper>("Function TAGame.CameraState_CarRef_TA.GetCarRotation", [this](CarWrapper cw, void* params, std::string eventName) {
+		//LOG("playtest started");
+		if (!cw || cw.IsNull()|| !isCarRotatable) return;
+		if (changeCarSpawnRotation()) {
+			isCarRotatable = false;
+		}
+		});
 	//TAGame.PlayerController_TA.EventTrainingEditorActorModified
 	gameWrapper->HookEvent("Function TAGame.PlayerController_TA.EventTrainingEditorActorModified",
 		[this](std::string eventName) {
 			if (editingVariances) {
 				//LOG("Training editor actor modified");
-				checkForR1Press();
+				//checkForR1Press();
+				checkForButtonPress(5);
+				checkForButtonPress(6);
 			}
 		}
 	);
@@ -119,30 +143,24 @@ void VersatileTraining::loadHooks() {
 		
 }
 
-void VersatileTraining::checkForR1Press() {
-	//DIJOYSTATE2 js;
-	//if (FAILED(controller->Poll())) {
-	//	// Reacquire device if necessary
-	//	controller->Acquire();
-	//	return;
-	//}
-	//if (FAILED(controller->GetDeviceState(sizeof(DIJOYSTATE2), &js))) {
-	//	//std::cerr << "Failed to get device state" << std::endl;
-	//	LOG("Failed to get device state");
-	//	return;
-	//}
+bool VersatileTraining::changeCarSpawnRotation() {
+	auto serv = gameWrapper->GetGameEventAsServer();
+	if (!serv) return 0;
+	auto car = serv.GetGameCar();
+	Rotator rot = car.GetRotation();
+	LOG("Car rotation: {}", rot.Pitch);
+	LOG("Car rotation: {}", rot.Yaw);
+	LOG("Car rotation: {}", rot.Roll);
+	rot.Yaw += 23036;
+	car.SetCarRotation(rot);
 
-	//// Check if R1 (Right Shoulder) is pressed
-	//if (js.rgbButtons[5] & 0x80) { // R1 is usually mapped to button index 5 on PS controllers
-	//	//std::cout << "R1 Button Pressed" << std::endl;
-	//	LOG("R1 Button Pressed");
-	//}
-	//else {
-	//	//std::cout << "R1 Button Not Pressed" << std::endl;
-	//	LOG("R1 Button Not Pressed");
-	//}
+	Rotator newRot = car.GetRotation();
+	LOG("Car rotation: {}", newRot.Pitch);
+	LOG("Car rotation: {}", newRot.Yaw);
+	LOG("Car rotation: {}", newRot.Roll);
+	LOG("Car rotation changed");
+	return 1;
 }
-
 TrainingEditorWrapper VersatileTraining::GetTrainingEditor() {
 	auto serv = gameWrapper->GetGameEventAsServer();
 	if (!serv) return { 0 };
@@ -237,105 +255,10 @@ void VersatileTraining::CleanUp() {
 	}
 }
 
-BOOL CALLBACK VersatileTraining::EnumDevicesCallback(const DIDEVICEINSTANCE* instance, VOID* context)
-{
-	VersatileTraining* pThis = static_cast<VersatileTraining*>(context); 
 
-	std::wstring wstr(instance->tszProductName);
-	std::string str(wstr.begin(), wstr.end());
 
-	LOG("Found device: {}", str);
 
-	LPDIRECTINPUTDEVICE8 controller;
-	HRESULT hr = pThis->dinput->CreateDevice(instance->guidInstance, &controller, NULL);
-	if (FAILED(hr)) {
-		LOG("Failed to create device for: {}", str);
-		return DIENUM_CONTINUE;
-	}
 
-	hr = controller->SetDataFormat(&c_dfDIJoystick2);
-	if (FAILED(hr)) {
-		LOG("Failed to set data format for device: {}", str);
-		return DIENUM_CONTINUE;
-	}
-
-	
-	hr = controller->SetCooperativeLevel(GetActiveWindow(), DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
-	if (FAILED(hr)) {
-		LOG("Failed to set cooperative level for device: {}", str);
-		return DIENUM_CONTINUE;
-	}
-
-	
-	hr = controller->Acquire();
-	if (FAILED(hr)) {
-		LOG("Failed to acquire device: {}", str);
-		return DIENUM_CONTINUE;
-	}
-
-	LOG("Successfully acquired device: {}", str);
-	pThis->controllers.push_back(controller);
-
-	return DIENUM_CONTINUE;
-}
-
-void VersatileTraining::enumerateControllers() {
-	//LPDIRECTINPUT8 dinput;
-	DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&dinput, NULL);
-
-	
-	auto callback = [](const DIDEVICEINSTANCE* instance, VOID* context) -> BOOL {
-		//  need to cast context to the appropriate type
-		VersatileTraining* pThis = static_cast<VersatileTraining*>(context);
-		return pThis->EnumDevicesCallback(instance, context);
-		};
-
-	dinput->EnumDevices(DI8DEVCLASS_GAMECTRL, callback, this, DIEDFL_ATTACHEDONLY);
-
-}
-
-//std::vector<std::pair<int, int>> runLengthEncode(std::vector<int> arr) {
-//
-//	std::vector<std::pair<int, int>> result;
-//	int count = 1;
-//	int pastInt = arr[0];
-//	for (int i = 1; i < arr.size(); i++) {
-//		if (arr[i] == pastInt) {
-//			count++;
-//		}
-//		else {
-//			result.push_back(std::make_pair(pastInt, count));
-//			count = 1;
-//			pastInt = arr[i];
-//		}
-//	}
-//
-//}
-
-//
-//std::string VersatileTraining::encodeTrainingCode(CustomTrainingData data) {
-//
-//	std::string start = "";
-//	std::string header = data.code + "-"+ std::to_string(data.numShots);
-//	std::vector<int>deltaChangeInBoost;
-//	std::vector<int>deltaChangeMinVelocity;
-//	std::vector<int>deltaChangeMaxVelocity;
-//	int pastMinVelocity = 0;
-//	int pastMaxVelocity = 0;
-//	int pastBoost = 0;
-//	for (int boostAmount : data.boostAmounts) {
-//		deltaChangeInBoost.push_back(boostAmount - pastBoost);
-//	}
-//	for (int minVelocity : data.startingVelocityMin) {
-//		deltaChangeMinVelocity.push_back(minVelocity - pastMinVelocity);
-//	}
-//	for (int maxVelocity : data.startingVelocityMax) {
-//		deltaChangeMaxVelocity.push_back(maxVelocity - pastMaxVelocity);
-//	}
-//
-//
-//	return "";
-//}
 
 void VersatileTraining::Render(CanvasWrapper canvas) {
 	if (!editingVariances) return;
