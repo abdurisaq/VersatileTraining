@@ -141,6 +141,7 @@ void VersatileTraining::loadHooks() {
 		VersatileTraining::getTrainingData(cw, params, eventName);
 		freezeForShot = freezeCar;
 		lockRotation = true;
+		appliedStartingVelocity = false;
 		editingVariances = false;
 		});
 
@@ -222,13 +223,36 @@ void VersatileTraining::loadHooks() {
 					//LOG("Car not found");
 					return;
 				}
-
+				Rotator rot = car.GetRotation();
+				if (rot.Pitch != carRotationUsed.Pitch || rot.Yaw != carRotationUsed.Yaw) {
+					
+					LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+					float pitchRad = (rot.Pitch/16201.0f) * (PI/2);
+					float yawRad =(rot.Yaw / 32768.0f) * PI;
+					float z = sinf(pitchRad);
+					float y = cosf(pitchRad) * sinf(yawRad);
+					float x = cosf(pitchRad) * cosf(yawRad);
+					Vector unitVector = { x,y,z };
+					int velocity = getRandomNumber(tempStartingVelocityMin, tempStartingVelocityMax);
+					startingVelocityTranslation = unitVector * velocity;
+				}
 				car.SetAngularVelocity(Vector{ 0, 0, 0}, false);
 				car.SetVelocity({ 0,0,5 });
 				LOG("keeping car frozen");
 				//first time it isn't frozen, i need to apply the new velocity caluclated by x y z components of magnitude velocity chosen at random between min and max
 
 			}
+		}
+		else if (!freezeForShot && gameWrapper->IsInCustomTraining() && !appliedStartingVelocity) {
+			ServerWrapper server = gameWrapper->GetCurrentGameState();
+			if (!server) { return; }
+			ActorWrapper car = server.GetGameCar();
+			if (!car) {
+				//LOG("Car not found");
+				return;
+			}
+			car.SetVelocity(startingVelocityTranslation);
+			appliedStartingVelocity = true;
 		}
 		});
 	
@@ -451,7 +475,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 		//overriden for testing
 		cvarManager->executeCommand("sv_training_enabled 1");
 		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(tempBoostAmount));
-		cvarManager->executeCommand("sv_training_player_velocity (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")");
+		//cvarManager->executeCommand("sv_training_player_velocity (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")");
 
 	}
 	

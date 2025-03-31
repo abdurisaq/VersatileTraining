@@ -14,6 +14,10 @@
 #pragma comment(lib, "dxguid.lib")
 
 
+#include <cmath>
+#include <random>
+
+#define  PI 3.14159265358979323846
 
 #include <unordered_map>
 #include <vector>
@@ -71,7 +75,9 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	int tempStartingVelocityMin = 0;
 	int tempStartingVelocityMax = 0;
 
-
+	Rotator carRotationUsed = { 0,0,0 };
+	Vector startingVelocityTranslation = { 0,0,0 };
+	bool appliedStartingVelocity = false;
 	//Boilerplate
 	void onLoad() override;
 	void onUnload() override; // Uncomment and implement if you need a unload method
@@ -128,6 +134,7 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	bool freezeCar = false;
 	bool freezeForShot = false;
 	void CleanUp();
+	int getRandomNumber(int min, int max);
 public:
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
 	void Render(CanvasWrapper canvas);
