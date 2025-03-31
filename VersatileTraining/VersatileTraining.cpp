@@ -197,7 +197,7 @@ void VersatileTraining::loadHooks() {
 		});
 	//TAGame.GFxHUD_TA.UpdateCarData
 	//TAGame.GameEditor_Actor_TA.EditorMoveToLocation call this to go beyond the bounds maybe, see if i can go beyond the border, if past location is the same as current location, and if pitch and roll aren't 0, let me go through the bounds a bit
-	gameWrapper->HookEventWithCallerPost<ActorWrapper >("Function TAGame.GameObserver_TA.UpdateCarsData", [this](ActorWrapper  cw, void* params, std::string eventName) {
+	gameWrapper->HookEventWithCallerPost<ActorWrapper >("Function TAGame.GFxHUD_TA.UpdateCarData", [this](ActorWrapper  cw, void* params, std::string eventName) {
 		if (editingVariances && !lockRotation) {
 			if (!cw || cw.IsNull()) {
 				LOG("Server not found");
@@ -208,7 +208,7 @@ void VersatileTraining::loadHooks() {
 		}
 		if (freezeForShot) {
 			if (gameWrapper->IsInCustomTraining()) {
-				LOG("In custom training");
+				//LOG("In custom training");
 				ServerWrapper server = gameWrapper->GetCurrentGameState();
 				if (!server) { return; }
 				ActorWrapper car = server.GetGameCar();
@@ -216,9 +216,11 @@ void VersatileTraining::loadHooks() {
 					LOG("Car not found");
 					return;
 				}
-				car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
-				car.SetVelocity({ 0,0,0 });
-				//LOG("keeping car frozen");
+
+				car.SetAngularVelocity(Vector{ 0, 0, 0}, false);
+				car.SetVelocity({ 0,0,5 });
+				LOG("keeping car frozen");
+				//first time it isn't frozen, i need to apply the new velocity caluclated by x y z components of magnitude velocity chosen at random between min and max
 
 			}
 		}
@@ -252,17 +254,8 @@ void VersatileTraining::loadHooks() {
 			//rot += rotationToApply;
 			rotationToApply = { 0,0,0};
 			cw.SetRotation(rot);
-			currentRotation = rot;
-
+			currentRotation = rot;	
 			
-			
-			//LOG("Rotation applied: Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
-
-			/*Vector location = cw.GetLocation();
-			LOG("Current Location - X: {}, Y: {}, Z: {}", location.X, location.Y, location.Z);*/
-			/*location.Z += 100;
-			gameWrapper->GetCurrentGameState().GetTestCarArchetype().SetLocation(location);*/
-			//cw.SetLocation(location);
 		}
 		});
 
@@ -283,45 +276,7 @@ void VersatileTraining::loadHooks() {
 		}
 	});
 	
-	gameWrapper->HookEventWithCallerPost<CarWrapper>("Function TAGame.CameraState_CarRef_TA.GetCarRotation", [this](CarWrapper cw, void* params, std::string eventName) {
-		//LOG("playtest started");
-		/*if (!cw || cw.IsNull()|| !isCarRotatable) return;
-		if (changeCarSpawnRotation()) {
-			isCarRotatable = false;
-		}*/
-
-		if (freezeCar) {
-
-
-			auto car = gameWrapper->GetCurrentGameState().GetGameCar();
-			if (!car) {
-				//LOG("Car not found");
-				return;
-
-			}
-			//LOG("Freezing car");
-			car.SetVelocity({ 0,0,0 });
-			car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
-		}
-		});
-	gameWrapper->HookEventWithCallerPost<ServerWrapper>("Function TAGame.GFxHUD_TA.UpdateCarData", [this](ServerWrapper cw, void* params, std::string eventName) {
-		//LOG("playtest started");
-		/*if (freezeCar ) {
-
-
-			auto car = cw.GetGameCar();
-			if (!car) {
-				LOG("Car not found");
-				return;
-
-			}
-			car.SetVelocity({ 0,0,0 });
-			car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
-		}*/
-		
-	}
-
-	);
+	
 	//TAGame.PlayerController_TA.EventTrainingEditorActorModified
 	gameWrapper->HookEvent("Function TAGame.PlayerController_TA.EventTrainingEditorActorModified",
 		[this](std::string eventName) {
@@ -406,22 +361,6 @@ void VersatileTraining::loadHooks() {
 			
 		}
 	);
-	/*gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameObserver_TA.UpdateCarsData",
-		[this](ActorWrapper cw, void* params, std::string eventName) {
-			auto serv = gameWrapper->GetCurrentGameState();
-
-			auto car = serv.GetTestCarArchetype();
-			if (!car) {
-
-				LOG("Car not found");
-				return;
-			}
-			Rotator rot = car.GetRotation();
-			LOG("Car rotation R : {}", rot.Roll);
-			rot.Roll += 1000;
-			car.SetCarRotation(rot);
-
-		});*/
 
 
 	
