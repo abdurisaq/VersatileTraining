@@ -141,7 +141,7 @@ void VersatileTraining::loadHooks() {
 		VersatileTraining::getTrainingData(cw, params, eventName);
 		freezeForShot = freezeCar;
 		lockRotation = true;
-		
+		editingVariances = false;
 		});
 
 
@@ -174,11 +174,17 @@ void VersatileTraining::loadHooks() {
 		LOG("stopped editing");
 		isCarRotatable = false;
 		lockRotation = true;
+		editingVariances = false;
 		});
 
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.Ball_GameEditor_TA.EditingEnd", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
 		LOG("car is being edited");
 		editingVariances = true;
+
+		});
+	//GameEvent_GameEditor_TA.EditorMode.EndState
+	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_GameEditor_TA.EditorMode.EndState", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
+		editingVariances = false;
 
 		});
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GameEditor_Actor_TA.EditingEnd", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
@@ -213,7 +219,7 @@ void VersatileTraining::loadHooks() {
 				if (!server) { return; }
 				ActorWrapper car = server.GetGameCar();
 				if (!car) {
-					LOG("Car not found");
+					//LOG("Car not found");
 					return;
 				}
 
@@ -241,7 +247,13 @@ void VersatileTraining::loadHooks() {
 
 			Rotator rot = cw.GetRotation();
 			//LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
-
+			LOG("Current Rotation - Pitch: {}", rot.Pitch);
+			LOG("Current Rotation - Yaw: {}", rot.Yaw);
+			LOG("Current Rotation - Roll: {}", rot.Roll);
+			Vector location = cw.GetLocation();
+			LOG("Current location X: {}", location.X);
+			LOG("Current location Y: {}", location.Y);
+			LOG("Current location Z: {}", location.Z);
 			rot.Yaw += rotationToApply.Yaw;
 			if (rotationToApply.Pitch == 0) {
 				rot.Pitch = currentRotation.Pitch;
