@@ -35,41 +35,67 @@ void VersatileTraining::onLoad()
 			enumerateControllers();
 		}, "check to see if there's a connected controller", PERMISSION_ALL
 	);
+	cvarManager->registerNotifier("unlockCar", [this](std::vector<std::string> args){
+		
+		if (lockRotation) {
+			LOG("car unlocked");
+		}
+		else {
+			LOG("car locked");
+		}
+		lockRotation = !lockRotation;
 
+		
+		}, "unlock car", PERMISSION_ALL);
 
+	cvarManager->setBind("X","unlockCar");
+	cvarManager->registerNotifier("freezeCar", [this](std::vector<std::string> args) {
+
+		if (freezeCar) {
+			LOG("car unfrozen");
+		}
+		else {
+			LOG("car frozen");
+		}
+		freezeCar = !freezeCar;
+
+		
+		}, "freeze car", PERMISSION_ALL);
+
+	cvarManager->setBind("F", "freezeCar");
 	initializeCallBacks();
 
-	m_inputMap["Up"] = { 0, false, "Up" };
-	m_inputMap["Down"] = { 0, false, "Down" };
-	m_inputMap["Left"] = { 0, false, "Left" };
-	m_inputMap["Right"] = { 0, false, "Right" };
+	//m_inputMap["Up"] = { 0, false, "Up" };
+	//m_inputMap["Down"] = { 0, false, "Down" };
+	//m_inputMap["Left"] = { 0, false, "Left" };
+	//m_inputMap["Right"] = { 0, false, "Right" };
 
-	// Register the arrow keys to update the rotation
-	for (const auto& input : m_inputMap) {
-		cvarManager->registerNotifier(input.first+"pressed", [this](std::vector<std::string> args) {
-			if (editingVariances) {
-				if (args[0] == "Uppressed") {
-					rotationToApply.Pitch += 500;
-					LOG("Up arrow pressed");
-				}
-				if (args[0] == "Downpressed") {
-					rotationToApply.Pitch -= 500;
-					LOG("Down arrow pressed");
-				}
-				if (args[0] == "Leftpressed") {
-					rotationToApply.Roll -= 500;
-					LOG("Left arrow pressed");
-				}
-				if (args[0] == "Rightpressed") {
-					rotationToApply.Roll += 500;
-					LOG("Right arrow pressed");
-				}
-			}
-			
-		}, "button pressed", PERMISSION_ALL
-		);
-		cvarManager->setBind(input.first, input.first + "pressed");
-	}
+	//// Register the arrow keys to update the rotation
+	//for (const auto& input : m_inputMap) {
+	//	cvarManager->registerNotifier(input.first+"pressed", [this](std::vector<std::string> args) {
+	//		if (editingVariances) {
+	//			if (args[0] == "Uppressed") {
+	//				rotationToApply.Pitch += 500;
+	//				LOG("Up arrow pressed");
+	//			}
+	//			if (args[0] == "Downpressed") {
+	//				rotationToApply.Pitch -= 500;
+	//				LOG("Down arrow pressed");
+	//			}
+	//			if (args[0] == "Leftpressed") {
+	//				rotationToApply.Roll -= 500;
+	//				LOG("Left arrow pressed");
+	//			}
+	//			if (args[0] == "Rightpressed") {
+	//				rotationToApply.Roll += 500;
+	//				LOG("Right arrow pressed");
+	//			}
+	//		}
+	//		
+	//	}, "button pressed", PERMISSION_ALL
+	//	);
+	//	cvarManager->setBind(input.first, input.first + "pressed");
+	//}
 	
 	// !! Enable debug logging by setting DEBUG_LOG = true in logging.h !!
 	//DEBUGLOG("VersatileTraining debug mode enabled");
@@ -113,6 +139,9 @@ void VersatileTraining::loadHooks() {
 
 	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
 		VersatileTraining::getTrainingData(cw, params, eventName);
+		freezeForShot = freezeCar;
+		lockRotation = true;
+		
 		});
 
 
@@ -144,15 +173,18 @@ void VersatileTraining::loadHooks() {
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_TrainingEditor_TA.EditorMode.StopEditing", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
 		LOG("stopped editing");
 		isCarRotatable = false;
+		lockRotation = true;
 		});
 
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.Ball_GameEditor_TA.EditingEnd", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
 		LOG("car is being edited");
 		editingVariances = true;
+
 		});
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GameEditor_Actor_TA.EditingEnd", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
 		LOG("ball is being edited");
 		editingVariances = false;
+		lockRotation = true;
 		});
 	//TAGame.GameEvent_TrainingEditor_TA.EventPlaytestStarted
 	/*gameWrapper->HookEvent("Function TAGame.GameEvent_TrainingEditor_TA.EventPlaytestStarted", [this](std::string eventName) {
@@ -164,9 +196,42 @@ void VersatileTraining::loadHooks() {
 
 		});
 	//TAGame.GFxHUD_TA.UpdateCarData
+	//TAGame.GameEditor_Actor_TA.EditorMoveToLocation call this to go beyond the bounds maybe, see if i can go beyond the border, if past location is the same as current location, and if pitch and roll aren't 0, let me go through the bounds a bit
+	gameWrapper->HookEventWithCallerPost<ActorWrapper >("Function TAGame.GameObserver_TA.UpdateCarsData", [this](ActorWrapper  cw, void* params, std::string eventName) {
+		if (editingVariances && !lockRotation) {
+			if (!cw || cw.IsNull()) {
+				LOG("Server not found");
+				return;
+			}
+
+
+		}
+		if (freezeForShot) {
+			if (gameWrapper->IsInCustomTraining()) {
+				LOG("In custom training");
+				ServerWrapper server = gameWrapper->GetCurrentGameState();
+				if (!server) { return; }
+				ActorWrapper car = server.GetGameCar();
+				if (!car) {
+					LOG("Car not found");
+					return;
+				}
+				car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
+				car.SetVelocity({ 0,0,0 });
+				//LOG("keeping car frozen");
+
+			}
+		}
+		});
 	
+	gameWrapper->HookEvent("Function GameEvent_Soccar_TA.Active.StartRound", [this](std::string eventName) {
+		if (gameWrapper->IsInCustomTraining()) {
+			freezeForShot = false;
+			
+		}
+	});
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorSetRotation", [this](ActorWrapper cw, void* params, std::string eventName) {
-		if (editingVariances) {
+		if (editingVariances && !lockRotation) {
 			if (!cw || cw.IsNull()) {
 				LOG("Server not found");
 				return;
@@ -175,49 +240,162 @@ void VersatileTraining::loadHooks() {
 			Rotator rot = cw.GetRotation();
 			//LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
 
-			rot += rotationToApply;
-			rotationToApply = { 0,0,0 };
+			rot.Yaw += rotationToApply.Yaw;
+			if (rotationToApply.Pitch == 0) {
+				rot.Pitch = currentRotation.Pitch;
+			}
+			else {
+				rot.Pitch = rotationToApply.Pitch;
+			}
+			rot.Roll += rotationToApply.Roll;
+
+			//rot += rotationToApply;
+			rotationToApply = { 0,0,0};
 			cw.SetRotation(rot);
+			currentRotation = rot;
+
+			
+			
 			//LOG("Rotation applied: Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+
+			/*Vector location = cw.GetLocation();
+			LOG("Current Location - X: {}, Y: {}, Z: {}", location.X, location.Y, location.Z);*/
+			/*location.Z += 100;
+			gameWrapper->GetCurrentGameState().GetTestCarArchetype().SetLocation(location);*/
+			//cw.SetLocation(location);
 		}
 		});
 
-	///*auto location = cw.GetLocation();
-	//		LOG("Car location: {}", location.X);
-	//		LOG("Car location: {}", location.Y);
-	//		LOG("Car location: {}", location.Z);*/
-	//auto car = gameWrapper->GetCurrentGameState().GetGameCar();
-	// 
-	//if (car) {
-	//	Rotator rot = car.GetRotation();
-	//	LOG("Car rotation: {}", rot.Pitch);
-	//	LOG("Car rotation: {}", rot.Yaw);
-	//	LOG("Car rotation: {}", rot.Roll);
-	//	// Proceed with using the rotation
-	//}
-	//else {
-	//	LOG("Car not found");
-	//	// Handle the case where the car doesn't exist (e.g., log an error or return early)
-	//}
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.PlayerController_TA.GetRotateActorCameraOffset",[this](ActorWrapper cw, void* params, std::string eventName) {
+		if (editingVariances && !lockRotation) {
+			if (!cw || cw.IsNull()) {
+				LOG("Server not found");
+				return;
+			}
+			
 
-	///*rot.Roll += 23036;
-	//car.SetCarRotation(rot);*/
+			
+			Rotator rot = gameWrapper->GetCamera().GetRotation();
+			
+			rotationToApply.Pitch = rot.Pitch;
+
+
+		}
+	});
+	
 	gameWrapper->HookEventWithCallerPost<CarWrapper>("Function TAGame.CameraState_CarRef_TA.GetCarRotation", [this](CarWrapper cw, void* params, std::string eventName) {
 		//LOG("playtest started");
-		if (!cw || cw.IsNull()|| !isCarRotatable) return;
+		/*if (!cw || cw.IsNull()|| !isCarRotatable) return;
 		if (changeCarSpawnRotation()) {
 			isCarRotatable = false;
+		}*/
+
+		if (freezeCar) {
+
+
+			auto car = gameWrapper->GetCurrentGameState().GetGameCar();
+			if (!car) {
+				//LOG("Car not found");
+				return;
+
+			}
+			//LOG("Freezing car");
+			car.SetVelocity({ 0,0,0 });
+			car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
 		}
 		});
+	gameWrapper->HookEventWithCallerPost<ServerWrapper>("Function TAGame.GFxHUD_TA.UpdateCarData", [this](ServerWrapper cw, void* params, std::string eventName) {
+		//LOG("playtest started");
+		/*if (freezeCar ) {
+
+
+			auto car = cw.GetGameCar();
+			if (!car) {
+				LOG("Car not found");
+				return;
+
+			}
+			car.SetVelocity({ 0,0,0 });
+			car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
+		}*/
+		
+	}
+
+	);
 	//TAGame.PlayerController_TA.EventTrainingEditorActorModified
 	gameWrapper->HookEvent("Function TAGame.PlayerController_TA.EventTrainingEditorActorModified",
 		[this](std::string eventName) {
 			if (editingVariances) {
 				//LOG("Training editor actor modified");
 				//checkForR1Press();
-				checkForButtonPress(4);
-				checkForButtonPress(5);
+				/*checkForButtonPress(4);
+				checkForButtonPress(5);*/  //when not connected, it fucks up
 				//checkForButtonPress(6);
+
+			
+				if (!lockRotation) {
+					if (GetAsyncKeyState('R') & 0x8000) {
+						rotationToApply.Pitch += 75;
+						//LOG("Pitch increased");
+					}
+					if (GetAsyncKeyState('C') & 0x8000) {
+						rotationToApply.Pitch -= 75;
+						//LOG("Pitch decreased");
+					}
+					if (GetAsyncKeyState('Q') & 0x8000) {
+						rotationToApply.Roll -= 75;
+						//LOG("Roll decreased");
+					}
+					if (GetAsyncKeyState('E') & 0x8000) {
+						rotationToApply.Roll += 75;
+						//LOG("Roll increased");
+					}
+				}
+				if (GetAsyncKeyState('2') & 0x8000) {
+					tempBoostAmount++;
+					if (tempBoostAmount > boostMax) {
+						tempBoostAmount = boostMax;
+					}
+					LOG("boost increased to {}", tempBoostAmount);
+					//LOG("Roll increased");
+				}
+				if (GetAsyncKeyState('1') & 0x8000) {
+					tempBoostAmount--;
+					if (tempBoostAmount < 0) {
+						tempBoostAmount = -1;
+					}
+					LOG("boost decreased to {}", tempBoostAmount);
+				}
+				if (GetAsyncKeyState('4') & 0x8000) {
+					tempStartingVelocityMin++;
+					if (tempStartingVelocityMin > maxVelocity) {
+						tempStartingVelocityMin = maxVelocity;
+					}
+					LOG("starting velocity increased to {}", tempStartingVelocityMin);
+				}
+				if (GetAsyncKeyState('3') & 0x8000) {
+					tempStartingVelocityMin--;
+					if (tempStartingVelocityMin < 0) {
+						tempStartingVelocityMin = minVelocity;
+					}
+					LOG("starting velocity decreased to {}", tempStartingVelocityMin);
+				}
+				if (GetAsyncKeyState('8') & 0x8000) {
+					tempStartingVelocityMax++;
+					if (tempStartingVelocityMax > maxVelocity) {
+						tempStartingVelocityMax = maxVelocity;
+					}
+					LOG("starting velocity increased to {}", tempStartingVelocityMax);
+				}
+				if (GetAsyncKeyState('7') & 0x8000) {
+					tempStartingVelocityMax--;
+					if (tempStartingVelocityMax < tempStartingVelocityMin) {
+						tempStartingVelocityMax = tempStartingVelocityMin;
+					}
+					LOG("starting velocity decreased to {}", tempStartingVelocityMax);
+				}
+				
+				
 			}
 		}
 	);
@@ -228,6 +406,22 @@ void VersatileTraining::loadHooks() {
 			
 		}
 	);
+	/*gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameObserver_TA.UpdateCarsData",
+		[this](ActorWrapper cw, void* params, std::string eventName) {
+			auto serv = gameWrapper->GetCurrentGameState();
+
+			auto car = serv.GetTestCarArchetype();
+			if (!car) {
+
+				LOG("Car not found");
+				return;
+			}
+			Rotator rot = car.GetRotation();
+			LOG("Car rotation R : {}", rot.Roll);
+			rot.Roll += 1000;
+			car.SetCarRotation(rot);
+
+		});*/
 
 
 	
@@ -267,6 +461,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
 	auto current = tew.GetActiveRoundNumber();*/
 	
+	
 	auto tw = ((TrainingEditorWrapper)cw.memory_address);
 	GameEditorSaveDataWrapper data = tw.GetTrainingData();
 	TrainingEditorSaveDataWrapper td = data.GetTrainingData();
@@ -299,9 +494,13 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
 	}
 	else {
-		LOG("Training data not found: {}", code);
+		/*LOG("Training data not found: {}", code);
 		cvarManager->executeCommand("sv_training_enabled 0");
-		cvarManager->executeCommand("sv_training_limitboost -1");
+		cvarManager->executeCommand("sv_training_limitboost -1");*/
+		//overriden for testing
+		cvarManager->executeCommand("sv_training_enabled 1");
+		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(tempBoostAmount));
+		cvarManager->executeCommand("sv_training_player_velocity (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")");
 
 	}
 	
@@ -361,6 +560,24 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
 	canvas.SetPosition(Vector2F{ 0.0, 0.0 });
 	canvas.DrawString("Boost Amount: " + std::to_string(tempBoostAmount), 2.0, 2.0,false);
+	canvas.SetPosition(Vector2F{ 0.0, 20.0 });
+	if (lockRotation) {
+		canvas.DrawString("Car rotation locked, press X to unlock", 2.0, 2.0, false);
+	}
+	else {
+		canvas.DrawString("Car rotation unlocked, press X to lock", 2.0, 2.0, false);
+	}
+	canvas.SetPosition(Vector2F{ 0.0, 40.0 });
+	if (freezeCar) {
+		
+		canvas.DrawString("Car frozen, press F to unfreeze", 2.0, 2.0, false);
+	}
+	else {
+
+		canvas.DrawString("Car unfrozen, press F to freeze", 2.0, 2.0, false);
+	}
+	canvas.SetPosition(Vector2F{ 0.0, 60.0 });
+	canvas.DrawString("Starting Velocity: (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")", 2.0, 2.0, false);
 	//canvas.SetPosition(20, 20);
 	//canvas.SetColor(255, 255, 255, 255);
 	//canvas.DrawString("Hello world!", 1, 1);

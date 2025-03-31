@@ -61,12 +61,15 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	int boostAmount = -1;
 	int boostMax = 100;
 	int boostMin = -1;
+	int maxVelocity = 2000;
+	int minVelocity = 0;
 	int startingVelocityMin = 10;
 	int startingVelocityMax = 100;
 
 	bool editingVariances = false;
 	int tempBoostAmount = -1;
-	int tempStartingVelocity = 0;
+	int tempStartingVelocityMin = 0;
+	int tempStartingVelocityMax = 0;
 
 
 	//Boilerplate
@@ -119,7 +122,11 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 
 	std::map<std::string, Input> m_inputMap;
 	Rotator rotationToApply = { 0,0,0 };
-
+	bool test = false;
+	Rotator currentRotation = { 0,0,0 };
+	bool lockRotation = true;
+	bool freezeCar = false;
+	bool freezeForShot = false;
 	void CleanUp();
 public:
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu

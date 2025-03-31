@@ -177,10 +177,10 @@ void VersatileTraining::rollRight() {
 	rotationToApply.Roll += 500;
 	LOG("Rolling right");
 }
-void VersatileTraining::IncrementTempStartingVelocity() {
-	tempStartingVelocity++;
-	LOG("Incrementing tempStartingVelocity to {}", tempStartingVelocity);
-}
+//void VersatileTraining::IncrementTempStartingVelocity() {
+//	tempStartingVelocity++;
+//	LOG("Incrementing tempStartingVelocity to {}", tempStartingVelocity);
+//}
 
 void VersatileTraining::registerButtonCallback(int buttonIndex, ButtonCallback callback) {
 	buttonCallbacks[buttonIndex] = callback;

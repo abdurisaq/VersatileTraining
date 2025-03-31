@@ -22,7 +22,7 @@ void VersatileTraining::RenderSettings() {
 	
 	ImGui::SliderInt("Boost Amount", &boostAmount, boostMin, boostMax);
 	//ImGui::DragIntRange2("Starting Velocity", &startingVelocityMin, &startingVelocityMax, 1, 0, 100, "%d", "%d");
-	ImGui::RangeSliderInt("Starting Velocity", &startingVelocityMin, &startingVelocityMax, 0, 2000, "(%d,%d)");
+	ImGui::RangeSliderInt("Starting Velocity", &startingVelocityMin, &startingVelocityMax, minVelocity, maxVelocity, "(%d,%d)");
 
 	if (ImGui::Button("Submit")) {
 		CustomTrainingData data;
