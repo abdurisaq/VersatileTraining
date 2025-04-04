@@ -4,6 +4,9 @@
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/plugin/pluginwindow.h"
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
+#include "bakkesmod/plugin/bakkesmodsdk.h"
+#include "bakkesmod/wrappers/includes.h"
+
 
 #define _AMD64_  // Assuming you are targeting 64-bit
 #include <Windows.h>
@@ -51,6 +54,17 @@ void GameWrapper::HookEventWithCallerPost(std::string eventtName, std::function<
 
 }
 
+
+template <typename T, typename std::enable_if<std::is_base_of<ObjectWrapper, T>::value>::type*>
+void GameWrapper::HookEventWithCaller(std::string eventName,
+	std::function<void(T caller, void* params, std::string eventName)> callback)
+{
+	auto wrapped_callback = [callback](ActorWrapper caller, void* params, std::string eventName)
+		{
+			callback(T(caller.memory_address), params, eventName);
+		};
+	HookEventWithCaller<ActorWrapper>(eventName, wrapped_callback);
+}
 class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	,public SettingsWindowBase // Uncomment if you wanna render your own tab in the settings menu
 	//,public PluginWindowBase // Uncomment if you want to render your own plugin window

@@ -140,6 +140,7 @@ void VersatileTraining::loadHooks() {
 	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
 		VersatileTraining::getTrainingData(cw, params, eventName);
 		freezeForShot = freezeCar;
+
 		lockRotation = true;
 		appliedStartingVelocity = false;
 		editingVariances = false;
@@ -213,6 +214,7 @@ void VersatileTraining::loadHooks() {
 
 
 		}
+		cw.SetbCollideWorld(0);
 		if (freezeForShot) {
 			if (gameWrapper->IsInCustomTraining()) {
 				//LOG("In custom training");
@@ -224,9 +226,12 @@ void VersatileTraining::loadHooks() {
 					return;
 				}
 				Rotator rot = car.GetRotation();
+				Vector loc = car.GetLocation();
 				if (rot.Pitch != carRotationUsed.Pitch || rot.Yaw != carRotationUsed.Yaw) {
 					
 					LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+					LOG("Current location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+					//car.SetLocation({ loc.X,5090,loc.Z });
 					float pitchRad = (rot.Pitch/16201.0f) * (PI/2);
 					float yawRad =(rot.Yaw / 32768.0f) * PI;
 					float z = sinf(pitchRad);
@@ -237,7 +242,8 @@ void VersatileTraining::loadHooks() {
 					startingVelocityTranslation = unitVector * velocity;
 				}
 				car.SetAngularVelocity(Vector{ 0, 0, 0}, false);
-				car.SetVelocity({ 0,0,5 });
+				Vector vel = car.GetVelocity();
+				car.SetVelocity({ vel.X,vel.Y,5 });
 				LOG("keeping car frozen");
 				//first time it isn't frozen, i need to apply the new velocity caluclated by x y z components of magnitude velocity chosen at random between min and max
 
@@ -252,6 +258,8 @@ void VersatileTraining::loadHooks() {
 				return;
 			}
 			car.SetVelocity(startingVelocityTranslation);
+			Vector loc = car.GetLocation();
+			//car.SetLocation({ loc.X,5090,loc.Z }); // this was just for testing purposes, might need logic to clamp onto wall
 			appliedStartingVelocity = true;
 		}
 		});
@@ -262,6 +270,147 @@ void VersatileTraining::loadHooks() {
 			
 		}
 	});
+	///TAGame.GameEditor_Actor_TA.CanEdit
+//Engine.Actor.HitWall
+
+	struct pExecEditorMoveToLocaction
+	{
+		struct Vector NewLocation;
+		uint32_t ReturnValue : 1;
+	};
+
+	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function Engine.Actor.HitWall", [this](ActorWrapper cw, void* params, std::string eventName) {
+		gameWrapper->SetTimeout([cw](ActorWrapper cw) {
+			cw.SetLocation(Vector(5000.f, 0.f, 420.f));
+			LOG("Forcefully reset location after HitWall.");
+			}, 0.05f);
+
+
+		});*/
+	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorMoveToLocation", [this](ActorWrapper cw, void* params, std::string eventName) {
+		auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
+
+		// Log the original location
+		cw.SetbCollideActors(false);
+		cw.SetbBlockActors(false);
+		cw.SetbCollideWorld(0);
+		
+		LOG("Original move to: X {}, Y {}, Z= {}", p->NewLocation.X, p->NewLocation.Y, p->NewLocation.Z);
+		/*p->NewLocation.X = 4200.f;
+		p->NewLocation.Y = 0.f;
+		p->NewLocation.Z = 420.f;
+		p->ReturnValue = 0;*/
+		});
+	//gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.ReInitPhysicsDelayed", [this](ActorWrapper cw, void* params, std::string eventName) {
+	//	if (editingVariances ) {//&& !lockRotation
+	//		if (!cw || cw.IsNull()) {
+	//			LOG("Server not found");
+	//			return;
+	//		}
+
+	//		Vector loc = cw.GetLocation();
+	//		Vector loc2 = cw.GetVelocity();
+
+	//		cw.SetLocation({ 0, 0, 0 });
+
+	//		cw.SetCollisionType(0);
+
+
+	//		LOG("Car location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+	//		LOG("Car velocity - X: {}, Y: {}, Z: {}", loc2.X, loc2.Y, loc2.Z);
+
+	//		if (!cw.GetbCanTeleport()) {
+	//			LOG("Car can't teleport");
+	//			cw.SetbCanTeleport(true);
+	//			cw.SetLocation({ 0, 0, 0 });
+
+	//		}
+	//		
+	//		else {
+	//			LOG("Car can teleport");
+	//		}
+	//		if (!cw.GetbLockLocation()) {
+	//			LOG("Car can't be locked");
+	//		}
+	//		else {
+	//			LOG("Car can be locked");
+	//		}
+	//		if (!cw.GetbMovable()) {
+	//			LOG("Car can't move");
+	//		}
+	//		else {
+	//			LOG("Car can move");
+	//		}
+	//		//cw.SetLocation({ 100, 100, 1000 });
+	//		//auto serv = gameWrapper->GetCurrentGameState();
+	//		//if (!serv) return;
+	//		//auto car = serv.GetTestCarArchetype();
+	//		//if (!car) {
+	//		//	LOG("Car not found");
+	//		//	return;
+
+	//		//}
+	//		//Vector loc = cw.GetLocation();
+	//		////LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+	//		//loc.X += 100;
+	//		//cw.SetLocation(loc);
+	//		//cw.SetVelocity({ 20, 0, 0 });
+
+	//		//if (!cw.GetbCanTeleport()) {
+	//		//	LOG("Car can't teleport");
+	//		//	//cw.SetbCanTeleport(true);	
+	//		//}
+	//		//else {
+	//		//	LOG("Car can teleport");
+	//		//}
+
+	//		//if (!cw.GetbLockLocation()) {
+	//		//	LOG("Car can't be locked");
+	//		//	//cw.SetbLockLocation(true);
+	//		//}
+	//		//else {
+	//		//	LOG("Car can be locked");
+	//		//}
+	//		//if (!cw.GetbMovable()) {
+	//		//	LOG("Car can't move");
+	//		//	//car.SetbMovable(true);
+	//		//}
+	//		//else {
+	//		//	LOG("Car can move");
+	//		//}
+	//		//if (!car.GetbCanTeleport()) {
+	//		//	LOG("Car can't teleport");
+	//		//	//car.SetbCanTeleport(true);
+	//		//}
+	//		///*else {
+	//		//					LOG("Car can teleport");
+	//		//}*/
+	//		//if (!car.GetbLockLocation()) {
+	//		//	LOG("Car can't be locked");
+	//		//	//car.SetbLockLocation(true);
+	//		//}
+	//		///*else {
+	//		//	LOG("Car can be locked");
+	//		//}*/
+	//		//if (!car.GetbMovable()) {
+	//		//	LOG("Car can't move");
+	//		//	//car.SetbMovable(true);
+	//		//}
+	//		/*else {
+	//			LOG("Car can move");
+	//		}*/
+	//		//LOG("x : {}, y: {}, z: {}", car.GetLocation().X, car.GetLocation().Y, car.GetLocation().Z);
+	//		//car.SetLocation({ 0,0,0 });
+	//		//gameWrapper->GetCurrentGameState().SetTestCarArchetype(car);
+	//		////Teleport(Vector& SpawnLocation, Rotator& SpawnRotation, unsigned long bStopVelocity, unsigned long bUpdateRotation, float ExtraForce);
+	//		//Rotator rot = car.GetRotation();
+	//		//Vector location = car.GetLocation();
+	//		//location.X += 10;
+	//		//car.Teleport(location, rot, true, true, 0);
+	//		//car.SetLocation(location);
+	//		
+	//		}
+	//	});
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorSetRotation", [this](ActorWrapper cw, void* params, std::string eventName) {
 		if (editingVariances && !lockRotation) {
 			if (!cw || cw.IsNull()) {
@@ -270,14 +419,6 @@ void VersatileTraining::loadHooks() {
 			}
 
 			Rotator rot = cw.GetRotation();
-			//LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
-			LOG("Current Rotation - Pitch: {}", rot.Pitch);
-			LOG("Current Rotation - Yaw: {}", rot.Yaw);
-			LOG("Current Rotation - Roll: {}", rot.Roll);
-			Vector location = cw.GetLocation();
-			LOG("Current location X: {}", location.X);
-			LOG("Current location Y: {}", location.Y);
-			LOG("Current location Z: {}", location.Z);
 			rot.Yaw += rotationToApply.Yaw;
 			if (rotationToApply.Pitch == 0) {
 				rot.Pitch = currentRotation.Pitch;
@@ -291,6 +432,7 @@ void VersatileTraining::loadHooks() {
 			rotationToApply = { 0,0,0};
 			cw.SetRotation(rot);
 			currentRotation = rot;	
+
 			
 		}
 		});
@@ -473,7 +615,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 		cvarManager->executeCommand("sv_training_enabled 0");
 		cvarManager->executeCommand("sv_training_limitboost -1");*/
 		//overriden for testing
-		cvarManager->executeCommand("sv_training_enabled 1");
+		//cvarManager->executeCommand("sv_training_enabled 1");
 		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(tempBoostAmount));
 		//cvarManager->executeCommand("sv_training_player_velocity (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")");
 
