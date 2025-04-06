@@ -80,7 +80,7 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	int boostMax = 100;
 	int boostMin = -1;
 	int maxVelocity = 2000;
-	int minVelocity = 0;
+	int minVelocity = -2000;
 	int startingVelocityMin = 10;
 	int startingVelocityMax = 100;
 
@@ -130,6 +130,10 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	LPDIRECTINPUT8 dinput;
 	LPDIRECTINPUTDEVICE8 joystick;
 	std::vector<LPDIRECTINPUTDEVICE8> controllers;
+
+	int clampVal = 0;
+	Rotator checkForClamping(Vector loc, Rotator rot);
+	Vector getClampChange(Vector loc);
 
 
 	bool changeCarSpawnRotation();

@@ -232,6 +232,11 @@ void VersatileTraining::loadHooks() {
 					LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
 					LOG("Current location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
 					//car.SetLocation({ loc.X,5090,loc.Z });
+					Vector loc2 = getClampChange(loc);
+					if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
+
+						car.SetLocation(loc2);
+					}
 					float pitchRad = (rot.Pitch/16201.0f) * (PI/2);
 					float yawRad =(rot.Yaw / 32768.0f) * PI;
 					float z = sinf(pitchRad);
@@ -259,7 +264,12 @@ void VersatileTraining::loadHooks() {
 			}
 			car.SetVelocity(startingVelocityTranslation);
 			Vector loc = car.GetLocation();
+
 			//car.SetLocation({ loc.X,5090,loc.Z }); // this was just for testing purposes, might need logic to clamp onto wall
+			Vector loc2 = getClampChange(loc);
+			if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
+				car.SetLocation(loc2);
+			}
 			appliedStartingVelocity = true;
 		}
 		});
@@ -291,126 +301,30 @@ void VersatileTraining::loadHooks() {
 		auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
 
 		// Log the original location
-		cw.SetbCollideActors(false);
-		cw.SetbBlockActors(false);
+		//cw.SetbCollideActors(false);
+		//cw.SetbBlockActors(false);
 		cw.SetbCollideWorld(0);
+		if (p->NewLocation.Y > 5100) {
+			p->NewLocation.Y = 5100;
+
+		}
+		else if (p->NewLocation.Y < -5100) {
+			p->NewLocation.Y = -5100;
+		}
+		if (p->NewLocation.X > 4056) {
+			p->NewLocation.X = 4056;
+		}
+		else if (p->NewLocation.X < -4056) {
+			p->NewLocation.X = -4056;
+		}
 		
-		LOG("Original move to: X {}, Y {}, Z= {}", p->NewLocation.X, p->NewLocation.Y, p->NewLocation.Z);
+		//LOG("Original move to: X {}, Y {}, Z= {}", p->NewLocation.X, p->NewLocation.Y, p->NewLocation.Z);
 		/*p->NewLocation.X = 4200.f;
 		p->NewLocation.Y = 0.f;
 		p->NewLocation.Z = 420.f;
 		p->ReturnValue = 0;*/
 		});
-	//gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.ReInitPhysicsDelayed", [this](ActorWrapper cw, void* params, std::string eventName) {
-	//	if (editingVariances ) {//&& !lockRotation
-	//		if (!cw || cw.IsNull()) {
-	//			LOG("Server not found");
-	//			return;
-	//		}
-
-	//		Vector loc = cw.GetLocation();
-	//		Vector loc2 = cw.GetVelocity();
-
-	//		cw.SetLocation({ 0, 0, 0 });
-
-	//		cw.SetCollisionType(0);
-
-
-	//		LOG("Car location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
-	//		LOG("Car velocity - X: {}, Y: {}, Z: {}", loc2.X, loc2.Y, loc2.Z);
-
-	//		if (!cw.GetbCanTeleport()) {
-	//			LOG("Car can't teleport");
-	//			cw.SetbCanTeleport(true);
-	//			cw.SetLocation({ 0, 0, 0 });
-
-	//		}
-	//		
-	//		else {
-	//			LOG("Car can teleport");
-	//		}
-	//		if (!cw.GetbLockLocation()) {
-	//			LOG("Car can't be locked");
-	//		}
-	//		else {
-	//			LOG("Car can be locked");
-	//		}
-	//		if (!cw.GetbMovable()) {
-	//			LOG("Car can't move");
-	//		}
-	//		else {
-	//			LOG("Car can move");
-	//		}
-	//		//cw.SetLocation({ 100, 100, 1000 });
-	//		//auto serv = gameWrapper->GetCurrentGameState();
-	//		//if (!serv) return;
-	//		//auto car = serv.GetTestCarArchetype();
-	//		//if (!car) {
-	//		//	LOG("Car not found");
-	//		//	return;
-
-	//		//}
-	//		//Vector loc = cw.GetLocation();
-	//		////LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
-	//		//loc.X += 100;
-	//		//cw.SetLocation(loc);
-	//		//cw.SetVelocity({ 20, 0, 0 });
-
-	//		//if (!cw.GetbCanTeleport()) {
-	//		//	LOG("Car can't teleport");
-	//		//	//cw.SetbCanTeleport(true);	
-	//		//}
-	//		//else {
-	//		//	LOG("Car can teleport");
-	//		//}
-
-	//		//if (!cw.GetbLockLocation()) {
-	//		//	LOG("Car can't be locked");
-	//		//	//cw.SetbLockLocation(true);
-	//		//}
-	//		//else {
-	//		//	LOG("Car can be locked");
-	//		//}
-	//		//if (!cw.GetbMovable()) {
-	//		//	LOG("Car can't move");
-	//		//	//car.SetbMovable(true);
-	//		//}
-	//		//else {
-	//		//	LOG("Car can move");
-	//		//}
-	//		//if (!car.GetbCanTeleport()) {
-	//		//	LOG("Car can't teleport");
-	//		//	//car.SetbCanTeleport(true);
-	//		//}
-	//		///*else {
-	//		//					LOG("Car can teleport");
-	//		//}*/
-	//		//if (!car.GetbLockLocation()) {
-	//		//	LOG("Car can't be locked");
-	//		//	//car.SetbLockLocation(true);
-	//		//}
-	//		///*else {
-	//		//	LOG("Car can be locked");
-	//		//}*/
-	//		//if (!car.GetbMovable()) {
-	//		//	LOG("Car can't move");
-	//		//	//car.SetbMovable(true);
-	//		//}
-	//		/*else {
-	//			LOG("Car can move");
-	//		}*/
-	//		//LOG("x : {}, y: {}, z: {}", car.GetLocation().X, car.GetLocation().Y, car.GetLocation().Z);
-	//		//car.SetLocation({ 0,0,0 });
-	//		//gameWrapper->GetCurrentGameState().SetTestCarArchetype(car);
-	//		////Teleport(Vector& SpawnLocation, Rotator& SpawnRotation, unsigned long bStopVelocity, unsigned long bUpdateRotation, float ExtraForce);
-	//		//Rotator rot = car.GetRotation();
-	//		//Vector location = car.GetLocation();
-	//		//location.X += 10;
-	//		//car.Teleport(location, rot, true, true, 0);
-	//		//car.SetLocation(location);
-	//		
-	//		}
-	//	});
+	
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorSetRotation", [this](ActorWrapper cw, void* params, std::string eventName) {
 		if (editingVariances && !lockRotation) {
 			if (!cw || cw.IsNull()) {
@@ -419,6 +333,7 @@ void VersatileTraining::loadHooks() {
 			}
 
 			Rotator rot = cw.GetRotation();
+			//LOG("Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
 			rot.Yaw += rotationToApply.Yaw;
 			if (rotationToApply.Pitch == 0) {
 				rot.Pitch = currentRotation.Pitch;
@@ -432,8 +347,19 @@ void VersatileTraining::loadHooks() {
 			rotationToApply = { 0,0,0};
 			cw.SetRotation(rot);
 			currentRotation = rot;	
+			Vector loc = cw.GetLocation();
+			//|| (currentRotation.Yaw % 65536 >= 31000 && currentRotation.Yaw % 65536 <= 33768)
+			//|| (currentRotation.Roll % 65536 >= 15000 && currentRotation.Roll % 65536 <= 17000)
 
+			//LOG("yaw : {}, roll: {}", abs( currentRotation.Yaw % 65536), abs (currentRotation.Roll % 65536));
+
+			Rotator rot1 = checkForClamping(loc, currentRotation);
+			if (rot1.Yaw != 0 && rot1.Roll != 0) {
+				//Pitch, Yaw, Roll;
+				cw.SetRotation({currentRotation.Pitch,rot1.Yaw,rot1.Roll});
+			}
 			
+
 		}
 		});
 
