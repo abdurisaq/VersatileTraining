@@ -250,6 +250,7 @@ void VersatileTraining::loadHooks() {
 				Vector vel = car.GetVelocity();
 				car.SetVelocity({ vel.X,vel.Y,5 });
 				LOG("keeping car frozen");
+				LOG("starting velocity - X: {}, Y: {}, Z: {}", startingVelocityTranslation.X, startingVelocityTranslation.Y, startingVelocityTranslation.Z);
 				//first time it isn't frozen, i need to apply the new velocity caluclated by x y z components of magnitude velocity chosen at random between min and max
 
 			}
@@ -262,7 +263,8 @@ void VersatileTraining::loadHooks() {
 				//LOG("Car not found");
 				return;
 			}
-			car.SetVelocity(startingVelocityTranslation);
+			Vector stickingVelocity = getStickingVelocity();
+			car.SetVelocity(startingVelocityTranslation+ stickingVelocity);
 			Vector loc = car.GetLocation();
 
 			//car.SetLocation({ loc.X,5090,loc.Z }); // this was just for testing purposes, might need logic to clamp onto wall
@@ -303,63 +305,144 @@ void VersatileTraining::loadHooks() {
 		// Log the original location
 		//cw.SetbCollideActors(false);
 		//cw.SetbBlockActors(false);
-		cw.SetbCollideWorld(0);
-		if (p->NewLocation.Y > 5100) {
-			p->NewLocation.Y = 5100;
+		//float diag = 7965;
+		float diag = 7965;
+		float ybuff = 5050;
+		float xbuff = 4026;
 
+		float xToAdd = 0;
+		float yToAdd = 0;
+
+		cw.SetbCollideWorld(0);
+		if (p->NewLocation.Z > 2015) {
+			p->NewLocation.Z = 2015;
 		}
-		else if (p->NewLocation.Y < -5100) {
-			p->NewLocation.Y = -5100;
+		else if (p->NewLocation.Z < 0) {
+			p->NewLocation.Z = 0;
 		}
-		if (p->NewLocation.X > 4056) {
-			p->NewLocation.X = 4056;
+
+		//diagonal stuff
+		
+		if (diag <p->NewLocation.X + p->NewLocation.Y ) {
+			//top left
+			float A = 1, B = 1, C = -diag;
+			float x = p->NewLocation.X;
+			float y = p->NewLocation.Y;
+			float d = (A * x + B * y + C) / (A * A + B * B);
+			p->NewLocation.X = x - A * d;
+			p->NewLocation.Y = y - B * d;
 		}
-		else if (p->NewLocation.X < -4056) {
-			p->NewLocation.X = -4056;
+		else if (p->NewLocation.X + p->NewLocation.Y < -diag) {
+			//bottom right
+			float A = 1, B = 1, C = diag;
+			float x = p->NewLocation.X;
+			float y = p->NewLocation.Y;
+			float d = (A * x + B * y + C) / (A * A + B * B);
+			p->NewLocation.X = x - A * d;
+			p->NewLocation.Y = y - B * d;
+		}
+		else if ((p->NewLocation.X- p->NewLocation.Y) > diag) {
+			//top right
+			float A = 1, B = -1, C = -diag;
+			float x = p->NewLocation.X;
+			float y = p->NewLocation.Y;
+			float d = (A * x + B * y + C) / (A * A + B * B);
+			p->NewLocation.X = x - A * d;
+			p->NewLocation.Y = y - B * d;
+		}
+		else if ((p->NewLocation.Y - p->NewLocation.X ) > diag) {
+			//bottom left
+			float A = 1, B = -1, C = diag;
+			float x = p->NewLocation.X;
+			float y = p->NewLocation.Y;
+			float d = (A * x + B * y + C) / (A * A + B * B);
+			p->NewLocation.X = x - A * d;
+			p->NewLocation.Y = y - B * d;
 		}
 		
+
+		if (p->NewLocation.Y > ybuff) {
+			p->NewLocation.Y = ybuff;
+
+		}
+		else if (p->NewLocation.Y < -ybuff) {
+			p->NewLocation.Y = -ybuff;
+		}
+		if (p->NewLocation.X > xbuff) {
+			p->NewLocation.X = xbuff;
+		}
+		else if (p->NewLocation.X < -xbuff) {
+			p->NewLocation.X = -xbuff;
+		}
+
 		//LOG("Original move to: X {}, Y {}, Z= {}", p->NewLocation.X, p->NewLocation.Y, p->NewLocation.Z);
 		/*p->NewLocation.X = 4200.f;
 		p->NewLocation.Y = 0.f;
 		p->NewLocation.Z = 420.f;
 		p->ReturnValue = 0;*/
+
+		//vertical corners
+		if (p->NewLocation.Z < 150) {
+			float rampXLimit = xbuff - (150 - p->NewLocation.Z); 
+			if (p->NewLocation.X > rampXLimit) {
+				p->NewLocation.X = rampXLimit;
+			}
+			float rightRampLimitX = -xbuff + (150 - p->NewLocation.Z);
+			if (p->NewLocation.X < rightRampLimitX) {
+				p->NewLocation.X = rightRampLimitX;
+			}
+			float rampYLimit = ybuff - (150 - p->NewLocation.Z); 
+			if (p->NewLocation.Y > rampYLimit) {
+				p->NewLocation.Y = rampYLimit;
+			}
+			float rightRampLimitY = -ybuff + (150 - p->NewLocation.Z);
+			if (p->NewLocation.Y < rightRampLimitY) {
+				p->NewLocation.Y = rightRampLimitY;
+			}
+
+		}
+		else  if (p->NewLocation.Z > 2015 - 300) {
+
+		}
 		});
 	
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorSetRotation", [this](ActorWrapper cw, void* params, std::string eventName) {
-		if (editingVariances && !lockRotation) {
+		if (editingVariances) {
 			if (!cw || cw.IsNull()) {
 				LOG("Server not found");
 				return;
 			}
 
-			Rotator rot = cw.GetRotation();
-			//LOG("Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
-			rot.Yaw += rotationToApply.Yaw;
-			if (rotationToApply.Pitch == 0) {
-				rot.Pitch = currentRotation.Pitch;
-			}
-			else {
-				rot.Pitch = rotationToApply.Pitch;
-			}
-			rot.Roll += rotationToApply.Roll;
-
-			//rot += rotationToApply;
-			rotationToApply = { 0,0,0};
-			cw.SetRotation(rot);
-			currentRotation = rot;	
 			Vector loc = cw.GetLocation();
-			//|| (currentRotation.Yaw % 65536 >= 31000 && currentRotation.Yaw % 65536 <= 33768)
-			//|| (currentRotation.Roll % 65536 >= 15000 && currentRotation.Roll % 65536 <= 17000)
-
-			//LOG("yaw : {}, roll: {}", abs( currentRotation.Yaw % 65536), abs (currentRotation.Roll % 65536));
-
 			Rotator rot1 = checkForClamping(loc, currentRotation);
-			if (rot1.Yaw != 0 && rot1.Roll != 0) {
-				//Pitch, Yaw, Roll;
-				cw.SetRotation({currentRotation.Pitch,rot1.Yaw,rot1.Roll});
-			}
-			
+			if (!lockRotation) {
+				
 
+				Rotator rot = cw.GetRotation();
+				//LOG("Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+				rot.Yaw += rotationToApply.Yaw;
+				if (rotationToApply.Pitch == 0) {
+					rot.Pitch = currentRotation.Pitch;
+				}
+				else {
+					rot.Pitch = rotationToApply.Pitch;
+				}
+				rot.Roll += rotationToApply.Roll;
+
+				//rot += rotationToApply;
+				rotationToApply = { 0,0,0 };
+				cw.SetRotation(rot);
+				currentRotation = rot;
+				
+
+				
+				if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
+					//Pitch, Yaw, Roll;
+					cw.SetRotation({ currentRotation.Pitch,rot1.Yaw,rot1.Roll });
+				}
+
+
+			}
 		}
 		});
 
@@ -371,11 +454,11 @@ void VersatileTraining::loadHooks() {
 			}
 			
 
-			
-			Rotator rot = gameWrapper->GetCamera().GetRotation();
-			
-			rotationToApply.Pitch = rot.Pitch;
+			if (clampVal != 5) {
+				Rotator rot = gameWrapper->GetCamera().GetRotation();
 
+				rotationToApply.Pitch = rot.Pitch;
+			}
 
 		}
 	});

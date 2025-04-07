@@ -10,57 +10,77 @@ int VersatileTraining::getRandomNumber(int min, int max) {
 
 
 Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
-	/*int yaw = abs(currentRotation.Yaw % 65536);*/
+
+	
+	auto inThreshold = [](int value, int center, int threshold) {
+		return value >= (center - threshold) && value <= (center + threshold);
+		};
+	//8170
+	auto cornerLine = [](int x, int y) {
+		return 7950 + x + y;
+		};
+	auto cornerLine2 = [](int x, int y) {
+		return 7950 + x - y;
+		};
 	int yaw = currentRotation.Yaw % 65536;
-	/*int roll = abs(rot.Roll % 65536);*/
-	int roll = (rot.Roll % 65536);
+
+	int roll = rot.Roll % 65536;
+	int pitch = rot.Pitch % 65536;
 	//int roll = abs(currentRotation.Roll % 65536);
 
-	bool yaw1 = ((yaw >= 0 && yaw <= 4000) || yaw >= 63000) || ((yaw <= 0 && yaw >= -4000) || yaw <= -63000);
-	bool yaw2 = (yaw >= 30000 && yaw <= 35000)  || (yaw <= -30000 && yaw >= -35000);
-	bool yaw3 = (yaw >= 40000 && yaw <= 50000) || ((yaw <= -15000 && yaw >= -18000));
-	bool yaw4 = ((yaw >= 15000 && yaw <= 18000)) || (yaw <= -40000 && yaw >= -50000);
-	/*bool nYaw1 = ((yaw <= 0 && yaw >= -4000) || yaw <= -63000);
-	bool nYaw2 = (yaw <= -30000 && yaw >= -35000);
-	bool nYaw3 = ((yaw <= -15000 && yaw >= -18000));
-	bool nYaw4 = (yaw <= -40000 && yaw >= -50000);*/
+	int north = 16384;
+	int south = 49152;
+	int east = 32768;
+	int west = 1;
+	int tolerance = 5000;
+	bool yaw1 = inThreshold(yaw, 0, tolerance) || inThreshold(yaw, 65536, tolerance);
+	bool yaw2 = inThreshold(yaw, east, tolerance) || inThreshold(yaw, -east, tolerance);
+	bool yaw3 = inThreshold(yaw, south, tolerance) || inThreshold(yaw, -north, tolerance);
+	bool yaw4 = inThreshold(yaw, north, tolerance) || inThreshold(yaw, -south, tolerance);
 
-	bool roll1 = (roll >= 40000 && roll <= 50000) || (roll <= -15000 && roll >= -17000);
-	bool roll2 = (roll >= 15000 && roll <= 17000) || (roll >= -50000 && roll <= -40000);
+	// Roll conditions
+	bool roll1 = inThreshold(roll, south, tolerance) || inThreshold(roll, -north, tolerance);
+	bool roll2 = inThreshold(roll, north, tolerance) || inThreshold(roll, -south, tolerance);
+	bool roll3 = inThreshold(roll, east, tolerance) || inThreshold(roll, -east, tolerance);
+	bool pitch1 = inThreshold(pitch, 0, 2500);
 
-	bool pRoll1 = (roll >= 40000 && roll <= 50000);
-	bool pRoll2 = (roll >= 15000 && roll <= 17000);
-	bool nRoll1 = (roll >= -50000 && roll <= -40000);
-	bool nRoll2 = (roll <= -15000 && roll >= -17000);
-	
-	if (loc.Y > 5050) {
+
+	//diagonal values
+
+	bool yaw5 = inThreshold(yaw, 8192, tolerance) || inThreshold(yaw, -57344, tolerance);
+	bool yaw6 = inThreshold(yaw, 40960, tolerance) || inThreshold(yaw, -24576, tolerance);
+	bool yaw7 = inThreshold(yaw, 24576, tolerance) || inThreshold(yaw, -40960, tolerance);
+	bool yaw8 = inThreshold(yaw, 57344, tolerance) || inThreshold(yaw, -8192, tolerance);
+
+	//summarize maybe into an easy to see loop later
+	if (loc.Y > 5040) {
 
 		if (yaw1  && (roll1))
 		{
 
 			LOG("clamped to orange back wall1");
 			clampVal = 1;
-			return Rotator{ 0,1, 49152 };
+			return Rotator{ pitch,1, south };
 		}
 		else if ( yaw2  && (roll2) )
 		{
 			LOG("clamped to orange back wall2");
 			clampVal = 1;
-			return Rotator{ 0,32768 ,16384 };
+			return Rotator{ pitch,32768 ,16384 };
 		}
 		else {
 			LOG("passed 5050 buyt one of these dont work");
 		}
 	}
-	else if (loc.Y < -5050) {
+	else if (loc.Y < -5040) {
 		if ( yaw1 && (roll2) ) {
 			clampVal = 2;
-			return Rotator{ 0,1 ,16384 };
+			return Rotator{ pitch,1 ,16384 };
 		}
 		if ( yaw2 && (roll1) ) {
 			LOG("clamped to blue back wall");
 			clampVal = 2;
-			return Rotator{ 0,32768 ,49152 };
+			return Rotator{ pitch,32768 ,south };
 
 		}
 
@@ -71,14 +91,14 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			LOG("clamped on the left wall");
 			clampVal = 3;
 			//(pRoll1 || nRoll2)
-			return Rotator{ 0,49152 ,49152 };
+			return Rotator{ pitch,south ,south };
 		}
 		else if (yaw4 && (roll2))
 		{
 			LOG("clamped on the left wall");
 			clampVal = 3;
 
-			return Rotator{ 0,16384 ,16384 };
+			return Rotator{ pitch,16384 ,16384 };
 		}
 	}
 	else if (loc.X < -4020)
@@ -87,20 +107,78 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		{
 			LOG("clamped on the right wall");
 			clampVal = 4;
-			return Rotator{ 0,49152 ,16384 };
+			return Rotator{ pitch,south ,16384 };
 		}
 		else if (yaw4 &&(roll1)) {
 			LOG("clamped on the right wall1");
 			clampVal = 4;
-			return Rotator{ 0,16384 ,49152 };
+			return Rotator{ pitch,16384 ,south };
 		}
 	}
-	
-	else {
-		clampVal = 0;
-		LOG("yaw : {}, roll: {}", yaw, roll);
-		LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+	else if (loc.Z > 2000 && pitch1 && roll3) {
+		LOG("clamped on the ceiling");
+		clampVal = 5;
+		return Rotator{ 1,yaw,32768 };
 	}
+
+	//diagonal values?
+	else if (cornerLine(loc.X, loc.Y) <= 0) {
+		
+		if (yaw7 && roll1) {
+			LOG("clamped on the back right corner");
+			clampVal = 6;
+			return Rotator{ pitch,24576,south };
+			
+		}
+		else if (yaw8 && roll2) {
+			LOG("clamped on the back right corner");
+			clampVal = 6;
+			return Rotator{ pitch,57344,north };
+		}
+		
+	}
+	else if (cornerLine(loc.X, loc.Y) >= 7950 * 2) {
+		if (yaw7 && roll2) {
+			LOG("clamped on the top left corner");
+			clampVal = 7;
+			return Rotator{ pitch,24576,north };
+		}
+		else if (yaw8 && roll1) {
+			LOG("clamped on the top left corner");
+			clampVal = 7;
+			return Rotator{ pitch,57344,south };
+		}
+		
+	}
+	else if (cornerLine2(loc.X, loc.Y) <= 0) {
+		
+		if (yaw5 && roll1) {
+			LOG("clamped on the top right corner");
+			clampVal = 8;
+			return Rotator{ pitch,8192,south };
+		}else if (yaw6 && roll2) {
+			LOG("clamped on the top right corner");
+			clampVal = 8;
+			return Rotator{ pitch,40960,north };
+		}
+	}
+	else if (cornerLine2(loc.X, loc.Y) >= 7950 * 2) {
+		
+		if (yaw5 && roll2) {
+			LOG("clamped on the back left corner");
+			clampVal = 9;
+			return Rotator{ pitch,8192,north };
+		}
+		else if (yaw6 && roll1) {
+			LOG("clamped on the back left corner");
+			clampVal = 9;
+			return Rotator{ pitch,40960,south };
+		}
+	}
+
+		clampVal = 0;
+		LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll,rot.Pitch);
+		LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
 	return Rotator{ 0,0,0};
 
 }
@@ -127,9 +205,45 @@ Vector VersatileTraining::getClampChange(Vector loc) {
 		return Vector{ -4066,loc.Y,loc.Z };
 		break;
 	}
+	case 5: {
+		return Vector{ loc.X,loc.Y,2050 };
+		break;
+	}
 	default: {
 		break;
 	}
 	}
+	return Vector{ 0,0,0 };
+}
+
+Vector VersatileTraining::getStickingVelocity() {
+	float stickingAmount = 100;
+	switch (clampVal) {//5090
+	case 1: {
+		return Vector{ 0,stickingAmount,0};
+		break;
+	}
+	case 2: {
+		return Vector{0,-stickingAmount,0};
+
+		break;
+	}
+	case 3: {
+		return Vector{ stickingAmount,0,0};
+
+		break;
+	}
+	case 4: {
+		return Vector{ -stickingAmount,0,0 };
+		break;
+	}
+	case 5: {
+		return Vector{ 0,0,stickingAmount };
+		break;
+	}
+	default: {
+		break;
+	}
+		}
 	return Vector{ 0,0,0 };
 }

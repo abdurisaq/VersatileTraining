@@ -134,7 +134,7 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	int clampVal = 0;
 	Rotator checkForClamping(Vector loc, Rotator rot);
 	Vector getClampChange(Vector loc);
-
+	Vector getStickingVelocity();
 
 	bool changeCarSpawnRotation();
 	bool isCarRotatable = false;
