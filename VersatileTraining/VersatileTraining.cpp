@@ -382,28 +382,43 @@ void VersatileTraining::loadHooks() {
 		p->ReturnValue = 0;*/
 
 		//vertical corners
-		if (p->NewLocation.Z < 150) {
-			float rampXLimit = xbuff - (150 - p->NewLocation.Z); 
-			if (p->NewLocation.X > rampXLimit) {
-				p->NewLocation.X = rampXLimit;
-			}
-			float rightRampLimitX = -xbuff + (150 - p->NewLocation.Z);
-			if (p->NewLocation.X < rightRampLimitX) {
-				p->NewLocation.X = rightRampLimitX;
-			}
-			float rampYLimit = ybuff - (150 - p->NewLocation.Z); 
-			if (p->NewLocation.Y > rampYLimit) {
-				p->NewLocation.Y = rampYLimit;
-			}
-			float rightRampLimitY = -ybuff + (150 - p->NewLocation.Z);
-			if (p->NewLocation.Y < rightRampLimitY) {
-				p->NewLocation.Y = rightRampLimitY;
-			}
+		const float zMin = 150;
+		const float zMax = 2000 - 300;
+		const float baseRampDepth = 150;
+		const float baseBoundaryShrink = 150;
+		const float ceilingScale = 2.5f; 
 
-		}
-		else  if (p->NewLocation.Z > 2015 - 300) {
+		if (p->NewLocation.Z < zMin || p->NewLocation.Z > zMax) {
+			bool isCeiling = (p->NewLocation.Z > zMax);
 
-		}
+	
+			float rampDepth = isCeiling ? baseRampDepth * ceilingScale : baseRampDepth;
+			float boundaryShrink = isCeiling ? baseBoundaryShrink * ceilingScale : baseBoundaryShrink;
+
+			float rampStart = isCeiling ? zMax : zMin;
+			float rampEnd = isCeiling ? zMax + rampDepth : zMin - rampDepth;
+
+			
+			float t = isCeiling
+				? (p->NewLocation.Z - rampStart) / rampDepth
+				: (rampStart - p->NewLocation.Z) / rampDepth;
+			t = std::clamp(t, 0.0f, 1.0f);
+
+			
+			float maxShrinkRatio = (xbuff - boundaryShrink) / xbuff;
+			float circleFactor = sqrt(1.0f - t * t * (1 - maxShrinkRatio * maxShrinkRatio));
+
+			float currentXBound = xbuff * circleFactor;
+			float currentYBound = ybuff * circleFactor;
+
+			p->NewLocation.X = std::clamp(p->NewLocation.X, -currentXBound, currentXBound);
+			p->NewLocation.Y = std::clamp(p->NewLocation.Y, -currentYBound, currentYBound);
+			LOG("{} Ramp: Z={} ({} to {}), t={}, XBound={} ({} to {})",
+				isCeiling ? "CEILING" : "FLOOR",
+				p->NewLocation.Z, rampStart, rampEnd, t,
+				currentXBound, xbuff, xbuff - boundaryShrink);
+		}//ai dont work, why did i even try 
+		
 		});
 	
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorSetRotation", [this](ActorWrapper cw, void* params, std::string eventName) {
