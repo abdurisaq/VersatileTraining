@@ -177,8 +177,8 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	}
 
 		clampVal = 0;
-		LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll,rot.Pitch);
-		LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+		//LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll,rot.Pitch);
+		//LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
 	return Rotator{ 0,0,0};
 
 }

@@ -300,126 +300,77 @@ void VersatileTraining::loadHooks() {
 
 		});*/
 	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorMoveToLocation", [this](ActorWrapper cw, void* params, std::string eventName) {
-		auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
+    auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
 
-		// Log the original location
-		//cw.SetbCollideActors(false);
-		//cw.SetbBlockActors(false);
-		//float diag = 7965;
-		float diag = 7965;
-		float ybuff = 5050;
-		float xbuff = 4026;
+    const float diag = 7965;
+	float diagReduction = 0;
+	float diagBound = 7965;
+    const float ybuff = 5050;
+    const float xbuff = 4026;
+    const float zMin = 150;
+	const float upperRampSize = 450;
+	const float zMax = 2044 - upperRampSize;
+    const float baseRampDepth = 150;
+    const float baseBoundaryShrink = 150;
+    const float ceilingScale = upperRampSize / baseRampDepth;
 
-		float xToAdd = 0;
-		float yToAdd = 0;
+    cw.SetbCollideWorld(0);
 
-		cw.SetbCollideWorld(0);
-		if (p->NewLocation.Z > 2015) {
-			p->NewLocation.Z = 2015;
-		}
-		else if (p->NewLocation.Z < 0) {
-			p->NewLocation.Z = 0;
-		}
+    p->NewLocation.Z = std::clamp(p->NewLocation.Z, 0.0f, 2015.0f);
 
-		//diagonal stuff
-		
-		if (diag <p->NewLocation.X + p->NewLocation.Y ) {
-			//top left
-			float A = 1, B = 1, C = -diag;
-			float x = p->NewLocation.X;
-			float y = p->NewLocation.Y;
-			float d = (A * x + B * y + C) / (A * A + B * B);
-			p->NewLocation.X = x - A * d;
-			p->NewLocation.Y = y - B * d;
-		}
-		else if (p->NewLocation.X + p->NewLocation.Y < -diag) {
-			//bottom right
-			float A = 1, B = 1, C = diag;
-			float x = p->NewLocation.X;
-			float y = p->NewLocation.Y;
-			float d = (A * x + B * y + C) / (A * A + B * B);
-			p->NewLocation.X = x - A * d;
-			p->NewLocation.Y = y - B * d;
-		}
-		else if ((p->NewLocation.X- p->NewLocation.Y) > diag) {
-			//top right
-			float A = 1, B = -1, C = -diag;
-			float x = p->NewLocation.X;
-			float y = p->NewLocation.Y;
-			float d = (A * x + B * y + C) / (A * A + B * B);
-			p->NewLocation.X = x - A * d;
-			p->NewLocation.Y = y - B * d;
-		}
-		else if ((p->NewLocation.Y - p->NewLocation.X ) > diag) {
-			//bottom left
-			float A = 1, B = -1, C = diag;
-			float x = p->NewLocation.X;
-			float y = p->NewLocation.Y;
-			float d = (A * x + B * y + C) / (A * A + B * B);
-			p->NewLocation.X = x - A * d;
-			p->NewLocation.Y = y - B * d;
-		}
-		
+    float currentXBound = xbuff;
+    float currentYBound = ybuff;
+    
+    if (p->NewLocation.Z < zMin || p->NewLocation.Z > zMax) {
+        bool isCeiling = (p->NewLocation.Z > zMax);
+        float rampDepth = isCeiling ? baseRampDepth * ceilingScale : baseRampDepth;
+        float boundaryShrink = isCeiling ? baseBoundaryShrink * ceilingScale : baseBoundaryShrink;
 
-		if (p->NewLocation.Y > ybuff) {
-			p->NewLocation.Y = ybuff;
+        float t = isCeiling
+            ? (p->NewLocation.Z - zMax) / rampDepth
+            : (zMin - p->NewLocation.Z) / rampDepth;
+        t = std::clamp(t, 0.0f, 1.0f);
 
-		}
-		else if (p->NewLocation.Y < -ybuff) {
-			p->NewLocation.Y = -ybuff;
-		}
-		if (p->NewLocation.X > xbuff) {
-			p->NewLocation.X = xbuff;
-		}
-		else if (p->NewLocation.X < -xbuff) {
-			p->NewLocation.X = -xbuff;
-		}
+        float maxShrinkRatio = (xbuff - boundaryShrink) / xbuff;
+        float circleFactor = sqrt(1.0f - t * t * (1 - maxShrinkRatio * maxShrinkRatio));
+		//LOG("t: {}, maxShrinkRatio: {}, circleFactor: {}", t, maxShrinkRatio, circleFactor);
+        currentXBound = xbuff * circleFactor;
+        currentYBound = ybuff * circleFactor;
+		diagBound = diag * circleFactor;
+		LOG("currentXBound: {}, currentYBound: {}", currentXBound, currentYBound);
+    }
 
-		//LOG("Original move to: X {}, Y {}, Z= {}", p->NewLocation.X, p->NewLocation.Y, p->NewLocation.Z);
-		/*p->NewLocation.X = 4200.f;
-		p->NewLocation.Y = 0.f;
-		p->NewLocation.Z = 420.f;
-		p->ReturnValue = 0;*/
+    
+    auto clampToDiagonal = [](float& x, float& y, float A, float B, float C) {
+        float d = (A * x + B * y + C) / (A * A + B * B);
+        x = x - A * d;
+        y = y - B * d;
+    };
 
-		//vertical corners
-		const float zMin = 150;
-		const float zMax = 2000 - 300;
-		const float baseRampDepth = 150;
-		const float baseBoundaryShrink = 150;
-		const float ceilingScale = 2.5f; 
+    // Topleft
+    if (diagBound < p->NewLocation.X + p->NewLocation.Y) {
+        clampToDiagonal(p->NewLocation.X, p->NewLocation.Y, 1, 1, -diagBound);
+    }
+    // downright
+    else if (p->NewLocation.X + p->NewLocation.Y < -diagBound) {
+        clampToDiagonal(p->NewLocation.X, p->NewLocation.Y, 1, 1, diagBound);
+    }
+    // Topright
+    else if ((p->NewLocation.X - p->NewLocation.Y) > diagBound) {
+        clampToDiagonal(p->NewLocation.X, p->NewLocation.Y, 1, -1, -diagBound);
+    }
+    // downleft
+    else if ((p->NewLocation.Y - p->NewLocation.X) > diagBound) {
+        clampToDiagonal(p->NewLocation.X, p->NewLocation.Y, 1, -1, diagBound);
+    }
 
-		if (p->NewLocation.Z < zMin || p->NewLocation.Z > zMax) {
-			bool isCeiling = (p->NewLocation.Z > zMax);
+    // apply bounding
+    p->NewLocation.X = std::clamp(p->NewLocation.X, -currentXBound, currentXBound);
+    p->NewLocation.Y = std::clamp(p->NewLocation.Y, -currentYBound, currentYBound);
 
-	
-			float rampDepth = isCeiling ? baseRampDepth * ceilingScale : baseRampDepth;
-			float boundaryShrink = isCeiling ? baseBoundaryShrink * ceilingScale : baseBoundaryShrink;
-
-			float rampStart = isCeiling ? zMax : zMin;
-			float rampEnd = isCeiling ? zMax + rampDepth : zMin - rampDepth;
-
-			
-			float t = isCeiling
-				? (p->NewLocation.Z - rampStart) / rampDepth
-				: (rampStart - p->NewLocation.Z) / rampDepth;
-			t = std::clamp(t, 0.0f, 1.0f);
-
-			
-			float maxShrinkRatio = (xbuff - boundaryShrink) / xbuff;
-			float circleFactor = sqrt(1.0f - t * t * (1 - maxShrinkRatio * maxShrinkRatio));
-
-			float currentXBound = xbuff * circleFactor;
-			float currentYBound = ybuff * circleFactor;
-
-			p->NewLocation.X = std::clamp(p->NewLocation.X, -currentXBound, currentXBound);
-			p->NewLocation.Y = std::clamp(p->NewLocation.Y, -currentYBound, currentYBound);
-			LOG("{} Ramp: Z={} ({} to {}), t={}, XBound={} ({} to {})",
-				isCeiling ? "CEILING" : "FLOOR",
-				p->NewLocation.Z, rampStart, rampEnd, t,
-				currentXBound, xbuff, xbuff - boundaryShrink);
-		}//ai dont work, why did i even try 
-		
-		});
+    // Debug 
+    //LOG("Final Position: X={}, Y={}, Z={}", p->NewLocation.X, p->NewLocation.Y, p->NewLocation.Z);
+});
 	
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorSetRotation", [this](ActorWrapper cw, void* params, std::string eventName) {
 		if (editingVariances) {
