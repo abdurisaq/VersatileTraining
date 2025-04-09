@@ -291,20 +291,13 @@ void VersatileTraining::loadHooks() {
 		uint32_t ReturnValue : 1;
 	};
 
-	/*gameWrapper->HookEventWithCaller<ActorWrapper>("Function Engine.Actor.HitWall", [this](ActorWrapper cw, void* params, std::string eventName) {
-		gameWrapper->SetTimeout([cw](ActorWrapper cw) {
-			cw.SetLocation(Vector(5000.f, 0.f, 420.f));
-			LOG("Forcefully reset location after HitWall.");
-			}, 0.05f);
 
-
-		});*/
 	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEditor_Actor_TA.EditorMoveToLocation", [this](ActorWrapper cw, void* params, std::string eventName) {
     auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
 
-    const float diag = 7965;
+    const float diag = 7950;
 	float diagReduction = 0;
-	float diagBound = 7965;
+	diagBound = 7950;
     const float ybuff = 5050;
     const float xbuff = 4026;
     const float zMin = 150;
@@ -316,7 +309,7 @@ void VersatileTraining::loadHooks() {
 
     cw.SetbCollideWorld(0);
 
-    p->NewLocation.Z = std::clamp(p->NewLocation.Z, 0.0f, 2015.0f);
+    p->NewLocation.Z = std::clamp(p->NewLocation.Z, 0.0f, 2005.0f);
 
     float currentXBound = xbuff;
     float currentYBound = ybuff;

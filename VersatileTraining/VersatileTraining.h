@@ -153,7 +153,12 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	bool freezeForShot = false;
 	void CleanUp();
 	int getRandomNumber(int min, int max);
+	//diagBound
+	float diagBound = 7965;
+	
+	
 public:
+	
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
 	void Render(CanvasWrapper canvas);
 	//void RenderWindow() override; // Uncomment if you want to render your own plugin window
