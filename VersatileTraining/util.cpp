@@ -15,6 +15,25 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	auto inThreshold = [](int value, int center, int threshold) {
 		return value >= (center - threshold) && value <= (center + threshold);
 		};
+
+	auto mapToRoll = [this,loc,rot](float value, float a, float b) {
+		//float end = 0;
+		if (isCeiling ) {
+			if (b > 0) {
+				b = 32768;//for some reason using % didn't work
+			}
+			else if (b < 0) {
+				b = -32768;
+			}
+		}
+		//if (loc.X < 0 && rot.Roll > 0) {
+		//	end = 65535;
+		//}
+		//else if (loc.X > 0 && rot.Roll < 0) {
+		//	end = -65535;
+		//}
+		return a + (b - a) * value;//finish this, if x is positive, then starting point is 16384, if negative its 49152, if isCeiling, end is 32768, else end is 0, if negative x, end might need to be 65535 so there is a positive range
+		};
 	//8170
 	auto cornerLine = [this](int x, int y) {
 		return (diagBound -25) + x + y;
@@ -32,15 +51,20 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	int south = 49152;
 	int east = 32768;
 	int west = 1;
+	int end = 65535;
+	int expectedRoll1 = mapToRoll(t, south, 65535);
+	int expectedRoll2 = mapToRoll(t, north, west);
+	LOG("expectedRoll: {}", expectedRoll1);
+	LOG("actual roll: {}", roll);
 	int tolerance = 5000;
 	bool yaw1 = inThreshold(yaw, 0, tolerance) || inThreshold(yaw, 65536, tolerance);
 	bool yaw2 = inThreshold(yaw, east, tolerance) || inThreshold(yaw, -east, tolerance);
 	bool yaw3 = inThreshold(yaw, south, tolerance) || inThreshold(yaw, -north, tolerance);
 	bool yaw4 = inThreshold(yaw, north, tolerance) || inThreshold(yaw, -south, tolerance);
 
-	// Roll conditions
-	bool roll1 = inThreshold(roll, south, tolerance) || inThreshold(roll, -north, tolerance);
-	bool roll2 = inThreshold(roll, north, tolerance) || inThreshold(roll, -south, tolerance);
+	// Roll conditions, should be mapped based on t value for the ramps.
+	bool roll1 = inThreshold(roll, expectedRoll1, tolerance) || inThreshold(roll, -expectedRoll2, tolerance);//south
+	bool roll2 = inThreshold(roll, expectedRoll2, tolerance) || inThreshold(roll, -expectedRoll1, tolerance);
 	bool roll3 = inThreshold(roll, east, tolerance) || inThreshold(roll, -east, tolerance);
 	bool pitch1 = inThreshold(pitch, 0, 2500);
 
@@ -53,66 +77,66 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	bool yaw8 = inThreshold(yaw, 57344, tolerance) || inThreshold(yaw, -8192, tolerance);
 
 	//summarize maybe into an easy to see loop later
-	if (loc.Y > 5040) {
+	if (loc.Y > (currentYBound - 10)) {
 
 		if (yaw1  && (roll1))
 		{
 
 			LOG("clamped to orange back wall1");
 			clampVal = 1;
-			return Rotator{ pitch,1, south };
+			return Rotator{ pitch,1, expectedRoll1 };
 		}
 		else if ( yaw2  && (roll2) )
 		{
 			LOG("clamped to orange back wall2");
 			clampVal = 1;
-			return Rotator{ pitch,32768 ,16384 };
+			return Rotator{ pitch,32768 ,expectedRoll2 };
 		}
 		else {
 			LOG("passed 5050 buyt one of these dont work");
 		}
 	}
-	else if (loc.Y < -5040) {
+	else if (loc.Y < -(currentYBound-10)) {
 		if ( yaw1 && (roll2) ) {
 			clampVal = 2;
-			return Rotator{ pitch,1 ,16384 };
+			return Rotator{ pitch,1 ,expectedRoll2 };//16384
 		}
 		if ( yaw2 && (roll1) ) {
 			LOG("clamped to blue back wall");
 			clampVal = 2;
-			return Rotator{ pitch,32768 ,south };
+			return Rotator{ pitch,32768 ,expectedRoll1 };//south
 
 		}
 
 	}
-	else if (loc.X > 4020) {
+	else if (loc.X > currentXBound-10) {
 		if (yaw3 && (roll1))
 		{
 			LOG("clamped on the left wall");
 			clampVal = 3;
 			//(pRoll1 || nRoll2)
-			return Rotator{ pitch,south ,south };
+			return Rotator{ pitch,south ,expectedRoll1 };
 		}
 		else if (yaw4 && (roll2))
 		{
 			LOG("clamped on the left wall");
 			clampVal = 3;
 
-			return Rotator{ pitch,16384 ,16384 };
+			return Rotator{ pitch,16384 ,expectedRoll2 };
 		}
 	}
-	else if (loc.X < -4020)
+	else if (loc.X < -(currentXBound-10))
 	{
 		if (yaw3 && (roll2))
 		{
 			LOG("clamped on the right wall");
 			clampVal = 4;
-			return Rotator{ pitch,south ,16384 };
+			return Rotator{ pitch,south ,expectedRoll2 };
 		}
 		else if (yaw4 &&(roll1)) {
 			LOG("clamped on the right wall1");
 			clampVal = 4;
-			return Rotator{ pitch,16384 ,south };
+			return Rotator{ pitch,16384 ,expectedRoll1 };
 		}
 	}
 	else if (loc.Z > 2000 && pitch1 && roll3) {
@@ -191,7 +215,37 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 }
 
 
-Vector VersatileTraining::getClampChange(Vector loc) {
+std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int extra) {
+	if (isCeiling) {
+		extra += 20;
+	}
+
+	LOG("roll from getAxisBreakDown: {}", rot.Roll);
+	// Determine how much of the extra should go to Z vs the axis
+	auto getZWeight = [this](int roll) -> float {
+		int center = 0;
+		if (isCeiling) {
+			center = (roll >= 0) ? 32768 : -32768;
+		}
+		float diff = std::abs(roll - center);
+		float clamped = std::clamp(diff / 16384.0f, 0.0f, 1.0f);
+		return 1.0f - clamped; // 1.0 to Z, 0.0 to other axis
+		};
+
+	float zWeight = getZWeight(rot.Roll);
+	float zExtra = extra * zWeight;
+	float axisExtra = extra * (1.0f - zWeight);
+
+	LOG("clampVal: {}", clampVal);
+	LOG("axisExtra: {}, zExtra: {}", axisExtra, zExtra);
+	if (!isCeiling) {
+		zExtra *= -1;
+	}
+	return std::make_pair(axisExtra, zExtra);
+
+};
+
+Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 
 	auto perpendicularProjection = [](float m, float b, float a, float b0) -> std::pair<float, float> {
 		float c = (a + m * (b0 - b)) / (m * m + 1);
@@ -199,6 +253,10 @@ Vector VersatileTraining::getClampChange(Vector loc) {
 		return { c, d };
 		};
 	float cornerVal = diagBound + 80;
+
+	std::pair <float,float> axisBreakDown = getAxisBreakDown(rot,20);
+	LOG("axisBreakDown.first: {}, axisBreakDown.second: {}", axisBreakDown.first, axisBreakDown.second);
+	
 	LOG("clampVal: {}", clampVal);
 	//6 p->NewLocation.X + p->NewLocation.Y < -diagBound bottom right
 	//7 diagBound < p->NewLocation.X + p->NewLocation.Y top left
@@ -207,21 +265,23 @@ Vector VersatileTraining::getClampChange(Vector loc) {
 
 	switch (clampVal) {//5090
 	case 1: {
-		return Vector{ loc.X,5090,loc.Z };
+		return Vector{ loc.X,currentYBound + axisBreakDown.first,frozenZVal + axisBreakDown.second };
 		break;
 	}
 	case 2: {
-		return Vector{ loc.X,-5090,loc.Z };
+		return Vector{ loc.X,-(currentYBound + axisBreakDown.first),frozenZVal + axisBreakDown.second };
 
 		break;
 	}
 	case 3: {
-		return Vector{ 4066,loc.Y,loc.Z };
+		
+		return Vector{ (currentXBound+ axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
 
 		break;
 	}
 	case 4: {
-		return Vector{ -4066,loc.Y,loc.Z };
+		
+		return Vector{ -(currentXBound+ axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
 		break;
 	}
 	case 5: {
@@ -270,29 +330,46 @@ Vector VersatileTraining::getClampChange(Vector loc) {
 	return Vector{ 0,0,0 };
 }
 
-Vector VersatileTraining::getStickingVelocity() {
-	float stickingAmount = 100;
+Vector VersatileTraining::getStickingVelocity(Rotator rot) {
+	float stickingAmount = 20;
+	std::pair <float, float> axisBreakDown = getAxisBreakDown(rot, stickingAmount);
 	switch (clampVal) {//5090
 	case 1: {
-		return Vector{ 0,stickingAmount,0};
+		return Vector{ 0,axisBreakDown.first,axisBreakDown.second};
 		break;
 	}
 	case 2: {
-		return Vector{0,-stickingAmount,0};
+		return Vector{0,-axisBreakDown.first,axisBreakDown.second };
 
 		break;
 	}
 	case 3: {
-		return Vector{ stickingAmount,0,0};
+		return Vector{ axisBreakDown.first,0,axisBreakDown.second };
 
 		break;
 	}
 	case 4: {
-		return Vector{ -stickingAmount,0,0 };
+		return Vector{ -axisBreakDown.first,0,axisBreakDown.second };
 		break;
 	}
 	case 5: {
 		return Vector{ 0,0,stickingAmount };
+		break;
+	}
+	case 6: {
+		return  Vector{ -stickingAmount,-stickingAmount,0 };
+		break;
+	}
+	case 7: {
+		return Vector{ stickingAmount,stickingAmount,0 };
+		break;
+	}
+	case 8: {
+		return  Vector{ -stickingAmount,stickingAmount,0 };
+		break;
+	}
+	case 9: {
+		return Vector{ stickingAmount,-stickingAmount,0 };
 		break;
 	}
 	default: {

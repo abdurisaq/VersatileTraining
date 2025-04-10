@@ -133,8 +133,9 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 
 	int clampVal = 0;
 	Rotator checkForClamping(Vector loc, Rotator rot);
-	Vector getClampChange(Vector loc);
-	Vector getStickingVelocity();
+	Vector getClampChange(Vector loc, Rotator rot);
+	std::pair <float, float> getAxisBreakDown(Rotator rot,int extra);
+	Vector getStickingVelocity(Rotator rot);
 
 	bool changeCarSpawnRotation();
 	bool isCarRotatable = false;
@@ -155,8 +156,14 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	int getRandomNumber(int min, int max);
 	//diagBound
 	float diagBound = 7965;
-	
-	
+
+	//for changing roll for clamping based on ramps
+	bool isCeiling = false;
+	float t = 0.0f;
+	float currentXBound = 4026.0f;
+	float currentYBound = 5050.0f;
+	float frozenZVal = 0.0f;
+	bool frozeZVal = false;
 public:
 	
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu

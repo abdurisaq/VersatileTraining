@@ -140,7 +140,7 @@ void VersatileTraining::loadHooks() {
 	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
 		VersatileTraining::getTrainingData(cw, params, eventName);
 		freezeForShot = freezeCar;
-
+		frozeZVal = !freezeCar;
 		lockRotation = true;
 		appliedStartingVelocity = false;
 		editingVariances = false;
@@ -232,7 +232,11 @@ void VersatileTraining::loadHooks() {
 					LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
 					LOG("Current location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
 					//car.SetLocation({ loc.X,5090,loc.Z });
-					Vector loc2 = getClampChange(loc);
+					if (!frozeZVal) {
+						frozenZVal = loc.Z;
+						frozeZVal = true;
+					}
+					Vector loc2 = getClampChange(loc,rot);
 					if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
 
 						car.SetLocation(loc2);
@@ -263,12 +267,18 @@ void VersatileTraining::loadHooks() {
 				//LOG("Car not found");
 				return;
 			}
-			Vector stickingVelocity = getStickingVelocity();
-			car.SetVelocity(startingVelocityTranslation+ stickingVelocity);
 			Vector loc = car.GetLocation();
+			Rotator rot = car.GetRotation();
 
+			Vector stickingVelocity = getStickingVelocity(rot);
+			car.SetVelocity(startingVelocityTranslation+ stickingVelocity);
+			
 			//car.SetLocation({ loc.X,5090,loc.Z }); // this was just for testing purposes, might need logic to clamp onto wall
-			Vector loc2 = getClampChange(loc);
+			if (!frozeZVal) {
+				frozenZVal = loc.Z;
+				frozeZVal = true;
+			}
+			Vector loc2 = getClampChange(loc,rot);
 			if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
 				car.SetLocation(loc2);
 			}
@@ -279,6 +289,7 @@ void VersatileTraining::loadHooks() {
 	gameWrapper->HookEvent("Function GameEvent_Soccar_TA.Active.StartRound", [this](std::string eventName) {
 		if (gameWrapper->IsInCustomTraining()) {
 			freezeForShot = false;
+			frozeZVal = false;
 			
 		}
 	});
@@ -311,15 +322,15 @@ void VersatileTraining::loadHooks() {
 
     p->NewLocation.Z = std::clamp(p->NewLocation.Z, 0.0f, 2005.0f);
 
-    float currentXBound = xbuff;
-    float currentYBound = ybuff;
+    currentXBound = xbuff;
+    currentYBound = ybuff;
     
     if (p->NewLocation.Z < zMin || p->NewLocation.Z > zMax) {
-        bool isCeiling = (p->NewLocation.Z > zMax);
+        isCeiling = (p->NewLocation.Z > zMax);
         float rampDepth = isCeiling ? baseRampDepth * ceilingScale : baseRampDepth;
         float boundaryShrink = isCeiling ? baseBoundaryShrink * ceilingScale : baseBoundaryShrink;
 
-        float t = isCeiling
+        t = isCeiling
             ? (p->NewLocation.Z - zMax) / rampDepth
             : (zMin - p->NewLocation.Z) / rampDepth;
         t = std::clamp(t, 0.0f, 1.0f);
@@ -327,6 +338,7 @@ void VersatileTraining::loadHooks() {
         float maxShrinkRatio = (xbuff - boundaryShrink) / xbuff;
         float circleFactor = sqrt(1.0f - t * t * (1 - maxShrinkRatio * maxShrinkRatio));
 		//LOG("t: {}, maxShrinkRatio: {}, circleFactor: {}", t, maxShrinkRatio, circleFactor);
+		LOG("t factor : {}", t);
         currentXBound = xbuff * circleFactor;
         currentYBound = ybuff * circleFactor;
 		diagBound = diag * circleFactor;
@@ -378,7 +390,7 @@ void VersatileTraining::loadHooks() {
 				
 
 				Rotator rot = cw.GetRotation();
-				//LOG("Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+				LOG("Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
 				rot.Yaw += rotationToApply.Yaw;
 				if (rotationToApply.Pitch == 0) {
 					rot.Pitch = currentRotation.Pitch;
