@@ -24,6 +24,9 @@
 
 #include <unordered_map>
 #include <vector>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include "version.h"
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
@@ -32,11 +35,21 @@ struct CustomTrainingData {
 	std::string code;
 	std::string name;
 	int numShots = 0;
-
+	int currentEditedShot = 0;
 	std::vector<int> boostAmounts;
-	std::vector<int> startingVelocityMin;
-	std::vector<int> startingVelocityMax;
+	std::vector<bool> freezeCar;
+	std::vector<int> startingVelocity;
+
 	
+	void initCustomTrainingData(int shotAmount, std::string packName) {
+		name = packName;
+		numShots = shotAmount;
+		currentEditedShot = 0;
+		boostAmounts = std::vector<int>(shotAmount, -1);
+		startingVelocity = std::vector<int>(shotAmount, 0);
+		freezeCar = std::vector<bool>(shotAmount, false);
+
+	}
 };
 struct ButtonState {
 	bool isPressed;
@@ -76,18 +89,20 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	std::string editingTrainingCode;
 	bool editMode = false;
 
+	CustomTrainingData currentTrainingData;
+	CustomTrainingData *currentTrainingDataUsed;
+	int currentShotIndex = 0;
+
 	int boostAmount = -1;
 	int boostMax = 100;
 	int boostMin = -1;
 	int maxVelocity = 2000;
 	int minVelocity = -2000;
-	int startingVelocityMin = 10;
-	int startingVelocityMax = 100;
+	int startingVelocity = 0;
 
 	bool editingVariances = false;
 	int tempBoostAmount = -1;
-	int tempStartingVelocityMin = 0;
-	int tempStartingVelocityMax = 0;
+	int tempStartingVelocity = 0;
 
 	Rotator carRotationUsed = { 0,0,0 };
 	Vector startingVelocityTranslation = { 0,0,0 };
@@ -164,6 +179,10 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	float currentYBound = 5050.0f;
 	float frozenZVal = 0.0f;
 	bool frozeZVal = false;
+
+	void SaveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
+	std::unordered_map<std::string, CustomTrainingData> LoadCompressedTrainingData(const std::filesystem::path& fileName);
+	std::filesystem::path saveFilePath;
 public:
 	
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu

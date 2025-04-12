@@ -21,15 +21,15 @@ void VersatileTraining::RenderSettings() {
 
 	
 	ImGui::SliderInt("Boost Amount", &boostAmount, boostMin, boostMax);
+	ImGui::SliderInt("Starting Velocity", &startingVelocity, minVelocity, maxVelocity);
 	//ImGui::DragIntRange2("Starting Velocity", &startingVelocityMin, &startingVelocityMax, 1, 0, 100, "%d", "%d");
-	ImGui::RangeSliderInt("Starting Velocity", &startingVelocityMin, &startingVelocityMax, minVelocity, maxVelocity, "(%d,%d)");
+	/*ImGui::RangeSliderInt("Starting Velocity", &startingVelocityMin, &startingVelocityMax, minVelocity, maxVelocity, "(%d,%d)");*/
 
 	if (ImGui::Button("Submit")) {
 		CustomTrainingData data;
 		data.code = trainingCode;
 		data.boostAmounts.push_back(boostAmount);
-		data.startingVelocityMax.push_back(startingVelocityMax);
-		data.startingVelocityMin.push_back(startingVelocityMin);
+		data.startingVelocity.push_back(startingVelocity);
 		trainingData.insert_or_assign(trainingCode,data);
 	}
 
@@ -43,7 +43,7 @@ void VersatileTraining::RenderSettings() {
 		}
 		ImGui::Text("Code: %s", key.c_str());
 		ImGui::Text("Boost Amount: %d", value.boostAmounts[0]);
-		ImGui::Text("Starting Velocity: (%d,%d)", value.startingVelocityMin[0], value.startingVelocityMax[0]);
+		ImGui::Text("Starting Velocity: (%d)", value.startingVelocity[0]);
 	
 		if (ImGui::Button(("Edit##" + key).c_str())) {
 			
@@ -66,7 +66,8 @@ void VersatileTraining::RenderSettings() {
 			CustomTrainingData& data = trainingData[editingTrainingCode];
 
 			ImGui::SliderInt("Boost Amount", &data.boostAmounts[0], boostMin, boostMax);
-			ImGui::RangeSliderInt("Starting Velocity", &data.startingVelocityMin[0], &data.startingVelocityMax[0], 0, 2000, "(%d,%d)");
+			ImGui::SliderInt("Starting Velocity", &data.startingVelocity[0], minVelocity, maxVelocity);
+		
 
 			if (ImGui::Button("Save")) {
 				

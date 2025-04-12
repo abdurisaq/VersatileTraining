@@ -8,6 +8,21 @@ int VersatileTraining::getRandomNumber(int min, int max) {
     return distrib(gen);
 }
 
+Rotator blendPitchRollClampSmooth(int pitch, int roll, int expectedPitch, int expectedRoll, int desiredYaw, float alpha = 1.0f) {
+	float pitchWeight = std::abs(static_cast<float>(pitch)) / 16384.0f;
+	pitchWeight = std::clamp(pitchWeight, 0.0f, 1.0f);
+
+	float rollWeight = 1.0f - pitchWeight;
+
+	int targetPitch = static_cast<int>(expectedPitch * pitchWeight + pitch * (1.0f - pitchWeight));
+	int targetRoll = static_cast<int>(expectedRoll * rollWeight + roll * (1.0f - rollWeight));
+
+	int blendedPitch = static_cast<int>(pitch + (targetPitch - pitch) * alpha);
+	int blendedRoll = static_cast<int>(roll + (targetRoll - roll) * alpha);
+
+	return Rotator{ blendedPitch, desiredYaw, blendedRoll };
+}
+
 
 Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 
@@ -26,15 +41,10 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 				b = -32768;
 			}
 		}
-		//if (loc.X < 0 && rot.Roll > 0) {
-		//	end = 65535;
-		//}
-		//else if (loc.X > 0 && rot.Roll < 0) {
-		//	end = -65535;
-		//}
-		return a + (b - a) * value;//finish this, if x is positive, then starting point is 16384, if negative its 49152, if isCeiling, end is 32768, else end is 0, if negative x, end might need to be 65535 so there is a positive range
+
+		return a + (b - a) * value;
 		};
-	//8170
+	
 	auto cornerLine = [this](int x, int y) {
 		return (diagBound -25) + x + y;
 		};//7950
@@ -54,6 +64,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	int end = 65535;
 	int expectedRoll1 = mapToRoll(t, south, 65535);
 	int expectedRoll2 = mapToRoll(t, north, west);
+	int expectedPitch = mapToRoll(t, 0, 16384);
 	LOG("expectedRoll: {}", expectedRoll1);
 	LOG("actual roll: {}", roll);
 	int tolerance = 5000;
@@ -149,7 +160,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		if (roll != 32768) {
 			LOG("roll is changing");
 		}
-		return Rotator{ 0,yaw,32768 };
+		return Rotator{ 0,yaw,32768 };//0
 	}
 
 	//diagonal values?

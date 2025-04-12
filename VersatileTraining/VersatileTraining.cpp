@@ -58,12 +58,19 @@ void VersatileTraining::onLoad()
 			LOG("car frozen");
 		}
 		freezeCar = !freezeCar;
+		if (currentTrainingDataUsed != nullptr) {
+			currentTrainingDataUsed->freezeCar[currentTrainingDataUsed->currentEditedShot] = freezeCar;
+		}
 
 		
 		}, "freeze car", PERMISSION_ALL);
 
 	cvarManager->setBind("F", "freezeCar");
 	initializeCallBacks();
+
+	std::filesystem::path myDataFolder = gameWrapper->GetDataFolder() / "VersatileTraining";
+	saveFilePath = myDataFolder / "packs.txt";
+	trainingData = LoadCompressedTrainingData(saveFilePath);
 
 	//m_inputMap["Up"] = { 0, false, "Up" };
 	//m_inputMap["Down"] = { 0, false, "Down" };
@@ -146,6 +153,17 @@ void VersatileTraining::loadHooks() {
 		editingVariances = false;
 		});
 
+	//TAGame.TrainingEditorMetrics_TA.TrainingEditorExit save when this is called
+	//
+	//TAGame.GameEvent_TrainingEditor_TA.GetTrainingMetrics
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.TrainingEditorMetrics_TA.TrainingEditorExit", [this](ActorWrapper cw, void* params, std::string eventName) {
+	//save changes to training pack customs
+		
+		currentTrainingDataUsed == nullptr;
+
+		});
+
+
 
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.StartEditing", [this](ActorWrapper cw, void* params, std::string eventName) {
 		LOG("new training pack opened and editing started--------------");
@@ -164,19 +182,98 @@ void VersatileTraining::loadHooks() {
 		GameEditorSaveDataWrapper data = tw.GetTrainingData();
 		TrainingEditorSaveDataWrapper td = data.GetTrainingData();
 
-		LOG("Training pack code : {}", td.GetCode().ToString());
-		LOG("Training pack name : {}", td.GetTM_Name().ToString());
-		LOG("Training pack type : {}", td.GetType());
-		LOG("Training pack difficulty : {}", td.GetDifficulty());
-		LOG("training pack creator name : {}", td.GetCreatorName().ToString());
+		std::string name = td.GetTM_Name().ToString();
+		int currentShot = tw.GetActiveRoundNumber();
+		int totalRounds = tw.GetTotalRounds();
+		
+		LOG("Training pack name : {}", name);
+		
+		LOG("Training current shot : {}", currentShot);
+		LOG("Training num rounds: {}", totalRounds);
+		
+		//iterate over trainingData and look for name
+		bool found = false;
+		for (auto& [key, value] : trainingData) {
+			if (value.name == name) {
+				currentTrainingData = value;
+				LOG("Training pack found in trainingData");
+				found = true;
+				currentTrainingDataUsed = &trainingData[name];
+				break;
+			}
+		}
+		if (!found) {
+			LOG("Training pack not found in trainingData");
+			currentTrainingData.initCustomTrainingData(totalRounds, name);
+			trainingData.insert_or_assign(name, currentTrainingData);//when published, change the key to the ID, but id isn't made before publishing
+			currentTrainingDataUsed = &trainingData[name];
+			
+			return;
+		}
+
+		tempBoostAmount = currentTrainingData.boostAmounts[currentShot];
+		tempStartingVelocity= currentTrainingData.startingVelocity[currentShot];
+		freezeCar = currentTrainingData.freezeCar[currentShot];
+		currentTrainingDataUsed->currentEditedShot = currentShot;
 		
 		
+		});
+
+	//TAGame.GFxData_TrainingModeEditor_TA.CreateRound
+	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GFxData_TrainingModeEditor_TA.CreateRound", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
+		currentTrainingDataUsed->numShots++;
+		currentTrainingDataUsed->boostAmounts.push_back(-1);
+		currentTrainingDataUsed->startingVelocity.push_back(0);
+		currentTrainingDataUsed->freezeCar.push_back(false);
+		
+		
+		});
+	//TAGame.GameEvent_TrainingEditor_TA.DeleteRound
+	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.DeleteRound", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
+		int currentShot = cw.GetActiveRoundNumber();
+
+		LOG("removing shot: {}", currentShot);
+		currentTrainingDataUsed->numShots--;
+		currentTrainingDataUsed->boostAmounts.erase(currentTrainingDataUsed->boostAmounts.begin() + currentShot);
+		currentTrainingDataUsed->startingVelocity.erase(currentTrainingDataUsed->startingVelocity.begin() + currentShot);
+		currentTrainingDataUsed->freezeCar.erase(currentTrainingDataUsed->freezeCar.begin() + currentShot);
+
+
+		});
+	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.DuplicateRound", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
+		//duplicate shot starting velocity and boost amount, and frozen status
+		int currentShot = cw.GetActiveRoundNumber();
+		int numRounds = cw.GetTotalRounds();
+		LOG("duplicating shot {}", currentShot);
+		LOG("num rounds {}", numRounds);
+
+		int boostToCopy = currentTrainingDataUsed->boostAmounts[currentShot];
+		int startingVelocityToCopy = currentTrainingDataUsed->startingVelocity[currentShot];
+		bool freezeToCopy = currentTrainingDataUsed->freezeCar[currentShot];
+		currentTrainingDataUsed->boostAmounts.push_back(boostToCopy);
+		currentTrainingDataUsed->startingVelocity.push_back(startingVelocityToCopy);
+		currentTrainingDataUsed->freezeCar.push_back(freezeToCopy);
+		currentTrainingDataUsed->numShots++;
+		
+
+
+
 		});
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_TrainingEditor_TA.EditorMode.StopEditing", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
 		LOG("stopped editing");
 		isCarRotatable = false;
 		lockRotation = true;
 		editingVariances = false;
+		if (currentTrainingDataUsed == nullptr) {
+			LOG("currentTrainingDataUsed is null");
+			return;
+		}
+		LOG("saving to shot in training data {}", currentTrainingDataUsed->currentEditedShot);
+		currentTrainingDataUsed->boostAmounts[currentTrainingDataUsed->currentEditedShot] = tempBoostAmount;
+		currentTrainingDataUsed->startingVelocity[currentTrainingDataUsed->currentEditedShot] = tempStartingVelocity;
+
+
+
 		});
 
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.Ball_GameEditor_TA.EditingEnd", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
@@ -247,7 +344,7 @@ void VersatileTraining::loadHooks() {
 					float y = cosf(pitchRad) * sinf(yawRad);
 					float x = cosf(pitchRad) * cosf(yawRad);
 					Vector unitVector = { x,y,z };
-					int velocity = getRandomNumber(tempStartingVelocityMin, tempStartingVelocityMax);
+					int velocity = tempStartingVelocity;//getRandomNumber(tempStartingVelocityMin, tempStartingVelocityMax);//changed 
 					startingVelocityTranslation = unitVector * velocity;
 				}
 				car.SetAngularVelocity(Vector{ 0, 0, 0}, false);
@@ -409,7 +506,7 @@ void VersatileTraining::loadHooks() {
 				
 				if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
 					//Pitch, Yaw, Roll;
-					cw.SetRotation({ currentRotation.Pitch,rot1.Yaw,rot1.Roll });
+					cw.SetRotation({ rot1.Pitch,rot1.Yaw,rot1.Roll });//currentRotation.Pitch
 				}
 
 
@@ -480,6 +577,20 @@ void VersatileTraining::loadHooks() {
 					LOG("boost decreased to {}", tempBoostAmount);
 				}
 				if (GetAsyncKeyState('4') & 0x8000) {
+					tempStartingVelocity++;
+					if (tempStartingVelocity > maxVelocity) {
+						tempStartingVelocity = maxVelocity;
+					}
+					LOG("starting velocity increased to {}", tempStartingVelocity);
+				}
+				if (GetAsyncKeyState('3') & 0x8000) {
+					tempStartingVelocity--;
+					if (tempStartingVelocity < minVelocity) {
+						tempStartingVelocity = minVelocity;
+					}
+					LOG("starting velocity decreased to {}", tempStartingVelocity);
+				}
+				/*if (GetAsyncKeyState('4') & 0x8000) {
 					tempStartingVelocityMin++;
 					if (tempStartingVelocityMin > maxVelocity) {
 						tempStartingVelocityMin = maxVelocity;
@@ -492,8 +603,8 @@ void VersatileTraining::loadHooks() {
 						tempStartingVelocityMin = minVelocity;
 					}
 					LOG("starting velocity decreased to {}", tempStartingVelocityMin);
-				}
-				if (GetAsyncKeyState('8') & 0x8000) {
+				}*/
+				/*if (GetAsyncKeyState('8') & 0x8000) {
 					tempStartingVelocityMax++;
 					if (tempStartingVelocityMax > maxVelocity) {
 						tempStartingVelocityMax = maxVelocity;
@@ -506,19 +617,33 @@ void VersatileTraining::loadHooks() {
 						tempStartingVelocityMax = tempStartingVelocityMin;
 					}
 					LOG("starting velocity decreased to {}", tempStartingVelocityMax);
-				}
+				}*/
 				
 				
 			}
 		}
 	);
 
-	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GFxData_TrainingModeBrowser_TA.GetLocalTrainingFiles",
-		[this](ActorWrapper cw, void* params, std::string eventName) {
-			LOG("GetLocalTrainingFiles called");
-			
-		}
-	);
+	//gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GFxData_TrainingModeBrowser_TA.GetLocalTrainingFiles",
+	//	[this](ActorWrapper cw, void* params, std::string eventName) {
+	//		//print out all local training packs
+
+	//		LOG("GetLocalTrainingFiles called");
+	//		if (!cw) {
+	//			LOG("Caller is invalid");
+	//			return;
+	//		}
+	//		TrainingEditorWrapper tw(cw.memory_address);
+	//		if (tw.IsNull()) {
+	//			LOG("Failed to get TrainingEditorWrapper");
+	//			return;
+	//		}
+	//		GameEditorSaveDataWrapper data = tw.GetTrainingData();
+	//		TrainingEditorSaveDataWrapper td = data.GetTrainingData();
+
+	//		
+	//	}
+	//);
 
 
 	
@@ -570,6 +695,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 	LOG("Training pack difficulty: {}", td.GetDifficulty());
 	LOG("Training pack creator name: {}", td.GetCreatorName().ToString());
 	LOG("Training pack description: {}", td.GetDescription().ToString());
+	LOG("training pack created at: {}", td.GetCreatedAt());
 	int totalRounds = tw.GetTotalRounds();
 	LOG("Training num rounds: {}", totalRounds);
 
@@ -587,7 +713,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 		cvarManager->executeCommand("sv_training_enabled 1");
 		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(foundCode->second.boostAmounts[0]));
 		//sv_training_player_velocity (1700, 1900);
-		cvarManager->executeCommand("sv_training_player_velocity ("+ std::to_string(foundCode->second.startingVelocityMin[0]) + "," + std::to_string(foundCode->second.startingVelocityMax[0]) + ")");
+		//cvarManager->executeCommand("sv_training_player_velocity ("+ std::to_string(foundCode->second.startingVelocityMin[0]) + "," + std::to_string(foundCode->second.startingVelocityMax[0]) + ")");
 
 	}
 	else {
@@ -619,6 +745,7 @@ void VersatileTraining::restartTraining() {
 
 void VersatileTraining::onUnload() {
 	LOG("Unloading Versatile Training");
+	SaveCompressedTrainingData(trainingData, saveFilePath);
 	CleanUp();
 }
 
@@ -674,7 +801,11 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 		canvas.DrawString("Car unfrozen, press F to freeze", 2.0, 2.0, false);
 	}
 	canvas.SetPosition(Vector2F{ 0.0, 60.0 });
-	canvas.DrawString("Starting Velocity: (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")", 2.0, 2.0, false);
+	//canvas.DrawString("Starting Velocity: (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")", 2.0, 2.0, false);
+
+	//tempStartingVelocity
+	canvas.DrawString("Starting Velocity: " + std::to_string(tempStartingVelocity), 2.0, 2.0, false);
+
 	//canvas.SetPosition(20, 20);
 	//canvas.SetColor(255, 255, 255, 255);
 	//canvas.DrawString("Hello world!", 1, 1);
