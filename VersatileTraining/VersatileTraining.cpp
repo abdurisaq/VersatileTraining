@@ -59,19 +59,56 @@ void VersatileTraining::onLoad()
 		}
 		freezeCar = !freezeCar;
 		if (currentTrainingDataUsed != nullptr) {
-			currentTrainingDataUsed->freezeCar[currentTrainingDataUsed->currentEditedShot] = freezeCar;
+			//currentTrainingDataUsed->freezeCar[currentTrainingDataUsed->currentEditedShot] = freezeCar;
+			currentTrainingData.freezeCar[currentTrainingData.currentEditedShot] = freezeCar;
 		}
 
 		
 		}, "freeze car", PERMISSION_ALL);
 
 	cvarManager->setBind("F", "freezeCar");
+
+	cvarManager->registerNotifier("printDataMap", [this](std::vector<std::string> args) {
+
+		for (auto [key, value] : trainingData) {
+			LOG("Name: {}", value.name);
+			LOG("Code: {}", key);
+			LOG("Num Shots: {}", value.numShots);
+			for (int i = 0; i < value.numShots; i++) {
+				LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}", i, value.boostAmounts[i], value.startingVelocity[i], static_cast<int>(value.freezeCar[i]));
+			}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
+			LOG("------------------------------");
+		}
+
+
+		}, "print local data map", PERMISSION_ALL);
+
+	cvarManager->setBind("L", "printDataMap");
+
+	cvarManager->registerNotifier("printCurrentPack", [this](std::vector<std::string> args) {
+
+		//currentTrainingData
+		LOG("Name: {}", currentTrainingData.name);
+		LOG("Code: {}", currentPackKey);
+		LOG("Num Shots: {}", currentTrainingData.numShots);
+		for (int i = 0; i < currentTrainingData.numShots; i++) {
+			LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}", i, currentTrainingData.boostAmounts[i], currentTrainingData.startingVelocity[i], static_cast<int>(currentTrainingData.freezeCar[i]));
+		}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
+
+		}, "print local data map", PERMISSION_ALL);
+
+	cvarManager->setBind("P", "printCurrentPack");
+
+
 	initializeCallBacks();
 
 	std::filesystem::path myDataFolder = gameWrapper->GetDataFolder() / "VersatileTraining";
 	saveFilePath = myDataFolder / "packs.txt";
-	trainingData = LoadCompressedTrainingData(saveFilePath);
 
+	trainingData = LoadCompressedTrainingData(saveFilePath);
+	for (auto& [key, value] : trainingData) {
+		shiftVelocitiesToNegative(value.startingVelocity);
+	}
 	//m_inputMap["Up"] = { 0, false, "Up" };
 	//m_inputMap["Down"] = { 0, false, "Down" };
 	//m_inputMap["Left"] = { 0, false, "Left" };
@@ -144,26 +181,55 @@ void VersatileTraining::onLoad()
 
 void VersatileTraining::loadHooks() {
 
+	//Function TAGame.TrainingEditorMetrics_TA.TrainingEditorEnter
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.TrainingEditorMetrics_TA.TrainingEditorEnter", [this](ActorWrapper cw, void* params, std::string eventName) {
+		LOG("Training editor enter");
+		currentTrainingData.currentEditedShot = -1;
+		
+	});
 	gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.LoadRound", [this](ActorWrapper cw, void* params, std::string eventName) {
+		
 		VersatileTraining::getTrainingData(cw, params, eventName);
 		freezeForShot = freezeCar;
 		frozeZVal = !freezeCar;
 		lockRotation = true;
 		appliedStartingVelocity = false;
 		editingVariances = false;
+		appliedWallClamping = false;
 		});
 
 	//TAGame.TrainingEditorMetrics_TA.TrainingEditorExit save when this is called
 	//
 	//TAGame.GameEvent_TrainingEditor_TA.GetTrainingMetrics
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.TrainingEditorMetrics_TA.TrainingEditorExit", [this](ActorWrapper cw, void* params, std::string eventName) {
-	//save changes to training pack customs
-		
-		currentTrainingDataUsed == nullptr;
-
+		currentTrainingData.currentEditedShot = -1;
 		});
 
+	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.Save", [this](ActorWrapper cw, void* params, std::string eventName) {
+		//if saved is called, then write what i've been doing to memory, if not, free and discard.
+		if (currentTrainingData.currentEditedShot != -1) {
+			//*currentTrainingDataEdited = *currentTrainingDataUsed; // Proper deep copy //crashes it. need to make a copy constructor, and make the = operator work
+			//trainingData[currentPackKey] = *currentTrainingDataUsed;
+			currentTrainingData.boostAmounts[currentTrainingData.currentEditedShot] = tempBoostAmount;
+			currentTrainingData.startingVelocity[currentTrainingData.currentEditedShot] = tempStartingVelocity;
+			currentTrainingData.freezeCar[currentTrainingData.currentEditedShot] = freezeCar;
+			trainingData[currentPackKey] = currentTrainingData;
 
+
+			//currentTrainingData
+			for (auto& [key, value] : trainingData) {
+				shiftVelocitiesToPositive(value.startingVelocity);
+			}
+			SaveCompressedTrainingData(trainingData, saveFilePath);//crashe for some reason
+			trainingData = LoadCompressedTrainingData(saveFilePath);
+			for (auto& [key, value] : trainingData) {
+				shiftVelocitiesToNegative(value.startingVelocity);
+			}
+		}
+		/*currentPackKey.clear();
+		currentTrainingDataUsed.reset();
+		currentTrainingDataEdited = nullptr;*/
+	});
 
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.StartEditing", [this](ActorWrapper cw, void* params, std::string eventName) {
 		LOG("new training pack opened and editing started--------------");
@@ -192,39 +258,61 @@ void VersatileTraining::loadHooks() {
 		LOG("Training num rounds: {}", totalRounds);
 		
 		//iterate over trainingData and look for name
+		if (currentTrainingData.currentEditedShot != -1) {
+			LOG("already loaded, skipping searching training data");
+			LOG("currentShot: {}", currentTrainingData.currentEditedShot);
+			LOG("setting boost atmount to {}", currentTrainingData.boostAmounts[currentShot]);
+			tempBoostAmount = currentTrainingData.boostAmounts[currentShot];
+			LOG("setting starting velocity to {}", currentTrainingData.startingVelocity[currentShot]);
+			tempStartingVelocity = currentTrainingData.startingVelocity[currentShot];
+			currentTrainingData.currentEditedShot = currentShot;
+			LOG("setting freeze car to {}", currentTrainingData.freezeCar[currentShot] ? "false" : "true");
+			freezeCar = currentTrainingData.freezeCar[currentShot];
+			//currentTrainingDataUsed->currentEditedShot = currentShot;
+			return;
+		}
 		bool found = false;
 		for (auto& [key, value] : trainingData) {
 			if (value.name == name) {
 				currentTrainingData = value;
 				LOG("Training pack found in trainingData");
 				found = true;
-				currentTrainingDataUsed = &trainingData[name];
+				currentPackKey = key;
+				//currentTrainingDataEdited = &trainingData[key]; 
+				//currentTrainingDataUsed = std::make_unique<CustomTrainingData>(value);
 				break;
 			}
 		}
 		if (!found) {
 			LOG("Training pack not found in trainingData");
 			currentTrainingData.initCustomTrainingData(totalRounds, name);
-			trainingData.insert_or_assign(name, currentTrainingData);//when published, change the key to the ID, but id isn't made before publishing
-			currentTrainingDataUsed = &trainingData[name];
+			auto [it, inserted] = trainingData.insert_or_assign(name, currentTrainingData);
+			//currentTrainingDataEdited = &it->second;
+			currentPackKey = name;
+			//currentTrainingDataUsed = std::make_unique<CustomTrainingData>(*currentTrainingDataEdited);
 			
-			return;
+			//return;
 		}
 
+		LOG("setting boost atmount to {}", currentTrainingData.boostAmounts[currentShot]);
 		tempBoostAmount = currentTrainingData.boostAmounts[currentShot];
+		LOG("setting starting velocity to {}", currentTrainingData.startingVelocity[currentShot]);
 		tempStartingVelocity= currentTrainingData.startingVelocity[currentShot];
+		currentTrainingData.currentEditedShot = currentShot;
+		LOG("setting freeze car to {}", currentTrainingData.freezeCar[currentShot] ? "false" : "true");
 		freezeCar = currentTrainingData.freezeCar[currentShot];
-		currentTrainingDataUsed->currentEditedShot = currentShot;
+		//currentTrainingDataUsed->currentEditedShot = currentShot;
+		
 		
 		
 		});
 
 	//TAGame.GFxData_TrainingModeEditor_TA.CreateRound
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GFxData_TrainingModeEditor_TA.CreateRound", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
-		currentTrainingDataUsed->numShots++;
-		currentTrainingDataUsed->boostAmounts.push_back(-1);
-		currentTrainingDataUsed->startingVelocity.push_back(0);
-		currentTrainingDataUsed->freezeCar.push_back(false);
+		currentTrainingData.numShots++;
+		currentTrainingData.boostAmounts.push_back(101);
+		currentTrainingData.startingVelocity.push_back(2000);
+		currentTrainingData.freezeCar.push_back(false);
 		
 		
 		});
@@ -233,10 +321,10 @@ void VersatileTraining::loadHooks() {
 		int currentShot = cw.GetActiveRoundNumber();
 
 		LOG("removing shot: {}", currentShot);
-		currentTrainingDataUsed->numShots--;
-		currentTrainingDataUsed->boostAmounts.erase(currentTrainingDataUsed->boostAmounts.begin() + currentShot);
-		currentTrainingDataUsed->startingVelocity.erase(currentTrainingDataUsed->startingVelocity.begin() + currentShot);
-		currentTrainingDataUsed->freezeCar.erase(currentTrainingDataUsed->freezeCar.begin() + currentShot);
+		currentTrainingData.numShots--;
+		currentTrainingData.boostAmounts.erase(currentTrainingData.boostAmounts.begin() + currentShot);
+		currentTrainingData.startingVelocity.erase(currentTrainingData.startingVelocity.begin() + currentShot);
+		currentTrainingData.freezeCar.erase(currentTrainingData.freezeCar.begin() + currentShot);
 
 
 		});
@@ -246,32 +334,51 @@ void VersatileTraining::loadHooks() {
 		int numRounds = cw.GetTotalRounds();
 		LOG("duplicating shot {}", currentShot);
 		LOG("num rounds {}", numRounds);
-
-		int boostToCopy = currentTrainingDataUsed->boostAmounts[currentShot];
-		int startingVelocityToCopy = currentTrainingDataUsed->startingVelocity[currentShot];
-		bool freezeToCopy = currentTrainingDataUsed->freezeCar[currentShot];
-		currentTrainingDataUsed->boostAmounts.push_back(boostToCopy);
-		currentTrainingDataUsed->startingVelocity.push_back(startingVelocityToCopy);
-		currentTrainingDataUsed->freezeCar.push_back(freezeToCopy);
-		currentTrainingDataUsed->numShots++;
+		LOG("copying a shot that is frozen ? {}", currentTrainingData.freezeCar[currentShot] ? "true" : "false");
+		int boostToCopy = currentTrainingData.boostAmounts[currentShot];
+		int startingVelocityToCopy = currentTrainingData.startingVelocity[currentShot];
+		bool freezeToCopy = currentTrainingData.freezeCar[currentShot];
+		currentTrainingData.boostAmounts.push_back(boostToCopy);
+		currentTrainingData.startingVelocity.push_back(startingVelocityToCopy);
+		currentTrainingData.freezeCar.push_back(freezeToCopy);
+		currentTrainingData.numShots++;
 		
 
 
 
 		});
+
+	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.StartPlayTest", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
+		if (!currentTrainingData.customPack) return;
+		LOG("setting boost amount in start play test to {}", tempBoostAmount);
+		currentTrainingData.boostAmounts[currentTrainingData.currentEditedShot] = tempBoostAmount;
+		LOG("setting starting velocity in start play test to {}", tempStartingVelocity);
+		currentTrainingData.startingVelocity[currentTrainingData.currentEditedShot] = tempStartingVelocity;
+		LOG("setting freeze car in start play test to {}", freezeCar ? "false" : "true");
+		currentTrainingData.freezeCar[currentTrainingData.currentEditedShot] = freezeCar;
+		trainingData[currentTrainingData.name] = currentTrainingData;
+
+		});
+
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_TrainingEditor_TA.EditorMode.StopEditing", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
+		if (!currentTrainingData.customPack) return;
 		LOG("stopped editing");
 		isCarRotatable = false;
 		lockRotation = true;
 		editingVariances = false;
-		if (currentTrainingDataUsed == nullptr) {
+		if (currentTrainingData.currentEditedShot == -1) {
 			LOG("currentTrainingDataUsed is null");
 			return;
 		}
-		LOG("saving to shot in training data {}", currentTrainingDataUsed->currentEditedShot);
-		currentTrainingDataUsed->boostAmounts[currentTrainingDataUsed->currentEditedShot] = tempBoostAmount;
-		currentTrainingDataUsed->startingVelocity[currentTrainingDataUsed->currentEditedShot] = tempStartingVelocity;
-
+		LOG("saving to shot in training data {}", currentTrainingData.currentEditedShot);
+		LOG("temp boost amount: {}", tempBoostAmount);
+		
+		currentTrainingData.boostAmounts[currentTrainingData.currentEditedShot] = tempBoostAmount;
+		currentTrainingData.startingVelocity[currentTrainingData.currentEditedShot] = tempStartingVelocity;
+		currentTrainingData.freezeCar[currentTrainingData.currentEditedShot] = freezeCar;
+		trainingData[currentTrainingData.name] = currentTrainingData;
+		
+		LOG("adding shot training data: {}, boost amount: {}, starting velocity: {}", currentTrainingData.currentEditedShot, currentTrainingData.boostAmounts[currentTrainingData.currentEditedShot], currentTrainingData.startingVelocity[currentTrainingData.currentEditedShot]);
 
 
 		});
@@ -303,6 +410,7 @@ void VersatileTraining::loadHooks() {
 	//TAGame.GFxHUD_TA.UpdateCarData
 	//TAGame.GameEditor_Actor_TA.EditorMoveToLocation call this to go beyond the bounds maybe, see if i can go beyond the border, if past location is the same as current location, and if pitch and roll aren't 0, let me go through the bounds a bit
 	gameWrapper->HookEventWithCallerPost<ActorWrapper >("Function TAGame.GFxHUD_TA.UpdateCarData", [this](ActorWrapper  cw, void* params, std::string eventName) {
+		if (!currentTrainingData.customPack) return;
 		if (editingVariances && !lockRotation) {
 			if (!cw || cw.IsNull()) {
 				LOG("Server not found");
@@ -312,51 +420,7 @@ void VersatileTraining::loadHooks() {
 
 		}
 		cw.SetbCollideWorld(0);
-		if (freezeForShot) {
-			if (gameWrapper->IsInCustomTraining()) {
-				//LOG("In custom training");
-				ServerWrapper server = gameWrapper->GetCurrentGameState();
-				if (!server) { return; }
-				ActorWrapper car = server.GetGameCar();
-				if (!car) {
-					//LOG("Car not found");
-					return;
-				}
-				Rotator rot = car.GetRotation();
-				Vector loc = car.GetLocation();
-				if (rot.Pitch != carRotationUsed.Pitch || rot.Yaw != carRotationUsed.Yaw) {
-					
-					LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
-					LOG("Current location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
-					//car.SetLocation({ loc.X,5090,loc.Z });
-					if (!frozeZVal) {
-						frozenZVal = loc.Z;
-						frozeZVal = true;
-					}
-					Vector loc2 = getClampChange(loc,rot);
-					if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
-
-						car.SetLocation(loc2);
-					}
-					float pitchRad = (rot.Pitch/16201.0f) * (PI/2);
-					float yawRad =(rot.Yaw / 32768.0f) * PI;
-					float z = sinf(pitchRad);
-					float y = cosf(pitchRad) * sinf(yawRad);
-					float x = cosf(pitchRad) * cosf(yawRad);
-					Vector unitVector = { x,y,z };
-					int velocity = tempStartingVelocity;//getRandomNumber(tempStartingVelocityMin, tempStartingVelocityMax);//changed 
-					startingVelocityTranslation = unitVector * velocity;
-				}
-				car.SetAngularVelocity(Vector{ 0, 0, 0}, false);
-				Vector vel = car.GetVelocity();
-				car.SetVelocity({ vel.X,vel.Y,5 });
-				LOG("keeping car frozen");
-				LOG("starting velocity - X: {}, Y: {}, Z: {}", startingVelocityTranslation.X, startingVelocityTranslation.Y, startingVelocityTranslation.Z);
-				//first time it isn't frozen, i need to apply the new velocity caluclated by x y z components of magnitude velocity chosen at random between min and max
-
-			}
-		}
-		else if (!freezeForShot && gameWrapper->IsInCustomTraining() && !appliedStartingVelocity) {
+		if (gameWrapper->IsInCustomTraining()) {
 			ServerWrapper server = gameWrapper->GetCurrentGameState();
 			if (!server) { return; }
 			ActorWrapper car = server.GetGameCar();
@@ -364,30 +428,112 @@ void VersatileTraining::loadHooks() {
 				//LOG("Car not found");
 				return;
 			}
-			Vector loc = car.GetLocation();
 			Rotator rot = car.GetRotation();
+			Vector loc = car.GetLocation();
+			if (!appliedWallClamping) {
+				LOG("applying clamping to wall");
+				Vector loc2 = getClampChange(loc, rot);
+				//if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
 
-			Vector stickingVelocity = getStickingVelocity(rot);
-			car.SetVelocity(startingVelocityTranslation+ stickingVelocity);
-			
-			//car.SetLocation({ loc.X,5090,loc.Z }); // this was just for testing purposes, might need logic to clamp onto wall
-			if (!frozeZVal) {
-				frozenZVal = loc.Z;
-				frozeZVal = true;
+					car.SetLocation(loc2);
+				//}
+				appliedWallClamping = true;
 			}
-			Vector loc2 = getClampChange(loc,rot);
-			if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
-				car.SetLocation(loc2);
+
+			if (freezeForShot) {
+				if (gameWrapper->IsInCustomTraining()) {
+					//LOG("In custom training");
+
+
+					/*Rotator rot = car.GetRotation();
+					Vector loc = car.GetLocation();*/
+					if (rot.Pitch != carRotationUsed.Pitch || rot.Yaw != carRotationUsed.Yaw) {
+
+						LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
+						LOG("Current location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+						//car.SetLocation({ loc.X,5090,loc.Z });
+						if (!frozeZVal) {
+							frozenZVal = loc.Z;
+							frozeZVal = true;
+						}
+						Vector loc2 = getClampChange(loc, rot);
+						if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
+
+							car.SetLocation(loc2);
+						}
+						float pitchRad = (rot.Pitch / 16201.0f) * (PI / 2);
+						float yawRad = (rot.Yaw / 32768.0f) * PI;
+						float z = sinf(pitchRad);
+						float y = cosf(pitchRad) * sinf(yawRad);
+						float x = cosf(pitchRad) * cosf(yawRad);
+						Vector unitVector = { x,y,z };
+						int velocity = currentTrainingData.startingVelocity[currentTrainingData.currentEditedShot];//getRandomNumber(tempStartingVelocityMin, tempStartingVelocityMax);//changed 
+						startingVelocityTranslation = unitVector * velocity;
+					}
+					car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
+					Vector vel = car.GetVelocity();
+					car.SetVelocity({ vel.X,vel.Y,5 });
+					LOG("keeping car frozen");
+					LOG("starting velocity - X: {}, Y: {}, Z: {}", startingVelocityTranslation.X, startingVelocityTranslation.Y, startingVelocityTranslation.Z);
+					//first time it isn't frozen, i need to apply the new velocity caluclated by x y z components of magnitude velocity chosen at random between min and max
+
+				}
 			}
-			appliedStartingVelocity = true;
+			else if (!freezeForShot && gameWrapper->IsInCustomTraining() && !appliedStartingVelocity) {
+				/*ServerWrapper server = gameWrapper->GetCurrentGameState();
+				if (!server) return;
+				ActorWrapper car = server.GetGameCar();
+				if (!car) return;
+
+				Vector loc = car.GetLocation();
+				Rotator rot = car.GetRotation();*/
+
+				/*Vector stickingVelocity = getStickingVelocity(rot);
+				car.SetVelocity(startingVelocityTranslation + stickingVelocity);*/
+
+				if (!frozeZVal) {
+					frozenZVal = loc.Z;
+					frozeZVal = true;
+				}
+				Vector loc2 = getClampChange(loc, rot);
+				/*LOG("clamp changes starting location X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+				if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
+					car.SetLocation(loc2);
+				}*/
+				appliedStartingVelocity = true;
+			}
 		}
 		});
 	
 	gameWrapper->HookEvent("Function GameEvent_Soccar_TA.Active.StartRound", [this](std::string eventName) {
 		if (gameWrapper->IsInCustomTraining()) {
+			if (!currentTrainingData.customPack) return;
 			freezeForShot = false;
 			frozeZVal = false;
-			
+			appliedStartingVelocity = false; // mark as not yet applied
+
+			// Get car and calculate velocity direction vector
+			ServerWrapper server = gameWrapper->GetCurrentGameState();
+			if (!server) return;
+			ActorWrapper car = server.GetGameCar();
+			if (!car) return;
+
+			Rotator rot = car.GetRotation();
+
+			float pitchRad = (rot.Pitch / 16201.0f) * (PI / 2);
+			float yawRad = (rot.Yaw / 32768.0f) * PI;
+			float z = sinf(pitchRad);
+			float y = cosf(pitchRad) * sinf(yawRad);
+			float x = cosf(pitchRad) * cosf(yawRad);
+			Vector unitVector = { x, y, z };
+
+			int velocity = currentTrainingData.startingVelocity[currentTrainingData.currentEditedShot];
+			if (velocity == 0) return;
+			startingVelocityTranslation = unitVector * velocity;
+			Vector stickingVelocity = getStickingVelocity(rot);
+			car.SetVelocity(startingVelocityTranslation + stickingVelocity);
+
+			LOG("Calculated new velocity in StartRound");
 		}
 	});
 	///TAGame.GameEditor_Actor_TA.CanEdit
@@ -435,11 +581,11 @@ void VersatileTraining::loadHooks() {
         float maxShrinkRatio = (xbuff - boundaryShrink) / xbuff;
         float circleFactor = sqrt(1.0f - t * t * (1 - maxShrinkRatio * maxShrinkRatio));
 		//LOG("t: {}, maxShrinkRatio: {}, circleFactor: {}", t, maxShrinkRatio, circleFactor);
-		LOG("t factor : {}", t);
+		//LOG("t factor : {}", t);
         currentXBound = xbuff * circleFactor;
         currentYBound = ybuff * circleFactor;
 		diagBound = diag * circleFactor;
-		LOG("currentXBound: {}, currentYBound: {}", currentXBound, currentYBound);
+		//LOG("currentXBound: {}, currentYBound: {}", currentXBound, currentYBound);
     }
 
     
@@ -495,14 +641,20 @@ void VersatileTraining::loadHooks() {
 				else {
 					rot.Pitch = rotationToApply.Pitch;
 				}
+				//testing, uncomment
 				rot.Roll += rotationToApply.Roll;
 
 				//rot += rotationToApply;
 				rotationToApply = { 0,0,0 };
 				cw.SetRotation(rot);
 				currentRotation = rot;
+				currentLocation = loc;
+				if(localRotation.Roll != 0 && localRotation.Pitch != 0 && localRotation.Yaw != 0) {
+					cw.SetRotation(localRotation);
+					localRotation = { 0,0,0 };
+					currentRotation = localRotation;
+				}
 				
-
 				
 				if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
 					//Pitch, Yaw, Roll;
@@ -521,6 +673,7 @@ void VersatileTraining::loadHooks() {
 				return;
 			}
 			
+			//test
 
 			if (clampVal != 5) {
 				Rotator rot = gameWrapper->GetCamera().GetRotation();
@@ -544,13 +697,23 @@ void VersatileTraining::loadHooks() {
 
 			
 				if (!lockRotation) {
-					if (GetAsyncKeyState('R') & 0x8000) {
-						rotationToApply.Pitch += 75;
-						//LOG("Pitch increased");
+					//if (GetAsyncKeyState('R') & 0x8000) {
+					//	rotationToApply.Pitch += 75;
+					//	//LOG("Pitch increased");
+					//}
+					//if (GetAsyncKeyState('C') & 0x8000) {
+					//	rotationToApply.Pitch -= 75;
+					//	//LOG("Pitch decreased");
+					//}
+
+					if (GetAsyncKeyState('R') & 0x8000) { // Pitch up
+						
+							ApplyLocalPitch( 500.0f); // GOTTA BE tested
+							LOG("applying localPitch");
 					}
-					if (GetAsyncKeyState('C') & 0x8000) {
-						rotationToApply.Pitch -= 75;
-						//LOG("Pitch decreased");
+					if (GetAsyncKeyState('C') & 0x8000) { // Pitch down
+						ApplyLocalPitch(-500.0f); // GOTTA BE tested
+						LOG("applying localPitch");
 					}
 					if (GetAsyncKeyState('Q') & 0x8000) {
 						rotationToApply.Roll -= 75;
@@ -571,8 +734,8 @@ void VersatileTraining::loadHooks() {
 				}
 				if (GetAsyncKeyState('1') & 0x8000) {
 					tempBoostAmount--;
-					if (tempBoostAmount < 0) {
-						tempBoostAmount = -1;
+					if (tempBoostAmount < boostMin) {
+						tempBoostAmount = boostMin;
 					}
 					LOG("boost decreased to {}", tempBoostAmount);
 				}
@@ -678,17 +841,14 @@ TrainingEditorWrapper VersatileTraining::GetTrainingEditor() {
 
 void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::string eventName) {
 
-	/*TrainingEditorWrapper tew = GetTrainingEditor();
-	if (!tew) return;
 
-	auto current = tew.GetActiveRoundNumber();*/
-	
-	
+
 	auto tw = ((TrainingEditorWrapper)cw.memory_address);
 	GameEditorSaveDataWrapper data = tw.GetTrainingData();
 	TrainingEditorSaveDataWrapper td = data.GetTrainingData();
 	LOG("Training pack code: {}", td.GetCode().ToString());
-	LOG("Training pack name", td.GetTM_Name().ToString());
+	std::string name = td.GetTM_Name().ToString();
+	LOG("Training pack name", name);
 	/*GetCreatorName();
 	GetDescription();*/
 	LOG("Training pack type: {}", td.GetType());
@@ -704,28 +864,64 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
 	std::string code = td.GetCode().ToString();
 
-	auto foundCode =  trainingData.find(code);
-	if (foundCode != trainingData.end()) {
-		LOG("Training data found: {}", code);
-		foundCode->second.name = td.GetTM_Name().ToString();
-		foundCode->second.numShots = totalRounds;
-		LOG("loaded training name: {}", foundCode->second.name);
-		cvarManager->executeCommand("sv_training_enabled 1");
-		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(foundCode->second.boostAmounts[0]));
-		//sv_training_player_velocity (1700, 1900);
-		//cvarManager->executeCommand("sv_training_player_velocity ("+ std::to_string(foundCode->second.startingVelocityMin[0]) + "," + std::to_string(foundCode->second.startingVelocityMax[0]) + ")");
-
+	bool found = false;
+	for (auto& [key, value] : trainingData) {
+		if (value.name == name) {
+			currentTrainingData = value;
+			LOG("setting active boost amount to {}", currentTrainingData.boostAmounts[currentShot]);
+			tempBoostAmount = currentTrainingData.boostAmounts[currentShot];
+			tempStartingVelocity = currentTrainingData.startingVelocity[currentShot];
+			LOG("setting active starting velocity to {}", tempStartingVelocity);
+			currentTrainingData.currentEditedShot = currentShot;
+			freezeCar = currentTrainingData.freezeCar[currentShot];
+			if (freezeCar) {
+				LOG("car is frozen");
+			}
+			else {
+				LOG("car is not frozen");
+			}
+			if (tempBoostAmount == 101) {
+				cvarManager->executeCommand("sv_training_limitboost -1");
+			}
+			else {
+				cvarManager->executeCommand("sv_training_limitboost " + std::to_string(tempBoostAmount));
+			}
+			found = true;
+		}
 	}
-	else {
-		/*LOG("Training data not found: {}", code);
-		cvarManager->executeCommand("sv_training_enabled 0");
-		cvarManager->executeCommand("sv_training_limitboost -1");*/
-		//overriden for testing
-		//cvarManager->executeCommand("sv_training_enabled 1");
-		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(tempBoostAmount));
-		//cvarManager->executeCommand("sv_training_player_velocity (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")");
-
+	if (!found) {
+		LOG("didn't find this traini pack in training data");
+		currentTrainingData.initCustomTrainingData(totalRounds, name);
+		currentTrainingData.customPack = false;
+		cvarManager->executeCommand("sv_training_limitboost -1");
 	}
+	//auto foundCode =  trainingData.find(code);
+	//if (foundCode != trainingData.end()) {
+	//	LOG("Training data found: {}", code);
+	//	foundCode->second.name = td.GetTM_Name().ToString();
+	//	foundCode->second.numShots = totalRounds;
+	//	LOG("loaded training name: {}", foundCode->second.name);
+	//	cvarManager->executeCommand("sv_training_enabled 1");
+	//	cvarManager->executeCommand("sv_training_limitboost " + std::to_string(foundCode->second.boostAmounts[0]));
+	//	//sv_training_player_velocity (1700, 1900);
+	//	//cvarManager->executeCommand("sv_training_player_velocity ("+ std::to_string(foundCode->second.startingVelocityMin[0]) + "," + std::to_string(foundCode->second.startingVelocityMax[0]) + ")");
+
+	//}
+	//else {
+	//	/*LOG("Training data not found: {}", code);
+	//	cvarManager->executeCommand("sv_training_enabled 0");
+	//	cvarManager->executeCommand("sv_training_limitboost -1");*/
+	//	//overriden for testing
+	//	//cvarManager->executeCommand("sv_training_enabled 1");
+	//	if (tempBoostAmount == 101) {
+	//		cvarManager->executeCommand("sv_training_limitboost -1");
+	//	}
+	//	else {
+	//		cvarManager->executeCommand("sv_training_limitboost " + std::to_string(tempBoostAmount));
+	//		//cvarManager->executeCommand("sv_training_player_velocity (" + std::to_string(tempStartingVelocityMin) + "," + std::to_string(tempStartingVelocityMax) + ")");
+	//	}
+
+	//}
 	
 }
 
@@ -745,6 +941,9 @@ void VersatileTraining::restartTraining() {
 
 void VersatileTraining::onUnload() {
 	LOG("Unloading Versatile Training");
+	for (auto& [key, value] : trainingData) {
+		shiftVelocitiesToPositive(value.startingVelocity);
+	}
 	SaveCompressedTrainingData(trainingData, saveFilePath);
 	CleanUp();
 }

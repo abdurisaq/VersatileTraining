@@ -128,10 +128,9 @@ void DecompressBoost(std::vector<int>& boostAmounts, int globalMinBoost,int bits
 
 void DecompressStartingVelocity(std::vector<int>& startingVelocity, int globalMinVelocity, int bitsForVelocity, std::vector<uint8_t>& bitstream, size_t& bitIndex) {
     
-    LOG("when decompressing starting velocity, global min velocity is : {} and numBitsForVelocity is : {}", globalMinVelocity, bitsForVelocity);
+    //LOG("when decompressing starting velocity, global min velocity is : {} and numBitsForVelocity is : {}", globalMinVelocity, bitsForVelocity);
     for (size_t i = 0; i < startingVelocity.size(); ++i) {
         int compressedVelocity = ReadBits(bitstream, bitIndex, bitsForVelocity);
-        LOG("read for velocity : {}", compressedVelocity);
         startingVelocity[i] = compressedVelocity + globalMinVelocity;  
     }
 }
@@ -194,7 +193,10 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
     
     for (const auto& entry : trainingData) {
         const CustomTrainingData& data = entry.second;
+        //
+        // update starting velocities, get rid of negatives by shifting the values up 2000
         
+       
         // Header: nameLength  | numShots | minBoost | minVelocity | boostbitAmount | velocitybitAmount | name
         size_t nameLength = data.name.size();
         std::vector<uint8_t> bitstream;
@@ -233,8 +235,19 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
 
-        size_t numBitsForBoost = CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first);
-        size_t numBitsForVelocity = CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first);
+        //size_t numBitsForBoost = CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first);
+        //size_t numBitsForVelocity = CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first);
+
+        size_t numBitsForBoost = 0;
+        if (boundaryBoosts.first != boundaryBoosts.second) {
+            numBitsForBoost = CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first);
+        }
+
+
+        size_t numBitsForVelocity = 0;
+        if (boundaryVelocities.first != boundaryVelocities.second) {
+            numBitsForVelocity = CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first);
+        }
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(numBitsForBoost & 0xFF);
@@ -257,10 +270,12 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
         }
 
         // Compress 
-        byte = CompressBoost(data.boostAmounts, boundaryBoosts.first, boundaryBoosts.second, bitstream, bitIndexInByte, byte);
-      
-        byte =CompressStartingVelocity(data.startingVelocity, boundaryVelocities.first, boundaryVelocities.second, bitstream, bitIndexInByte, byte);
-     
+        if (numBitsForBoost > 0) {
+            byte = CompressBoost(data.boostAmounts, boundaryBoosts.first, boundaryBoosts.second, bitstream, bitIndexInByte, byte);
+        }
+        if (numBitsForVelocity > 0) {
+            byte = CompressStartingVelocity(data.startingVelocity, boundaryVelocities.first, boundaryVelocities.second, bitstream, bitIndexInByte, byte);
+        }
         CompressFreeze(data.freezeCar, bitstream, bitIndexInByte, byte);
       
       
@@ -277,90 +292,86 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
 
     outFile.close();
 }
-
 std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompressedTrainingData(const std::filesystem::path& fileName) {
-    
     LOG("loading from file");
     std::ifstream inFile(fileName, std::ios::binary);
     if (!inFile.is_open()) {
         LOG("Error: Failed to open file for reading: ");
-        return {};  
+        return {};
     }
 
-    std::string base64EncodedData((std::istreambuf_iterator<char>(inFile)), std::istreambuf_iterator<char>());
-    inFile.close();
-    
-    if (base64EncodedData.empty()) {
-        LOG("Warning: The file is empty." );
-        return {}; 
-    }
-    
-    std::vector<uint8_t> bitstream = base64_decode_bytearr(base64EncodedData);
-    
-    if (bitstream.empty()) {
-        LOG("Error: Failed to decode base64 data.");
-        return {};  
-    }
-
-    size_t bitIndex = 0;
-
-    
+    std::string line;
     std::unordered_map<std::string, CustomTrainingData> trainingDataMap;
-    LOG("do we get here 3");
-    
-    while (bitIndex < bitstream.size()) {
-        // Read header (nameLength | name | numShots | minBoost | minVelocity)
-        size_t nameLength = ReadBits(bitstream, bitIndex, NAME_LEN_BITS); 
+
+    while (std::getline(inFile, line)) {
+        if (line.empty()) continue;
+
+        std::vector<uint8_t> bitstream = base64_decode_bytearr(line);
+        if (bitstream.empty()) {
+            LOG("Error: Failed to decode base64 line.");
+            continue;
+        }
+
+        size_t bitIndex = 0;
+
+        size_t nameLength = ReadBits(bitstream, bitIndex, NAME_LEN_BITS);
         if (nameLength == 0) {
             LOG("Error: Invalid name length in the header.");
-            break;  
+            continue;
         }
         LOG("Name length : {}", nameLength);
-        
-        
-        size_t numShots = ReadBits(bitstream, bitIndex, NUM_SHOTS_BITS);  
+
+        size_t numShots = ReadBits(bitstream, bitIndex, NUM_SHOTS_BITS);
         LOG("numShots : {}", numShots);
-        int minBoost = ReadBits(bitstream, bitIndex, BOOST_MIN_BITS);  
+        int minBoost = ReadBits(bitstream, bitIndex, BOOST_MIN_BITS);
         LOG("minBoost : {}", minBoost);
-        int minVelocity = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);  
+        int minVelocity = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
         LOG("minVelocity : {}", minVelocity);
-        uint8_t packedBits = ReadBits(bitstream, bitIndex, 7); 
-        int numBitsForBoost = (packedBits >> 4) & 0x07;  
-        int numBitsForVelocity = packedBits & 0x0F;  
+        uint8_t packedBits = ReadBits(bitstream, bitIndex, 7);
+        int numBitsForBoost = (packedBits >> 4) & 0x07;
+        int numBitsForVelocity = packedBits & 0x0F;
         LOG("num bits for boost : {}", numBitsForBoost);
         LOG("num bits for velocity : {}", numBitsForVelocity);
 
         std::string name(nameLength, '\0');
-
         for (size_t i = 0; i < nameLength; ++i) {
-            name[i] = ReadBits(bitstream, bitIndex, 7);  
+            name[i] = ReadBits(bitstream, bitIndex, 7);
         }
         LOG("name : {}", name);
 
-        
         CustomTrainingData trainingData;
         trainingData.initCustomTrainingData(numShots, name);
 
+        if (numBitsForBoost == 0) {
+            std::fill(trainingData.boostAmounts.begin(), trainingData.boostAmounts.end(), minBoost);
+        }
+        else {
+            DecompressBoost(trainingData.boostAmounts, minBoost, numBitsForBoost, bitstream, bitIndex);
+        }
 
-
-
-        DecompressBoost(trainingData.boostAmounts, minBoost, numBitsForBoost, bitstream, bitIndex);
         for (int boostAmounts : trainingData.boostAmounts) {
             LOG("boostAmounts : {}", boostAmounts);
         }
-        DecompressStartingVelocity(trainingData.startingVelocity, minVelocity, numBitsForVelocity, bitstream, bitIndex);
+
+        if (numBitsForVelocity == 0) {
+            std::fill(trainingData.startingVelocity.begin(), trainingData.startingVelocity.end(), minVelocity);
+        }
+        else {
+            DecompressStartingVelocity(trainingData.startingVelocity, minVelocity, numBitsForVelocity, bitstream, bitIndex);
+        }
+
         for (int startingVelocity : trainingData.startingVelocity) {
-			LOG("startingVelocity : {}", startingVelocity);
-		}
+            LOG("startingVelocity : {}", startingVelocity);
+        }
+
         DecompressFreeze(trainingData.freezeCar, bitstream, bitIndex);
         for (bool freeze : trainingData.freezeCar) {
             LOG("freeze : {}", freeze);
         }
-       
+
         trainingDataMap[name] = trainingData;
     }
 
-    
     if (trainingDataMap.empty()) {
         LOG("Warning: No valid training data found in the file after decoding.");
     }

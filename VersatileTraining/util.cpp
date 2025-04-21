@@ -65,8 +65,8 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	int expectedRoll1 = mapToRoll(t, south, 65535);
 	int expectedRoll2 = mapToRoll(t, north, west);
 	int expectedPitch = mapToRoll(t, 0, 16384);
-	LOG("expectedRoll: {}", expectedRoll1);
-	LOG("actual roll: {}", roll);
+	//LOG("expectedRoll: {}", expectedRoll1);
+	//LOG("actual roll: {}", roll);
 	int tolerance = 5000;
 	bool yaw1 = inThreshold(yaw, 0, tolerance) || inThreshold(yaw, 65536, tolerance);
 	bool yaw2 = inThreshold(yaw, east, tolerance) || inThreshold(yaw, -east, tolerance);
@@ -124,6 +124,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		if (yaw3 && (roll1))
 		{
 			LOG("clamped on the left wall");
+			LOG("expected roll :{} ", expectedRoll1);
 			clampVal = 3;
 			//(pRoll1 || nRoll2)
 			return Rotator{ pitch,south ,expectedRoll1 };
@@ -131,6 +132,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		else if (yaw4 && (roll2))
 		{
 			LOG("clamped on the left wall");
+			LOG("expected roll :{} ", expectedRoll2);
 			clampVal = 3;
 
 			return Rotator{ pitch,16384 ,expectedRoll2 };
@@ -265,7 +267,9 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		};
 	float cornerVal = diagBound + 80;
 
-	std::pair <float,float> axisBreakDown = getAxisBreakDown(rot,20);
+	checkForClamping(loc, rot);
+
+	std::pair <float,float> axisBreakDown = getAxisBreakDown(rot,50);
 	LOG("axisBreakDown.first: {}, axisBreakDown.second: {}", axisBreakDown.first, axisBreakDown.second);
 	
 	LOG("clampVal: {}", clampVal);
@@ -276,6 +280,8 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 
 	switch (clampVal) {//5090
 	case 1: {
+		LOG("Old location: {}, {} {}", loc.X, loc.Y,loc.Z);
+		LOG("New location: {}, {} {}", loc.X, currentYBound + axisBreakDown.first, frozenZVal + axisBreakDown.second);
 		return Vector{ loc.X,currentYBound + axisBreakDown.first,frozenZVal + axisBreakDown.second };
 		break;
 	}
@@ -388,4 +394,49 @@ Vector VersatileTraining::getStickingVelocity(Rotator rot) {
 	}
 		}
 	return Vector{ 0,0,0 };
+}
+
+
+
+void VersatileTraining::ApplyLocalPitch(float pitchInput) {
+	// Get current rotation and position
+	Rotator rot = currentRotation;
+	Vector loc = currentLocation; // Get car location from your game wrapper
+
+	// Only apply local pitch when on curves (0 < t < 1)
+	if (t > 0.0f && t < 1.0f) {
+		// Calculate blend factor based on how far we are into the curve
+		float blendFactor = abs(t - 0.5f) * 2.0f; // 0 at middle, 1 at edges
+
+		// Convert angles to radians
+		const float UU_TO_RAD = 3.14159265358979323846f / 32768.0f;
+		float rollRad = rot.Roll * UU_TO_RAD;
+
+		// Compute local pitch adjustment
+		float adjustedPitch = pitchInput * cos(rollRad) * blendFactor;
+		float adjustedYaw = pitchInput * sin(rollRad) * blendFactor;
+
+		// Blend with standard pitch
+		rot.Pitch += static_cast<int>(adjustedPitch + pitchInput * (1.0f - blendFactor));
+		rot.Yaw += static_cast<int>(adjustedYaw);
+	}
+	else {
+		// Standard pitch behavior when not on curves
+		rot.Pitch += static_cast<int>(pitchInput);
+	}
+
+	localRotation = rot;
+}
+
+
+void VersatileTraining::shiftVelocitiesToPositive(std::vector<int>& vec) {
+	for (int& value : vec) {	
+			value += 2000;
+	}
+}
+void VersatileTraining::shiftVelocitiesToNegative(std::vector<int>& vec) {
+	
+	for (int& value : vec) {
+		value -= 2000;
+	}
 }

@@ -39,13 +39,13 @@ struct CustomTrainingData {
 	std::vector<int> boostAmounts;
 	std::vector<bool> freezeCar;
 	std::vector<int> startingVelocity;
-
+	bool customPack = true;
 	
 	void initCustomTrainingData(int shotAmount, std::string packName) {
 		name = packName;
 		numShots = shotAmount;
 		currentEditedShot = 0;
-		boostAmounts = std::vector<int>(shotAmount, -1);
+		boostAmounts = std::vector<int>(shotAmount, 101);
 		startingVelocity = std::vector<int>(shotAmount, 0);
 		freezeCar = std::vector<bool>(shotAmount, false);
 
@@ -90,23 +90,27 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	bool editMode = false;
 
 	CustomTrainingData currentTrainingData;
-	CustomTrainingData *currentTrainingDataUsed;
+	CustomTrainingData * currentTrainingDataEdited;
+	std::unique_ptr<CustomTrainingData> currentTrainingDataUsed;
+	std::string currentPackKey;
 	int currentShotIndex = 0;
 
-	int boostAmount = -1;
-	int boostMax = 100;
-	int boostMin = -1;
+	int boostAmount = 0;
+	int boostMax = 101;
+	int boostMin = 0;
+
 	int maxVelocity = 2000;
 	int minVelocity = -2000;
 	int startingVelocity = 0;
 
 	bool editingVariances = false;
-	int tempBoostAmount = -1;
-	int tempStartingVelocity = 0;
-
+	int tempBoostAmount = 0;
+	int tempStartingVelocity = 2000;
+	int activeStartingVelocity = 0;
 	Rotator carRotationUsed = { 0,0,0 };
 	Vector startingVelocityTranslation = { 0,0,0 };
 	bool appliedStartingVelocity = false;
+	bool appliedWallClamping = false;
 	//Boilerplate
 	void onLoad() override;
 	void onUnload() override; // Uncomment and implement if you need a unload method
@@ -164,6 +168,7 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	Rotator rotationToApply = { 0,0,0 };
 	bool test = false;
 	Rotator currentRotation = { 0,0,0 };
+	Vector currentLocation = { 0,0,0 };
 	bool lockRotation = true;
 	bool freezeCar = false;
 	bool freezeForShot = false;
@@ -183,6 +188,14 @@ class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
 	void SaveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
 	std::unordered_map<std::string, CustomTrainingData> LoadCompressedTrainingData(const std::filesystem::path& fileName);
 	std::filesystem::path saveFilePath;
+
+	void ApplyLocalPitch( float pitchInput);
+	Rotator localRotation = { 0,0,0 };
+
+
+	void shiftVelocitiesToPositive(std::vector<int>& vec);
+
+	void shiftVelocitiesToNegative(std::vector<int>& vec);
 public:
 	
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
