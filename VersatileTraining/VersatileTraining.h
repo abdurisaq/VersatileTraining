@@ -39,8 +39,8 @@ struct CustomTrainingData {
 	std::vector<int> boostAmounts;
 	std::vector<bool> freezeCar;
 	std::vector<int> startingVelocity;
-	bool customPack = true;
-	
+	bool customPack = false;
+
 	void initCustomTrainingData(int shotAmount, std::string packName) {
 		name = packName;
 		numShots = shotAmount;
@@ -56,6 +56,17 @@ struct ButtonState {
 	std::chrono::steady_clock::time_point lastUpdateTime;
 };
 
+struct Input {
+	int index;
+	bool pressed;
+	std::string name;
+};
+
+
+struct KeyState {
+	int index;      // Virtual key index/code
+	bool pressed;   // Is the key pressed
+};
 template <typename T, typename std::enable_if<std::is_base_of<ObjectWrapper, T>::value>::type*>
 void GameWrapper::HookEventWithCallerPost(std::string eventtName, std::function<void(T caller, void* params, std::string eventName)> callback)
 {
@@ -78,127 +89,139 @@ void GameWrapper::HookEventWithCaller(std::string eventName,
 		};
 	HookEventWithCaller<ActorWrapper>(eventName, wrapped_callback);
 }
-class VersatileTraining: public BakkesMod::Plugin::BakkesModPlugin
-	,public SettingsWindowBase // Uncomment if you wanna render your own tab in the settings menu
+class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
+	, public SettingsWindowBase // Uncomment if you wanna render your own tab in the settings menu
 	//,public PluginWindowBase // Uncomment if you want to render your own plugin window
 {
-
-	//std::shared_ptr<bool> enabled;
 
 	std::unordered_map<std::string, CustomTrainingData> trainingData;
 	std::string editingTrainingCode;
 	bool editMode = false;
 
+	bool editingGoalBlocker = false;
+	bool goalBlockerEligbleToBeEdited = false;
+	bool savedPastCamera = false;
+	Vector previousLocBeforeGoalEdit = { 0, 0, 0 };
+	Rotator previousRotBeforeGoalEdit = { 0, 0, 0 };
+
 	CustomTrainingData currentTrainingData;
-	CustomTrainingData * currentTrainingDataEdited;
+	CustomTrainingData* currentTrainingDataEdited;
 	std::unique_ptr<CustomTrainingData> currentTrainingDataUsed;
 	std::string currentPackKey;
 	int currentShotIndex = 0;
 
+	// Boost and velocity
 	int boostAmount = 0;
 	int boostMax = 101;
 	int boostMin = 0;
-
 	int maxVelocity = 2000;
 	int minVelocity = -2000;
 	int startingVelocity = 0;
-
-	bool editingVariances = false;
 	int tempBoostAmount = 0;
 	int tempStartingVelocity = 2000;
 	int activeStartingVelocity = 0;
-	Rotator carRotationUsed = { 0,0,0 };
-	Vector startingVelocityTranslation = { 0,0,0 };
+
+	bool editingVariances = false;
 	bool appliedStartingVelocity = false;
 	bool appliedWallClamping = false;
-	//Boilerplate
-	void onLoad() override;
-	void onUnload() override; // Uncomment and implement if you need a unload method
-	void loadHooks();
-	void restartTraining();
-	void getTrainingData(ActorWrapper cw, void* params, std::string eventName);
-	void setTrainingVariables(ActorWrapper cw, void* params, std::string eventName);
 
-	CustomTrainingData decodeTrainingCode(std::string code);
-	std::string encodeTrainingCode(CustomTrainingData data);
-	TrainingEditorWrapper GetTrainingEditor();
-	void onGetEditingTraining(GameEditorWrapper caller);
+	// Rotation and clamping
+	Rotator carRotationUsed = { 0, 0, 0 };
+	Rotator rotationToApply = { 0, 0, 0 };
+	Rotator currentRotation = { 0, 0, 0 };
+	Vector startingVelocityTranslation = { 0, 0, 0 };
+	Vector currentLocation = { 0, 0, 0 };
+	bool lockRotation = true;
+	bool freezeCar = false;
+	bool freezeForShot = false;
 
-	//setting up button clicks to specified functions
-	using ButtonCallback = std::function<void()>; 
 
-	std::unordered_map<int, ButtonCallback> buttonCallbacks; 
+	//input controls
+	using ButtonCallback = std::function<void()>;
+	std::unordered_map<int, ButtonCallback> buttonCallbacks;
 	std::unordered_map<int, ButtonState> buttonStates;
-	void registerButtonCallback(int buttonIndex, ButtonCallback callback);
-	void initializeCallBacks();
-	void IncrementTempBoost();
-	void IncrementTempStartingVelocity();
-
-	void checkForR1Press();
-	void checkForButtonPress(int buttonIndex);
-
 	bool R1AlreadyPressed = false;
 	std::chrono::steady_clock::time_point lastUpdateTime;
-	static BOOL CALLBACK EnumDevicesCallback(const DIDEVICEINSTANCE* instance, VOID* context);
-	void enumerateControllers();
+	std::map<std::string, struct Input> m_inputMap;
 
-
-	void rollLeft();
-	void rollRight();
 	
+
+	// DirectInput
 	LPDIRECTINPUT8 dinput;
 	LPDIRECTINPUTDEVICE8 joystick;
 	std::vector<LPDIRECTINPUTDEVICE8> controllers;
 
+	// Clamping
 	int clampVal = 0;
-	Rotator checkForClamping(Vector loc, Rotator rot);
-	Vector getClampChange(Vector loc, Rotator rot);
-	std::pair <float, float> getAxisBreakDown(Rotator rot,int extra);
-	Vector getStickingVelocity(Rotator rot);
-
-	bool changeCarSpawnRotation();
-	bool isCarRotatable = false;
-	struct Input {
-		int index;
-		bool pressed;
-		std::string name;
-	};
-
-	std::map<std::string, Input> m_inputMap;
-	Rotator rotationToApply = { 0,0,0 };
-	bool test = false;
-	Rotator currentRotation = { 0,0,0 };
-	Vector currentLocation = { 0,0,0 };
-	bool lockRotation = true;
-	bool freezeCar = false;
-	bool freezeForShot = false;
-	void CleanUp();
-	int getRandomNumber(int min, int max);
-	//diagBound
-	float diagBound = 7965;
-
-	//for changing roll for clamping based on ramps
 	bool isCeiling = false;
-	float t = 0.0f;
+	float diagBound = 7965;
 	float currentXBound = 4026.0f;
 	float currentYBound = 5050.0f;
 	float frozenZVal = 0.0f;
 	bool frozeZVal = false;
 
+	// Misc
+	bool isCarRotatable = false;
+	bool test = false;
+	float t = 0.0f;
+	std::filesystem::path saveFilePath;
+	Rotator localRotation = { 0, 0, 0 };
+
+
+
+	void onLoad() override;
+	void onUnload() override; // Uncomment and implement if you need a unload method
+
+	// Training
+	void loadHooks();
+	void registerNotifiers();
+	void getTrainingData(ActorWrapper cw, void* params, std::string eventName);
+
+
+	// controller stuff
+	void registerButtonCallback(int buttonIndex, std::function<void()> callback);
+	void initializeCallBacks();
+	void checkForR1Press();
+	void checkForButtonPress(int buttonIndex);
+	void enumerateControllers();
+	void IncrementTempBoost();
+	void IncrementTempStartingVelocity();
+	BOOL CALLBACK EnumDevicesCallback(const DIDEVICEINSTANCE* instance, VOID* context);
+
+	// Movement helpers
+	void rollLeft();
+	void rollRight();
+
+	Rotator checkForClamping(Vector loc, Rotator rot);
+	Vector getClampChange(Vector loc, Rotator rot);
+	std::pair<float, float> getAxisBreakDown(Rotator rot, int extra);
+	Vector getStickingVelocity(Rotator rot);
+	bool changeCarSpawnRotation();
+
+	;
+
+	// Data helpers
+	void CleanUp();
+	int getRandomNumber(int min, int max);
 	void SaveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
 	std::unordered_map<std::string, CustomTrainingData> LoadCompressedTrainingData(const std::filesystem::path& fileName);
-	std::filesystem::path saveFilePath;
-
-	void ApplyLocalPitch( float pitchInput);
-	Rotator localRotation = { 0,0,0 };
-
-
 	void shiftVelocitiesToPositive(std::vector<int>& vec);
-
 	void shiftVelocitiesToNegative(std::vector<int>& vec);
+	void ApplyLocalPitch(float pitchInput);
+
+
+
+	std::map<std::string, KeyState> keyStates;
+
+
+	int middleMouseIndex = 0;
+	bool saveCursorPos = false;
+	std::pair<Vector,Vector> goalBlockerPos = { { 0, 0, 0 }, { 0, 0, 0 } };
 public:
-	
+
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
 	void Render(CanvasWrapper canvas);
+
+	void onTick(std::string eventName);
 	//void RenderWindow() override; // Uncomment if you want to render your own plugin window
 };

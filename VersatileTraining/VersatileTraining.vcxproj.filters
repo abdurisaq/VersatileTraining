@@ -93,6 +93,9 @@
     <ClCompile Include="saving.cpp">
       <Filter>Plugin\src</Filter>
     </ClCompile>
+    <ClCompile Include="eventHooks.cpp">
+      <Filter>Plugin\src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui_rangeslider.h">
