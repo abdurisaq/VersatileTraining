@@ -96,6 +96,18 @@
     <ClCompile Include="eventHooks.cpp">
       <Filter>Plugin\src</Filter>
     </ClCompile>
+    <ClCompile Include="RenderingTools\Objects\Frustum.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderingTools\Objects\Line.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderingTools\Objects\VisualCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderingTools\Extra\CanvasExtensions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imgui_rangeslider.h">

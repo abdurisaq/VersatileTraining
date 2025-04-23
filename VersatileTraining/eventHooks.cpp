@@ -18,6 +18,7 @@ void VersatileTraining::loadHooks() {
 		appliedStartingVelocity = false;
 		editingVariances = false;
 		appliedWallClamping = false;
+		editingGoalBlocker = false;
 		});
 
 	//TAGame.TrainingEditorMetrics_TA.TrainingEditorExit save when this is called
@@ -26,6 +27,7 @@ void VersatileTraining::loadHooks() {
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.TrainingEditorMetrics_TA.TrainingEditorExit", [this](ActorWrapper cw, void* params, std::string eventName) {
 		currentTrainingData.currentEditedShot = -1;
 		editingGoalBlocker = false;
+		goalBlockerEligbleToBeEdited = false;
 		});
 
 	gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.Save", [this](ActorWrapper cw, void* params, std::string eventName) {
@@ -38,7 +40,7 @@ void VersatileTraining::loadHooks() {
 			currentTrainingData.freezeCar[currentTrainingData.currentEditedShot] = freezeCar;
 			trainingData[currentPackKey] = currentTrainingData;
 
-
+			LOG("saving num shots : {}", currentTrainingData.numShots);
 			//currentTrainingData
 			for (auto& [key, value] : trainingData) {
 				shiftVelocitiesToPositive(value.startingVelocity);
@@ -85,6 +87,12 @@ void VersatileTraining::loadHooks() {
 		if (currentTrainingData.currentEditedShot != -1) {
 			LOG("already loaded, skipping searching training data");
 			LOG("currentShot: {}", currentTrainingData.currentEditedShot);
+			LOG("amount of shots in found training data: {}", currentTrainingData.numShots);
+			while (currentShot >= currentTrainingData.numShots) {
+				LOG("adding shot");
+				currentTrainingData.addShot();
+				LOG("now this many shots in training data: {}", currentTrainingData.numShots);
+			}
 			LOG("setting boost atmount to {}", currentTrainingData.boostAmounts[currentShot]);
 			tempBoostAmount = currentTrainingData.boostAmounts[currentShot];
 			LOG("setting starting velocity to {}", currentTrainingData.startingVelocity[currentShot]);
@@ -118,6 +126,14 @@ void VersatileTraining::loadHooks() {
 			//return;
 		}
 
+
+		LOG("currentShot: {}", currentShot);
+		LOG("amount of shots in found training data: {}", currentTrainingData.numShots);
+		while (currentShot >= currentTrainingData.numShots) {
+			LOG("adding shot");
+			currentTrainingData.addShot();
+			LOG("now this many shots in training data: {}", currentTrainingData.numShots);
+		}
 		LOG("setting boost atmount to {}", currentTrainingData.boostAmounts[currentShot]);
 		tempBoostAmount = currentTrainingData.boostAmounts[currentShot];
 		LOG("setting starting velocity to {}", currentTrainingData.startingVelocity[currentShot]);
@@ -133,24 +149,25 @@ void VersatileTraining::loadHooks() {
 
 	//TAGame.GFxData_TrainingModeEditor_TA.CreateRound
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GFxData_TrainingModeEditor_TA.CreateRound", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
-		currentTrainingData.numShots++;
-		currentTrainingData.boostAmounts.push_back(101);
-		currentTrainingData.startingVelocity.push_back(2000);
-		currentTrainingData.freezeCar.push_back(false);
+		currentTrainingData.addShot();
 
 
 		});
-	//TAGame.GameEvent_TrainingEditor_TA.DeleteRound
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function TAGame.GameEvent_TrainingEditor_TA.DeleteRound", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
-		int currentShot = cw.GetActiveRoundNumber();
+		int shotToRemove = cw.GetActiveRoundNumber();  // Get this BEFORE deletion
 
-		LOG("removing shot: {}", currentShot);
-		currentTrainingData.numShots--;
-		currentTrainingData.boostAmounts.erase(currentTrainingData.boostAmounts.begin() + currentShot);
-		currentTrainingData.startingVelocity.erase(currentTrainingData.startingVelocity.begin() + currentShot);
-		currentTrainingData.freezeCar.erase(currentTrainingData.freezeCar.begin() + currentShot);
+		if (shotToRemove >= 0 && shotToRemove < currentTrainingData.numShots) {
+			LOG("Removing shot: {}", shotToRemove);
 
+			currentTrainingData.boostAmounts.erase(currentTrainingData.boostAmounts.begin() + shotToRemove);
+			currentTrainingData.startingVelocity.erase(currentTrainingData.startingVelocity.begin() + shotToRemove);
+			currentTrainingData.freezeCar.erase(currentTrainingData.freezeCar.begin() + shotToRemove);
 
+			currentTrainingData.numShots--;
+		}
+		else {
+			LOG("Invalid shot index: {}, numShots = {}", shotToRemove, currentTrainingData.numShots);
+		}
 		});
 	gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>("Function GameEvent_TrainingEditor_TA.ShotSelection.DuplicateRound", [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
 		//duplicate shot starting velocity and boost amount, and frozen status
@@ -162,10 +179,8 @@ void VersatileTraining::loadHooks() {
 		int boostToCopy = currentTrainingData.boostAmounts[currentShot];
 		int startingVelocityToCopy = currentTrainingData.startingVelocity[currentShot];
 		bool freezeToCopy = currentTrainingData.freezeCar[currentShot];
-		currentTrainingData.boostAmounts.push_back(boostToCopy);
-		currentTrainingData.startingVelocity.push_back(startingVelocityToCopy);
-		currentTrainingData.freezeCar.push_back(freezeToCopy);
-		currentTrainingData.numShots++;
+
+		currentTrainingData.addShot(boostToCopy, startingVelocityToCopy, freezeToCopy);
 
 
 
@@ -284,11 +299,11 @@ void VersatileTraining::loadHooks() {
 							frozenZVal = loc.Z;
 							frozeZVal = true;
 						}
-						Vector loc2 = getClampChange(loc, rot);
+						/*Vector loc2 = getClampChange(loc, rot);
 						if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
 
 							car.SetLocation(loc2);
-						}
+						}*/
 						float pitchRad = (rot.Pitch / 16201.0f) * (PI / 2);
 						float yawRad = (rot.Yaw / 32768.0f) * PI;
 						float z = sinf(pitchRad);
@@ -297,6 +312,12 @@ void VersatileTraining::loadHooks() {
 						Vector unitVector = { x,y,z };
 						int velocity = currentTrainingData.startingVelocity[currentTrainingData.currentEditedShot];//getRandomNumber(tempStartingVelocityMin, tempStartingVelocityMax);//changed 
 						startingVelocityTranslation = unitVector * velocity;
+					}
+					Vector loc2 = getClampChange(loc, rot);
+					if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
+						LOG("old location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+						LOG("new location - X: {}, Y: {}, Z: {}", loc2.X, loc2.Y, loc2.Z);
+						car.SetLocation(loc2);
 					}
 					car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
 					Vector vel = car.GetVelocity();

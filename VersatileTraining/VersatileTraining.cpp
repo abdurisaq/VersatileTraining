@@ -171,7 +171,7 @@ void VersatileTraining::registerNotifiers() {
 		}
 
 
-		if (currentTrainingData.customPack && goalBlockerEligbleToBeEdited) {
+		if (currentTrainingData.customPack && goalBlockerEligbleToBeEdited ) {//&& gameWrapper->IsInCustomTraining()
 			LOG("flipping editing goal blocker to {}", editingGoalBlocker ? "true" : "false");
 			editingGoalBlocker = !editingGoalBlocker;
 		}
@@ -296,19 +296,148 @@ void VersatileTraining::CleanUp() {
 	}
 }
 
+bool inRectangle(const std::pair<Vector, Vector>& goalBlockerPos, const Vector& ballLoc) {
+	float minX = min(goalBlockerPos.first.X, goalBlockerPos.second.X);
+	float maxX = max(goalBlockerPos.first.X, goalBlockerPos.second.X);
 
+	float minZ = min(goalBlockerPos.first.Z, goalBlockerPos.second.Z);
+	float maxZ = max(goalBlockerPos.first.Z, goalBlockerPos.second.Z);
+
+	// Y is usually constant (the back wall), so we just care about X and Z for 2D plane
+	return (ballLoc.X >= minX && ballLoc.X <= maxX &&
+		ballLoc.Z >= minZ && ballLoc.Z <= maxZ);
+}
 
 void VersatileTraining::onTick(std::string eventName) {
 	
 	if (editingGoalBlocker) {
-		if (gameWrapper->IsKeyPressed(middleMouseIndex)) {
+		if (gameWrapper->IsKeyPressed(middleMouseIndex) && middleMouseReleased) {
 			saveCursorPos = true;
+			middleMouseReleased = false;
 			LOG("middle mouse button pressed");
 		}
+		else if (!gameWrapper->IsKeyPressed(middleMouseIndex)) {
+			middleMouseReleased = true;
+		}
+	}
+
+	if (!gameWrapper->IsInCustomTraining())return;
+	if ((goalBlockerPos.first.X == 0 && goalBlockerPos.first.Y == 0 && goalBlockerPos.first.Z == 0) || (goalBlockerPos.second.X == 0 && goalBlockerPos.second.Y == 0 && goalBlockerPos.second.Z == 0)) return;
+
+	ServerWrapper gameState = gameWrapper->GetCurrentGameState();
+
+	BallWrapper ball = gameState.GetBall();
+
+	if (!ball) {
+		return;
+	}
+
+	ArrayWrapper<GoalWrapper> allGoals = gameState.GetGoals();
+
+	if (allGoals.Count() < 2) {
+		return;
+	}
+
+	Vector ballPosition = ball.GetLocation();
+	Vector ballVelocity = ball.GetVelocity();
+
+	if (ballPosition.Y > backWall && ballVelocity.Y > 0) {
+
+		if (inRectangle(goalBlockerPos, ballPosition)) {
+			GoalWrapper enemyGoal = allGoals.Get(1);
+
+			if (!enemyGoal) {
+				return;
+			}
+
+			Vector explosionPosition = ballPosition;
+
+			ball.eventOnHitGoal(enemyGoal, explosionPosition);
+			return;
+		}
+
+		ballVelocity.Y = -ballVelocity.Y;
+		ball.SetVelocity(ballVelocity);
 	}
 }
 
 
+Vector GetForwardVectorFromRotator(const Rotator& rot) {
+    float yawRad = rot.Yaw * (2.0f * PI / 65536.0f);
+    float pitchRad = rot.Pitch * (PI / 32768.0f);
+
+    float cosPitch = cosf(pitchRad);
+
+    return Vector{
+        cosPitch * cosf(yawRad), // X
+        cosPitch * sinf(yawRad), // Y
+        sinf(pitchRad)           // Z
+    };
+}
+
+bool ProjectToPlaneY(Vector origin, Vector direction, float yPlane, Vector& outHit) {
+	// get point by projecting onto Y = backWall
+	if (fabs(direction.Y) < 1e-6) return false; //to make sure it doesnt fuck with 0
+
+	float t = (yPlane - origin.Y) / direction.Y;
+	if (t < 0) return false; // Behind the camera
+
+	outHit = origin + direction * t;
+	return true;
+}
+
+float Dot(const Vector2& a, const Vector2& b) {
+	return a.X * b.X + a.Y * b.Y;
+}
+
+void DrawLineClippedByCircle(CanvasWrapper& canvas, const Vector2& a, const Vector2& b, const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D, CameraWrapper cam, RT::Frustum frust) {
+	Vector2 ab = b - a;
+	Vector2 ac = a - circleCenter;
+
+	float A = Dot(ab, ab);
+	float B = 2 * Dot(ac, ab);
+	float C = Dot(ac, ac) - radius * radius;
+
+	float discriminant = B * B - 4 * A * C;
+
+	// No intersection: draw full line
+	if (discriminant < 0.0f) {
+		RT::Line full(a3D, b3D, RT::GetVisualDistance(canvas, frust, cam, a3D) * 1.5f);
+		full.DrawWithinFrustum(canvas, frust);
+		return;
+	}
+
+	// Compute intersection points (in screen space as t values)
+	float sqrtDisc = std::sqrt(discriminant);
+	float t1 = (-B - sqrtDisc) / (2 * A);
+	float t2 = (-B + sqrtDisc) / (2 * A);
+
+	t1 = std::clamp(t1, 0.0f, 1.0f);
+	t2 = std::clamp(t2, 0.0f, 1.0f);
+
+	Vector2 p1 = a + ab * t1;
+	Vector2 p2 = a + ab * t2;
+
+	Vector v3D = b3D - a3D;
+	Vector p1_3D = a3D + v3D * t1;
+	Vector p2_3D = a3D + v3D * t2;
+
+	if (t1 > 0.0f) {
+		RT::Line line1(a3D, p1_3D, RT::GetVisualDistance(canvas, frust, cam, a3D) * 1.5f);
+		line1.DrawWithinFrustum(canvas, frust);
+	}
+	if (t2 < 1.0f) {
+		RT::Line line2(p2_3D, b3D, RT::GetVisualDistance(canvas, frust, cam, b3D) * 1.5f);
+		line2.DrawWithinFrustum(canvas, frust);
+	}
+}
+
+
+float Distance(Vector2 a, Vector2 b) {
+	float dx = b.X - a.X;
+	float dy = b.Y - a.Y;
+	return sqrt(dx * dx + dy * dy);
+}
 void VersatileTraining::Render(CanvasWrapper canvas) {
 	if (editingVariances) {
 
@@ -342,32 +471,127 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 		canvas.DrawString("Starting Velocity: " + std::to_string(tempStartingVelocity), 2.0, 2.0, false);
 	}
 	else if (editingGoalBlocker) {
-		LOG("drawing cursor");
+		CameraWrapper cam = gameWrapper->GetCamera();
+		if (cam.IsNull()) return;
+
+		Vector camLoc = cam.GetLocation();
+		Vector forward = GetForwardVectorFromRotator(cam.GetRotation());
+		RT::Frustum frust{ canvas, cam };
+
+		Vector projectedPoint;
+		if (ProjectToPlaneY(camLoc, forward, backWall, projectedPoint)) {
+			// Draw projected point as a small cross
+			Vector2 screenPoint = canvas.Project(projectedPoint);
+			float crossSize = 5.0f;
+			canvas.SetColor(255, 255, 255, 255);
+			canvas.DrawLine(screenPoint - Vector2(crossSize, 0), screenPoint + Vector2(crossSize, 0), 1.0f);
+			canvas.DrawLine(screenPoint - Vector2(0, crossSize), screenPoint + Vector2(0, crossSize), 1.0f);
+
+			// Handle mouse input
+			if (saveCursorPos) {
+				if (!goalAnchors.first) {
+					goalBlockerPos.first = projectedPoint;
+					saveCursorPos = false;
+					goalAnchors.first = true;
+
+				}
+				else if(!goalAnchors.second){
+					goalBlockerPos.second = projectedPoint;
+					rectangleSaved = true;
+					saveCursorPos = false;
+					goalAnchors.second = true;
+				}
+				else {
+					goalBlockerPos.first = projectedPoint;
+					goalBlockerPos.second = {0, 0, 0};
+					goalAnchors.first = true;
+					goalAnchors.second = false;
+					rectangleMade = false;
+					saveCursorPos = false;
+					rectangleSaved = false;
+				}
+				//eventaully add logic for second middle mouse press to keep the goal blocker seperate from mouse
+			}
+			else if (goalAnchors.first && !rectangleSaved) {
+				goalBlockerPos.second = projectedPoint;
+				rectangleMade = true;
+
+			}
+
+			// If we have both points, draw rectangle on the goal plane
+			if (rectangleMade) {
+				Vector topLeft(max(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, max(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+				Vector topRight(min(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, max(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+				Vector bottomLeft(max(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, min(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+				Vector bottomRight(min(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, min(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+
+				canvas.SetColor(0, 255, 0, 255); // Green
+
+				RT::Line lineTop(topLeft, topRight, RT::GetVisualDistance(canvas, frust, cam, topLeft) * 1.5f);
+				RT::Line lineRight(topRight, bottomRight, RT::GetVisualDistance(canvas, frust, cam, topRight) * 1.5f);
+				RT::Line lineBottom(bottomRight, bottomLeft, RT::GetVisualDistance(canvas, frust, cam, bottomRight) * 1.5f);
+				RT::Line lineLeft(bottomLeft, topLeft, RT::GetVisualDistance(canvas, frust, cam, bottomLeft) * 1.5f);
+
+				lineTop.DrawWithinFrustum(canvas, frust);
+				lineRight.DrawWithinFrustum(canvas, frust);
+				lineBottom.DrawWithinFrustum(canvas, frust);
+				lineLeft.DrawWithinFrustum(canvas, frust);
+
+				LOG("top Left corner: {}, {}, {}", topLeft.X, topLeft.Y, topLeft.Z);
+				LOG("top Right corner: {}, {}, {}", topRight.X, topRight.Y, topRight.Z);
+				LOG("bottom Left corner: {}, {}, {}", bottomLeft.X, bottomLeft.Y, bottomLeft.Z);
+				LOG("bottom Right corner: {}, {}, {}", bottomRight.X, bottomRight.Y, bottomRight.Z);
+
+			}
+		}
+
+		// Optional: Draw center screen cursor
 		Vector2 screenSize = canvas.GetSize();
-
-		// Calculate center
 		Vector2 center(screenSize.X / 2, screenSize.Y / 2);
-
-		// Set color to white with full opacity
 		canvas.SetColor(255, 255, 255, 255);
-
-		// Size of the cross lines
 		float length = 10.0f;
+		canvas.DrawLine(Vector2(center.X - length, center.Y), Vector2(center.X + length, center.Y), 1.5f);
+		canvas.DrawLine(Vector2(center.X, center.Y - length), Vector2(center.X, center.Y + length), 1.5f);
 
-		// Draw horizontal line
-		canvas.DrawLine(
-			Vector2(center.X - length, center.Y),
-			Vector2(center.X + length, center.Y),
-			1.5f
-		);
 
-		// Draw vertical line
-		canvas.DrawLine(
-			Vector2(center.X, center.Y - length),
-			Vector2(center.X, center.Y + length),
-			1.5f
-		);
 	}
+
+	if (!gameWrapper->IsInCustomTraining()) return;
+
+	if ((goalBlockerPos.first.X == 0 && goalBlockerPos.first.Y == 0 && goalBlockerPos.first.Z == 0) ||
+		(goalBlockerPos.second.X == 0 && goalBlockerPos.second.Y == 0 && goalBlockerPos.second.Z == 0)) return;
+
+	CameraWrapper camera = gameWrapper->GetCamera();
+	if (camera.IsNull()) return;
+
+	RT::Frustum frustum{ canvas, camera };
+	ServerWrapper gameState = gameWrapper->GetCurrentGameState();
+	BallWrapper ball = gameState.GetBall();
+	if (ball.IsNull()) return;
+
+	Vector2 ballScreenPos = canvas.Project(ball.GetLocation());
+	//float ballRadius = canvas.Project(ball.GetLocation() + Vector(92.75f, 0, 0)).Dist(ballScreenPos); // 92.75 uu = ball radius in RL
+	float ballRadius = Distance(ballScreenPos, canvas.Project(ball.GetLocation() + Vector(92.75f, 0, 0)));
+	// Goal blocker corner definitions
+	Vector topLeft(max(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, max(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+	Vector topRight(min(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, max(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+	Vector bottomLeft(max(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, min(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+	Vector bottomRight(min(goalBlockerPos.first.X, goalBlockerPos.second.X), backWall, min(goalBlockerPos.first.Z, goalBlockerPos.second.Z));
+
+	// Project all points to 2D
+	Vector2 tl2d = canvas.Project(topLeft);
+	Vector2 tr2d = canvas.Project(topRight);
+	Vector2 bl2d = canvas.Project(bottomLeft);
+	Vector2 br2d = canvas.Project(bottomRight);
+
+	canvas.SetColor(0, 255, 0, 255); // Green
+
+	DrawLineClippedByCircle(canvas, tl2d, tr2d, ballScreenPos, ballRadius, topLeft, topRight, camera, frustum);
+	DrawLineClippedByCircle(canvas, tr2d, br2d, ballScreenPos, ballRadius, topRight, bottomRight, camera, frustum);
+	DrawLineClippedByCircle(canvas, br2d, bl2d, ballScreenPos, ballRadius, bottomRight, bottomLeft, camera, frustum);
+	DrawLineClippedByCircle(canvas, bl2d, tl2d, ballScreenPos, ballRadius, bottomLeft, topLeft, camera, frustum);
+
+
 
 
 }

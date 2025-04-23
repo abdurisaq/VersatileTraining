@@ -50,6 +50,12 @@ struct CustomTrainingData {
 		freezeCar = std::vector<bool>(shotAmount, false);
 
 	}
+	void addShot(int boostAmount = 101, int velocity = 0, bool frozen = false ) {
+		numShots++;
+		boostAmounts.push_back(boostAmount);
+		startingVelocity.push_back(velocity);
+		freezeCar.push_back(frozen);
+	}
 };
 struct ButtonState {
 	bool isPressed;
@@ -215,8 +221,14 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 
 
 	int middleMouseIndex = 0;
+	bool middleMouseReleased = true;
 	bool saveCursorPos = false;
 	std::pair<Vector,Vector> goalBlockerPos = { { 0, 0, 0 }, { 0, 0, 0 } };
+	std::pair<bool,bool> goalAnchors = { false, false };
+	bool rectangleMade = false;
+	bool rectangleSaved = false;
+	int backWall = 5140;
+
 public:
 
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
