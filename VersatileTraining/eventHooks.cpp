@@ -477,7 +477,8 @@ void VersatileTraining::loadHooks() {
 			}
 
 			Vector loc = cw.GetLocation();
-			Rotator rot1 = checkForClamping(loc, currentRotation);
+			Rotator rot = cw.GetRotation();
+			Rotator rot1 = checkForClamping(loc, rot);//currentRotation
 			if (!lockRotation) {
 
 

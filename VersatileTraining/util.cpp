@@ -51,7 +51,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	auto cornerLine2 = [this](int x, int y) {
 		return (diagBound - 25) + x - y;
 		};
-	int yaw = currentRotation.Yaw % 65536;
+	int yaw = rot.Yaw % 65536;//currentRotation.Yaw % 65536;
 
 	int roll = rot.Roll % 65536;
 	int pitch = rot.Pitch % 65536;
@@ -105,6 +105,8 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		}
 		else {
 			LOG("passed 5050 buyt one of these dont work");
+			LOG("loc.Y: {}, currentYBound: {}", loc.Y, currentYBound);
+			LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll, pitch);
 		}
 	}
 	else if (loc.Y < -(currentYBound-10)) {
@@ -266,7 +268,7 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		return { c, d };
 		};
 	float cornerVal = diagBound + 80;
-
+	LOG("in getclampchange rotation is Pitch :{} Yaw:{} Roll:{}",rot.Pitch,rot.Yaw,rot.Roll);
 	checkForClamping(loc, rot);
 
 	std::pair <float,float> axisBreakDown = getAxisBreakDown(rot,50);
