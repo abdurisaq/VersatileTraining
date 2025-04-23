@@ -6,8 +6,7 @@
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 #include "bakkesmod/plugin/bakkesmodsdk.h"
 #include "bakkesmod/wrappers/includes.h"
-
-
+//#include "bakkesmod/wrappers/wrapperstructs.h"
 #define _AMD64_  // Assuming you are targeting 64-bit
 #include <Windows.h>
 #include <Xinput.h>
@@ -39,22 +38,36 @@ struct CustomTrainingData {
 	std::vector<int> boostAmounts;
 	std::vector<bool> freezeCar;
 	std::vector<int> startingVelocity;
+	std::vector<std::pair<Vector, Vector>> goalBlockers;
+	std::vector<std::pair<bool, bool>>goalAnchors;
 	bool customPack = false;
 
 	void initCustomTrainingData(int shotAmount, std::string packName) {
+		LOG("called initCustomTrainingData");
 		name = packName;
 		numShots = shotAmount;
 		currentEditedShot = 0;
 		boostAmounts = std::vector<int>(shotAmount, 101);
 		startingVelocity = std::vector<int>(shotAmount, 0);
 		freezeCar = std::vector<bool>(shotAmount, false);
+		goalBlockers = std::vector<std::pair<Vector, Vector>>(shotAmount, { { 0, 0, 0 }, { 0, 0, 0 } });
+		goalAnchors = std::vector<std::pair<bool, bool>>(shotAmount, { false, false });
 
 	}
-	void addShot(int boostAmount = 101, int velocity = 0, bool frozen = false ) {
+	void addShot(int boostAmount = 101, int velocity = 0, bool frozen = false , Vector firstAnchor = {0,0,0} , Vector secondAnchor = { 0,0,0 }) {
 		numShots++;
 		boostAmounts.push_back(boostAmount);
 		startingVelocity.push_back(velocity);
 		freezeCar.push_back(frozen);
+		goalBlockers.push_back({ firstAnchor, secondAnchor });
+		if (firstAnchor.X == 0 && firstAnchor.Z == 0 && secondAnchor.X == 0 && secondAnchor.Z == 0) {
+			goalAnchors.push_back({ false, false });
+			LOG("in add shot, first and second anchor are 0" );
+		}
+		else {
+			goalAnchors.push_back({ true, true });
+			LOG("in add shot, first and second anchor are not 0" );
+		}
 	}
 };
 struct ButtonState {
@@ -213,6 +226,10 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	std::unordered_map<std::string, CustomTrainingData> LoadCompressedTrainingData(const std::filesystem::path& fileName);
 	void shiftVelocitiesToPositive(std::vector<int>& vec);
 	void shiftVelocitiesToNegative(std::vector<int>& vec);
+
+	void shiftGoalBlockerToPositive(std::vector<std::pair<Vector, Vector>>& vec);
+	void shiftGoalBlockerToNegative(std::vector<std::pair<Vector, Vector>>& vec);
+
 	void ApplyLocalPitch(float pitchInput);
 
 
@@ -228,6 +245,42 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool rectangleMade = false;
 	bool rectangleSaved = false;
 	int backWall = 5140;
+
+	//function hook handlers
+	void handleTrainingEditorActorModified();
+	void handleUpdateFlyPOV();
+	void handleStopEditingGoalBlocker();
+	void handleBallEditingBegin();
+	void handleGetRotateActorCameraOffset(ActorWrapper cw);
+	void handleEditorSetRotation(ActorWrapper cw);
+	void handleEditorMoveToLocation(ActorWrapper cw, void* params);
+	void handleStartRound();
+	void handleUnfrozenCar(ActorWrapper car, Vector loc, Rotator rot);
+	void handleFreezeCar(ActorWrapper car, Vector loc, Rotator rot);
+	void handleUpdateCarData(ActorWrapper cw);
+	void handleEndPlayTest();
+	void handleGameEditorActorEditingEnd();
+	void handleEditorModeEndState();
+	void handleBallEditingEnd();
+	void handleStopEditing();
+	void handleStartPlayTest();
+	void handleDuplicateRound(TrainingEditorWrapper cw);
+	void handleDeleteRound(TrainingEditorWrapper cw);
+	void handleCreateRound();
+	void handleNewTrainingData(int currentShot);
+	void handleExistingTrainingData(int currentShot);
+	void handleStartEditing(ActorWrapper cw);
+	void handleTrainingSave();
+	void handleTrainingEditorExit();
+	void handleLoadRound(ActorWrapper cw, void* params, std::string eventName);
+	void handleTrainingEditorEnter();
+
+	// hooks groups together
+	void setupInputHandlingHooks();
+	void setupGoalBlockerHooks();
+	void setupEditorMovementHooks();
+	void setupTrainingShotHooks();
+	void setupTrainingEditorHooks();
 
 public:
 

@@ -442,3 +442,43 @@ void VersatileTraining::shiftVelocitiesToNegative(std::vector<int>& vec) {
 		value -= 2000;
 	}
 }
+
+
+void VersatileTraining::shiftGoalBlockerToPositive(std::vector<std::pair<Vector, Vector>>& vec) {
+	LOG("before shifting");
+	for (std::pair<Vector, Vector>& value : vec) {
+		LOG("before shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
+		LOG("before shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
+	}
+	for (std::pair<Vector, Vector>& value : vec) {
+		value.first.X += 910;
+		value.second.X += 910;
+		value.second.Z += 20;
+		value.first.Z += 20;
+	}
+
+	LOG("after shifting");
+	for (std::pair<Vector, Vector>& value : vec) {
+		LOG("after shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
+		LOG("after shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
+	}
+}
+void VersatileTraining::shiftGoalBlockerToNegative(std::vector<std::pair<Vector, Vector>>& vec) {
+	LOG("before shifting");
+	for (std::pair<Vector, Vector>& value : vec) {
+		LOG("before shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
+		LOG("before shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
+	}
+
+	for (std::pair<Vector, Vector>& value : vec) {
+		value.first.X -= 910;
+		value.second.X -=910;
+		value.second.Z -= 20;
+		value.first.Z -= 20;
+	}
+	LOG("after shifting");
+	for (std::pair<Vector, Vector>& value : vec) {
+		LOG("after shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
+		LOG("after shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
+	}
+}

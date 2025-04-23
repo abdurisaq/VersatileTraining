@@ -33,6 +33,7 @@ void VersatileTraining::onLoad()
 	trainingData = LoadCompressedTrainingData(saveFilePath);
 	for (auto& [key, value] : trainingData) {
 		shiftVelocitiesToNegative(value.startingVelocity);
+		shiftGoalBlockerToNegative(value.goalBlockers);
 	}
 
 	//		
@@ -135,7 +136,10 @@ void VersatileTraining::registerNotifiers() {
 			LOG("Code: {}", key);
 			LOG("Num Shots: {}", value.numShots);
 			for (int i = 0; i < value.numShots; i++) {
-				LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}", i, value.boostAmounts[i], value.startingVelocity[i], static_cast<int>(value.freezeCar[i]));
+				LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}. goal blocker x1 {}, z1 {} x2 {}, z2 {}", i, value.boostAmounts[i], value.startingVelocity[i], 
+					static_cast<int>(value.freezeCar[i]),static_cast<int>(value.goalBlockers[i].first.X), static_cast<int>(value.goalBlockers[i].first.Z), 
+					static_cast<int>(value.goalBlockers[i].second.X), static_cast<int>(value.goalBlockers[i].second.X));
+				LOG("goal anchors first: {}, second: {}", value.goalAnchors[i].first ? "true" : "false", value.goalAnchors[i].second ? "true" : "false");
 			}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
 			LOG("------------------------------");
 		}
@@ -242,6 +246,14 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 			LOG("setting active starting velocity to {}", tempStartingVelocity);
 			currentTrainingData.currentEditedShot = currentShot;
 			freezeCar = currentTrainingData.freezeCar[currentShot];
+			std::pair<Vector,Vector> blockerToAssign = currentTrainingData.goalBlockers[currentShot];
+
+			//goalAnchors.first = !(blockerToAssign.first.X == 0.f || blockerToAssign.first.Z == 0.f) ;//&& (blockerToAssign.first != Vector{ 0,0,0 })
+			//goalAnchors.second = !(blockerToAssign.second.X == 0.f || blockerToAssign.second.Z == 0.f);//&& (blockerToAssign.second != Vector{ 0,0,0 })
+			goalAnchors = currentTrainingData.goalAnchors[currentShot];
+			goalBlockerPos = currentTrainingData.goalBlockers[currentShot];
+			LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", goalBlockerPos.first.X, goalBlockerPos.first.Z, goalBlockerPos.second.X, goalBlockerPos.second.Z, goalAnchors.first ? "true" : "false", goalAnchors.second ? "true" : "false");
+
 			if (freezeCar) {
 				LOG("car is frozen");
 			}
@@ -260,7 +272,12 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 	if (!found) {
 		LOG("didn't find this traini pack in training data");
 		currentTrainingData.initCustomTrainingData(totalRounds, name);
-		currentTrainingData.customPack = false;
+		if (td.GetCode().ToString().empty()) {
+			currentTrainingData.customPack = true;
+		}
+		else {
+			currentTrainingData.customPack = false;
+		}
 		cvarManager->executeCommand("sv_training_limitboost -1");
 	}
 
@@ -273,6 +290,7 @@ void VersatileTraining::onUnload() {
 	LOG("Unloading Versatile Training");
 	for (auto& [key, value] : trainingData) {
 		shiftVelocitiesToPositive(value.startingVelocity);
+		shiftGoalBlockerToPositive(value.goalBlockers);
 	}
 	SaveCompressedTrainingData(trainingData, saveFilePath);
 	CleanUp();
@@ -489,19 +507,26 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
 			// Handle mouse input
 			if (saveCursorPos) {
+				LOG("current anchors first: {}, second: {}", goalAnchors.first ? "true" : "false", goalAnchors.second ? "true" : "false");
+				LOG("current anchor firs : X {} Z {}, second : X {} Z {}", goalBlockerPos.first.X, goalBlockerPos.first.Z, goalBlockerPos.second.X, goalBlockerPos.second.Z);
 				if (!goalAnchors.first) {
 					goalBlockerPos.first = projectedPoint;
 					saveCursorPos = false;
+					rectangleMade = false;
+					rectangleSaved = false;
 					goalAnchors.first = true;
-
+					LOG("adding to first anchor point : X {}, Z {}", goalBlockerPos.first.X, goalBlockerPos.first.Z);
 				}
 				else if(!goalAnchors.second){
 					goalBlockerPos.second = projectedPoint;
 					rectangleSaved = true;
 					saveCursorPos = false;
 					goalAnchors.second = true;
+
+					LOG("first anchor point : X {}, Z {}, second anchor point : X {} Z {}", goalBlockerPos.first.X, goalBlockerPos.first.Z, goalBlockerPos.second.X, goalBlockerPos.second.Z);
 				}
 				else {
+					LOG("this else call is being called");
 					goalBlockerPos.first = projectedPoint;
 					goalBlockerPos.second = {0, 0, 0};
 					goalAnchors.first = true;
@@ -512,11 +537,16 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 				}
 				//eventaully add logic for second middle mouse press to keep the goal blocker seperate from mouse
 			}
-			else if (goalAnchors.first && !rectangleSaved) {
+			else if (goalAnchors.first && !goalAnchors.second) {
+				
 				goalBlockerPos.second = projectedPoint;
+				//LOG("updating second anchor point : X {}, Z {}", goalBlockerPos.second.X, goalBlockerPos.second.Z);
 				rectangleMade = true;
 
+			}if (goalAnchors.first && goalAnchors.second) {
+				rectangleMade = true;
 			}
+			
 
 			// If we have both points, draw rectangle on the goal plane
 			if (rectangleMade) {
@@ -537,11 +567,6 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 				lineBottom.DrawWithinFrustum(canvas, frust);
 				lineLeft.DrawWithinFrustum(canvas, frust);
 
-				LOG("top Left corner: {}, {}, {}", topLeft.X, topLeft.Y, topLeft.Z);
-				LOG("top Right corner: {}, {}, {}", topRight.X, topRight.Y, topRight.Z);
-				LOG("bottom Left corner: {}, {}, {}", bottomLeft.X, bottomLeft.Y, bottomLeft.Z);
-				LOG("bottom Right corner: {}, {}, {}", bottomRight.X, bottomRight.Y, bottomRight.Z);
-
 			}
 		}
 
@@ -556,10 +581,10 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
 	}
 
-	if (!gameWrapper->IsInCustomTraining()) return;
+	//if (!gameWrapper->IsInCustomTraining()) return;
 
-	if ((goalBlockerPos.first.X == 0 && goalBlockerPos.first.Y == 0 && goalBlockerPos.first.Z == 0) ||
-		(goalBlockerPos.second.X == 0 && goalBlockerPos.second.Y == 0 && goalBlockerPos.second.Z == 0)) return;
+	if (!(goalAnchors.first && goalAnchors.second)) return;
+	
 
 	CameraWrapper camera = gameWrapper->GetCamera();
 	if (camera.IsNull()) return;
