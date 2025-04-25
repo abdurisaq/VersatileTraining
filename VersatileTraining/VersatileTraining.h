@@ -29,6 +29,28 @@
 #include "version.h"
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
+struct FVector {
+	float X, Y, Z;
+
+	FVector() : X(0), Y(0), Z(0) {}
+	FVector(float x, float y, float z) : X(x), Y(y), Z(z) {}
+};
+struct FRotator {
+	float Pitch, Yaw, Roll;
+
+	FRotator() : Pitch(0), Yaw(0), Roll(0) {}
+	FRotator(float pitch, float yaw, float roll) : Pitch(pitch), Yaw(yaw), Roll(roll) {}
+};
+struct pGetTrajectoryStartLocation {
+	FVector ReturnValue;
+};
+struct pGetTrajectoryStartVelocity {
+	FVector ReturnValue;
+};
+struct pGetTrajectoryStartRotation {
+	FRotator ReturnValue;
+};
+
 
 struct CustomTrainingData {
 	std::string code;
@@ -81,10 +103,28 @@ struct Input {
 	std::string name;
 };
 
+struct BallState {
+	Vector location;
+	Rotator rotation;
+	Vector velocity;
+	Vector angularVelocity;
 
+};
 struct KeyState {
 	int index;      // Virtual key index/code
 	bool pressed;   // Is the key pressed
+};
+
+struct ShotRecording {
+	int carBody = 23; //default octane
+	GamepadSettings settings = GamepadSettings(0, 0.5, 1, 1);
+	std::vector<ControllerInput> inputs;
+	struct InitialState {
+		Vector location;
+		Rotator rotation;
+		Vector velocity;
+	};
+	std::shared_ptr<InitialState> initialState;
 };
 template <typename T, typename std::enable_if<std::is_base_of<ObjectWrapper, T>::value>::type*>
 void GameWrapper::HookEventWithCallerPost(std::string eventtName, std::function<void(T caller, void* params, std::string eventName)> callback)
@@ -112,6 +152,25 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	, public SettingsWindowBase // Uncomment if you wanna render your own tab in the settings menu
 	//,public PluginWindowBase // Uncomment if you want to render your own plugin window
 {
+
+	int lastRecordedFrame = -1;
+	int lastPlaybackFrame = -1;
+	ControllerInput lastPlaybackInput;
+
+
+	BallState ballState;
+	bool botSpawnedTest = false;
+	bool canSpawnBot = false;
+	bool primedToStartRecording = false;
+	bool roundStarted = false;
+	bool justStartedPlayback = false;
+	int botSpawnTick = 0;
+	bool startRecording = false;
+	std::shared_ptr< ShotRecording> currentShotRecording;
+	int frame = 0;
+	int startingFrame = 0;
+
+	bool playForNormalCar = false;
 
 	std::unordered_map<std::string, CustomTrainingData> trainingData;
 	std::string editingTrainingCode;
