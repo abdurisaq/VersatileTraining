@@ -245,6 +245,7 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->registerNotifier("spawnBot", [this](std::vector<std::string> args) {
 		if (botSpawnedTest) return;
 		if(currentShotRecording == nullptr) return;
+		if(currentShotRecording->inputs.size() == 0) return;
 		if (!canSpawnBot) return;
 		auto server = gameWrapper->GetCurrentGameState();
 		if (!server) return;

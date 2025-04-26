@@ -150,83 +150,61 @@ void VersatileTraining::setupTrainingEditorHooks() {
             if (!params) return;
 
             ControllerInput* input = static_cast<ControllerInput*>(params);
+            auto& inputs = currentShotRecording->inputs;
             auto currentFrame = gameWrapper->GetEngine().GetPhysicsFrame();
+            if (botSpawnedTest || playForNormalCar) {
+                if (!roundStarted) {
+                    bool anyInput =
+                        input->Throttle != 0.0f || input->Steer != 0.0f ||
+                        input->Pitch != 0.0f || input->Yaw != 0.0f || input->Roll != 0.0f ||
+                        input->Jump || input->ActivateBoost || input->Handbrake;
 
-            if ((botSpawnedTest || playForNormalCar) && !roundStarted) {
-
-                bool anyInput =
-                    input->Throttle != 0.0f || input->Steer != 0.0f ||
-                    input->Pitch != 0.0f || input->Yaw != 0.0f || input->Roll != 0.0f ||
-                    input->Jump || input->ActivateBoost || input->Handbrake;
-
-                if (anyInput) {
-                    roundStarted = true;
-                    startingFrame = currentFrame;
-                    
-                }
-                else {
-                    car.SetbDriving(true); // Ensure bot responds to inputs
-                }
-            }
-            if ((botSpawnedTest || playForNormalCar) && roundStarted) {
-                if (!currentShotRecording) return;
-
-              
-
-                auto& inputs = currentShotRecording->inputs;
-                auto tick = currentFrame - this->startingFrame;
-
-                if (tick < 0 || tick >= inputs.size()) {
-                    if (tick >= inputs.size()) {
-                        LOG("Playback completed - {} frames", inputs.size());
-                        roundStarted = false;
+                    if (anyInput) {
+                        LOG("found first input, Throttle: {:.7f} Steer: {:.7f} Pitch: {:.7f} Yaw: {:.7f} Roll: {:.7f} Jump: {} ActivateBoost: {} Handbrake: {}",
+                            input->Throttle, input->Steer, input->Pitch, input->Yaw, input->Roll,
+                            input->Jump ? "true" : "false", input->ActivateBoost ? "true" : "false", input->Handbrake ? "true" : "false");
+                        roundStarted = true;
+                        //frame = 0;
+                        *input = inputs[0];
+                        frame = 1;
+                        return;
                     }
-                    return;
+
                 }
+                if (roundStarted) {
+                    if (!currentShotRecording) return; //shared_ptr to recording
 
-       
-               
 
-
-                LOG("Frame {}: Applying input - Throttle: {:.7f}, Steer: {:.7}, Pitch: {:.7f}, Yaw: {:.7f}, Roll: {:.7f}, DodgeForward: {:.7f}, DodgeStrafe: {:.7f}, Handbrake {}, Jump {}, ActivateBoost {}, HoldingBoost {}, Jumped {}",
-                    tick, inputs[tick].Throttle, inputs[tick].Steer, inputs[tick].Pitch,inputs[tick].Yaw, inputs[tick].Roll, inputs[tick].DodgeForward, inputs[tick].DodgeStrafe, inputs[tick].Handbrake? "true" : "false", inputs[tick].Jump ? "true" : "false", inputs[tick].ActivateBoost ? "true" : "false", inputs[tick].HoldingBoost ? "true" : "false", inputs[tick].Jumped ? "true" : "false");
-                *input = inputs[tick];
-               
-            }
-
-            // Handle recording start trigger
-            else if (primedToStartRecording) {
-                bool anyInput =
-                    input->Throttle != 0.0f || input->Steer != 0.0f ||
-                    input->Pitch != 0.0f || input->Yaw != 0.0f || input->Roll != 0.0f ||
-                    input->Jump || input->ActivateBoost || input->Handbrake;
-
-                if (anyInput) {
-                    
-                    startingFrame = currentFrame;
-                    LOG("Starting recording from first detected input frame is  {}",startingFrame);
-                    lastRecordedFrame = -1; // Reset recording tracking
-                    primedToStartRecording = false;
-                    startRecording = true;
-                }
-                else {
-                    car.SetbDriving(true);
+                    if (frame <= inputs.size()) {
+                        *input = inputs[frame];
+                        ++frame;
+                    }
+                    else {
+                        LOG("Frame {} out of bounds, size: {}", frame, inputs.size());
+                    }
                 }
             }
+            else {
+                if (primedToStartRecording) {
+                    bool anyInput =
+                        input->Throttle != 0.0f || input->Steer != 0.0f ||
+                        input->Pitch != 0.0f || input->Yaw != 0.0f || input->Roll != 0.0f ||
+                        input->Jump || input->ActivateBoost || input->Handbrake;
 
-            // Handle actual recording
-            if (startRecording && car.GetOwnerName() != "testplayers") {
-                // Only record once per physics frame
-                if (currentFrame != lastRecordedFrame) {
+                    if (anyInput) {
 
-                    currentShotRecording->inputs.push_back(*input);
-                    lastRecordedFrame = currentFrame;
+                        LOG("Starting recording from first detected input frame is  {}", startingFrame);
+                        primedToStartRecording = false;
+                        startRecording = true;
+                    }
 
-                    LOG("Frame {}: Recording input - Throttle: {:.3f}, Steer: {:.3f}",
-                        currentShotRecording->inputs.size() - 1,
-                        input->Throttle, input->Steer);
+                }
+                if (startRecording && car.GetOwnerName() != "testplayers") {
+                    inputs.push_back(*input);
+                    ++frame;
                 }
             }
+
         }
     );
     //TAGame.CameraState_BallCam_TA.BeginCameraState
