@@ -25,7 +25,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
     gameWrapper->HookEventWithCaller<ActorWrapper>(
         "Function TAGame.GameMetrics_TA.EndRound",
         [this](ActorWrapper cw, void* params, std::string eventName) {
-            LOG("ending round at frame {}", gameWrapper->GetEngine().GetPhysicsFrame());
+            testCalledInStartRound = false;
             startRecording = false;
             roundStarted = false;
             playForNormalCar = false;
@@ -33,6 +33,8 @@ void VersatileTraining::setupTrainingEditorHooks() {
             //delete bot if it was spawned
             if (!server) return;
             canSpawnBot = false;
+            startPlayback = false;
+            jumpedFirstFrame = false;
             LOG("setting can spawn bot to false");
             botSpawnedTest = false;
             auto cars = server.GetCars();
@@ -50,205 +52,266 @@ void VersatileTraining::setupTrainingEditorHooks() {
             }
             
             });
-    /*gameWrapper->HookEventWithCallerPost<BallWrapper>("Function TAGame.Ball_GameEditor_TA.GetBallFireVelocity",
-        [this](BallWrapper cw, void* params, std::string eventName) {
-            ballState.location = cw.GetLocation();
-            ballState.velocity = cw.GetVelocity();
-            ballState.rotation = cw.GetRotation();
-            ballState.angularVelocity = cw.GetAngularVelocity();
 
-            LOG("Ball - X: {}, Y: {}, Z: {}", ballState.location.X, ballState.location.Y, ballState.location.Z);
-            LOG("Ball - Velocity - X: {}, Y: {}, Z: {}", ballState.velocity.X, ballState.velocity.Y, ballState.velocity.Z);
-            LOG("Ball - Rotation - Pitch: {}, Yaw: {}, Roll: {}", ballState.rotation.Pitch, ballState.rotation.Yaw, ballState.rotation.Roll);
-            LOG("Ball - Angular Velocity - X: {}, Y: {}, Z: {}", ballState.angularVelocity.X, ballState.angularVelocity.Y, ballState.angularVelocity.Z);
+    /*bool anyInput =
+                        input->Throttle != 0.0f || input->Steer != 0.0f ||
+                        input->Pitch != 0.0f || input->Yaw != 0.0f || input->Roll != 0.0f ||
+                        input->Jump || input->ActivateBoost || input->Handbrake;*/
 
-            float* floatView = reinterpret_cast<float*>(params);
-            for (int i = 0; i < 4096 - 3; ++i) {
-                
-                if (fabs(floatView[i] - 818.81f) < 0.001f) {
-                    LOG("float[{}] = {} (hex: {})", i, floatView[i], *((uint32_t*)&floatView[i]));
-                    LOG("f[{}-{}]: {}, {}, {}", i, i + 2, floatView[i], floatView[i + 1], floatView[i + 2]);
-                    LOG("f[{}-{}]: {}, {}, {}", i + 3, i + 5, floatView[i + 3], floatView[i + 4], floatView[i + 5]);
-                    break;
-                }
-                
-            }
+    //gameWrapper->HookEventWithCaller<CarWrapper>(//TAGame.Car_TA.SetVehicleInput  Vehicle_TA
+    //    "Function TAGame.Vehicle_TA.SetVehicleInput", 
+    //    [this](CarWrapper car, void* params, std::string eventName) {
+    //        static const ControllerInput NO_INPUT = ControllerInput{
+    //            .Throttle = 0,
+    //            .Steer = 0,
+    //            .Pitch = 0,
+    //            .Yaw = 0,
+    //            .Roll = 0,
+    //            .DodgeForward = 0,
+    //            .DodgeStrafe = 0,
+    //            .Handbrake = 0,
+    //            .Jump = 0,
+    //            .ActivateBoost = 0,
+    //            .HoldingBoost = 0,
+    //            .Jumped = 0,
+    //        };
+    //        auto hasAnyInput = [](const ControllerInput* input) {
+    //            constexpr float epsilon = 0.00000001f;
+    //            return std::abs(input->Throttle) > epsilon ||
+    //                std::abs(input->Steer) > epsilon ||
+    //                std::abs(input->Pitch) > epsilon ||
+    //                std::abs(input->Yaw) > epsilon ||
+    //                std::abs(input->Roll) > epsilon ||
+    //                std::abs(input->DodgeForward) > epsilon ||
+    //                std::abs(input->DodgeStrafe) > epsilon ||
+    //                input->Jump ||
+    //                input->ActivateBoost ||
+    //                input->Handbrake ||
+    //                input->HoldingBoost ||
+    //                input->Jumped;
+    //            };
+    //        ControllerInput* input = static_cast<ControllerInput*>(params);
+    //        auto& inputs = currentShotRecording->inputs;
+    //        if (botSpawnedTest || playForNormalCar) {
+    //            if (!roundStarted) {
+    //                if (startPlayback) {//hasAnyInput(input)
 
-            
-           
-        });*/
+    //                    
+    //                    HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
+    //                    //PostMessage(hwnd, WM_KEYDOWN, 'D', 0);
+    //                    PostMessage(hwnd, WM_KEYUP, 'D', 0);//'W'
+    //                    frame = 0;
+    //                    startPlayback = false;
+    //                    roundStarted = true;
+    //                    //*input = NO_INPUT;
+    //                }
+    //            }
+    //        }
+    //    });
+    //TAGame.FXActor_Car_TA.SetBraking
+    //gameWrapper->HookEventWithCaller<CarWrapper>(//Car_TA  Vehicle_TA
+    //    "Function TAGame.PlayerController_TA.PlayerTick",
+    //    [this](CarWrapper car, void* params, std::string eventName) {
+    //        if (startPlayback ) {
 
-    //float Throttle = .0f;
-    //float Steer = .0f;
-    //float Pitch = .0f;
-    //float Yaw = .0f;
-    //float Roll = .0f;
-    //float DodgeForward = .0f;
-    //float DodgeStrafe = .0f;
-    //unsigned long Handbrake : 1;
-    //unsigned long Jump : 1;
-    //unsigned long ActivateBoost : 1;
-    //unsigned long HoldingBoost : 1;
-    //unsigned long Jumped : 1;
-    
-    // Add these to your class members
-    
+    //            Vector location= car.GetLocation();
+    //            if (location != currentShotRecording->initialState->location) {
+
+    //                HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
+    //                //PostMessage(hwnd, WM_KEYDOWN, 'D', 0);
+    //                PostMessage(hwnd, WM_KEYUP, 'D', 0);//'W'
+    //                //frame = 0;
+    //                startPlayback = false;
+    //                roundStarted = true;
+    //            }
+    //        }
+    //    });
     gameWrapper->HookEventWithCaller<CarWrapper>(
-        "Function TAGame.GameEvent_TA.AddBot",
-        [this](CarWrapper caller, void* params, std::string eventName) {
-            LOG("Adding bot with name: {}", caller.GetOwnerName());
-            
-   //         auto server = gameWrapper->GetCurrentGameState();
-   //         if (!server) return;
-   //         auto cars = server.GetCars();
-   //  
-   //         if (cars.Count() == 0) return;
-
-   //         
-   //         for (auto car : cars) {
-   //             std::string ownerName = car.GetOwnerName();
-   //             if (ownerName == "testplayers") {
-   //                 LOG("Bot added with name: {}", ownerName);
-
-   //                /* PlayerControllerWrapper playerController = gameWrapper->GetCurrentGameState().GetLocalPrimaryPlayer();
-   //                 caller.SetPlayerController(playerController);
-   //                 playerController.SetCar(caller);
-
-   //                 caller.GetAIController().DoNothing();
-
-   //                 ViewTarget viewTarget;
-   //                 viewTarget.Controller = (void*)playerController.memory_address;
-   //                 viewTarget.Target = (void*)caller.memory_address;
-   //                 viewTarget.PRI = (void*)playerController.GetPRI().memory_address;
-
-   //                 CameraWrapper cam = gameWrapper->GetCamera();
-   //                 cam.SetViewTarget(viewTarget);
-
-   //                 caller.GetPRI().SetUserCarPreferences(
-   //                     currentShotRecording->settings.DodgeInputThreshold,
-   //                     currentShotRecording->settings.SteeringSensitivity,
-   //                     currentShotRecording->settings.AirControlSensitivity
-   //                 );
-
-   //                 if (currentShotRecording->initialState) {
-   //                     RBState botState;
-   //                     botState.Location = currentShotRecording->initialState->location;
-   //                     botState.Quaternion = RotatorToQuat(currentShotRecording->initialState->rotation);
-   //                     botCar.SetPhysicsState(botState);
-   //                     botCar.SetbDriving(true);
-   //                 }
-   //                 botSpawnedTest = true;*/
-   //             }
-			//}
-            
-        }
-    );
-
-    gameWrapper->HookEventWithCaller<CarWrapper>(
-        "Function TAGame.Car_TA.SetVehicleInput",
+        "Function TAGame.Vehicle_TA.SetVehicleInput",
         [this](CarWrapper car, void* params, std::string eventName) {
-            if (!params) return;
+            static const ControllerInput NO_INPUT = ControllerInput{
+                .Throttle = 0,
+                .Steer = 0,
+                .Pitch = 0,
+                .Yaw = 0,
+                .Roll = 0,
+                .DodgeForward = 0,
+                .DodgeStrafe = 0,
+                .Handbrake = 0,
+                .Jump = 0,
+                .ActivateBoost = 0,
+                .HoldingBoost = 0,
+                .Jumped = 0,
+            };
+                    auto hasAnyInput = [](const ControllerInput* input) {
+                constexpr float epsilon = 0.00000001f;
+                return std::abs(input->Throttle) > epsilon ||
+                    std::abs(input->Steer) > epsilon ||
+                    std::abs(input->Pitch) > epsilon ||
+                    std::abs(input->Yaw) > epsilon ||
+                    std::abs(input->Roll) > epsilon ||
+                    std::abs(input->DodgeForward) > epsilon ||
+                    std::abs(input->DodgeStrafe) > epsilon ||
+                    input->Jump ||
+                    input->ActivateBoost ||
+                    input->Handbrake ||
+                    input->HoldingBoost ||
+                    input->Jumped;
+                };
+
+
+            if (!params) {
+                LOG("params is null");
+                return;
+            }
 
             ControllerInput* input = static_cast<ControllerInput*>(params);
             auto& inputs = currentShotRecording->inputs;
             auto currentFrame = gameWrapper->GetEngine().GetPhysicsFrame();
             if (botSpawnedTest || playForNormalCar) {
                 if (!roundStarted) {
-                    bool anyInput =
-                        input->Throttle != 0.0f || input->Steer != 0.0f ||
-                        input->Pitch != 0.0f || input->Yaw != 0.0f || input->Roll != 0.0f ||
-                        input->Jump || input->ActivateBoost || input->Handbrake;
 
-                    if (anyInput) {
-                        LOG("found first input, Throttle: {:.7f} Steer: {:.7f} Pitch: {:.7f} Yaw: {:.7f} Roll: {:.7f} Jump: {} ActivateBoost: {} Handbrake: {}",
-                            input->Throttle, input->Steer, input->Pitch, input->Yaw, input->Roll,
-                            input->Jump ? "true" : "false", input->ActivateBoost ? "true" : "false", input->Handbrake ? "true" : "false");
+                    if (startPlayback) {
+
+                        //HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
+                        //PostMessage(hwnd, WM_KEYDOWN, 'D', 0);
+                        //PostMessage(hwnd, WM_KEYUP, 'D', 0);//'W'
+                        LOG(" Applying input - Throttle: {:.7f}, Steer : {:.7}, Pitch : {:.7f}, Yaw : {:.7f}, Roll : {:.7f}, DodgeForward : {:.7f}, DodgeStrafe : {:.7f}, Handbrake{}, Jump{}, ActivateBoost{}, HoldingBoost{}, Jumped{}",
+                            inputs[0].Throttle, inputs[0].Steer, inputs[0].Pitch, inputs[0].Yaw, inputs[0].Roll, inputs[0].DodgeForward, inputs[0].DodgeStrafe, inputs[0].Handbrake ? "true" : "false", inputs[0].Jump ? "true" : "false", inputs[0].ActivateBoost ? "true" : "false", inputs[0].HoldingBoost ? "true" : "false", inputs[0].Jumped ? "true" : "false");
+
+
+                        INPUT inputsToSend[2] = {};
+
+                        if (inputs[0].Throttle < -0.0000001f) {
+                            LOG("first keypress goes backwards");
+                            // Set up a key down event
+                            inputsToSend[0].type = INPUT_KEYBOARD;
+                            inputsToSend[0].ki.wVk = 'S';  // Virtual-key code for 'W'
+                            inputsToSend[0].ki.dwFlags = 0; // 0 for key press
+
+                            // Set up a key up event
+                            inputsToSend[1].type = INPUT_KEYBOARD;
+                            inputsToSend[1].ki.wVk = 'S';  // Same virtual key code
+                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
+                        }
+                        else if (inputs[0].Steer < -0.00001f) {
+                            LOG("first keypress goes left");
+                            // Set up a key down event
+                            inputsToSend[0].type = INPUT_KEYBOARD;
+                            inputsToSend[0].ki.wVk = 'A';  // Virtual-key code for 'W'
+                            inputsToSend[0].ki.dwFlags = 0; // 0 for key press
+
+                            // Set up a key up event
+                            inputsToSend[1].type = INPUT_KEYBOARD;
+                            inputsToSend[1].ki.wVk = 'A';  // Same virtual key code
+                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
+                        }
+                        else if (inputs[0].Steer > 0.00001f)
+                        {
+                            LOG("first keypress goes right");
+                            // Set up a key down event
+                            inputsToSend[0].type = INPUT_KEYBOARD;
+                            inputsToSend[0].ki.wVk = 'D';  // Virtual-key code for 'W'
+                            inputsToSend[0].ki.dwFlags = 0; // 0 for key press
+
+                            //// Set up a key up event
+                            inputsToSend[1].type = INPUT_KEYBOARD;
+                            inputsToSend[1].ki.wVk = 'D';  // Same virtual key code
+                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
+                        }
+                        else
+                        {
+                            LOG("first keypress goes forward");
+                            // Set up a key down event
+                            inputsToSend[0].type = INPUT_KEYBOARD;
+                            inputsToSend[0].ki.wVk = 'W';  // Virtual-key code for 'W'
+                            inputsToSend[0].ki.dwFlags = 0; // 0 for key pressinputsToSend[1].type = INPUT_KEYBOARD;
+
+                            inputsToSend[1].type = INPUT_KEYBOARD;
+                            inputsToSend[1].ki.wVk = 'W';  // Same virtual key code
+                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
+
+
+                        }
+
+                        SendInput(2, inputsToSend, sizeof(INPUT));
+
+                        frame = 0;
                         roundStarted = true;
-                        //frame = 0;
-                        *input = inputs[0];
-                        frame = 1;
-                        return;
-                    }
 
+                        *input = NO_INPUT;
+                        if (inputs[frame].Jump) {
+                            car.SetbJumped(true);
+                            return;
+                        }
+                        else if (inputs[frame].ActivateBoost ) {//|| inputs[frame].HoldingBoost
+                        //    LOG("first frame is boost, presetting");
+                            /*car.ForceBoost(true);*/
+                            //input->ActivateBoost = true;
+                            //*input = inputs[0];
+                        //    return;
+                        //    //return;
+                        }
+                        else if (freezeCar) {
+                            LOG("car is frozen, setting jump to false");
+                            car.SetbDoubleJumped(false);
+
+                            if (std::abs(inputs[0].Throttle) > 0.00001f || std::abs(inputs[0].Steer) > 0.00001f)
+                            {
+                                return;
+                            }
+                            //return;
+                        }
+                        /*if (std::abs(inputs[0].Throttle) > 0.00001f || std::abs(inputs[0].Steer) > 0.00001f)
+                        {
+                            return;
+                        }*/
+                        return;
+                        LOG("any wheel touching ground {}", car.AnyWheelTouchingGround() ? "true" : "false");
+
+                    }
                 }
                 if (roundStarted) {
                     if (!currentShotRecording) return; //shared_ptr to recording
 
-
                     if (frame <= inputs.size()) {
-                        *input = inputs[frame];
-                        ++frame;
+
+                        *input = inputs[frame]; //-1 
+
+                        frame++;
                     }
                     else {
+
                         LOG("Frame {} out of bounds, size: {}", frame, inputs.size());
+
+                        roundStarted = false;
                     }
                 }
             }
             else {
                 if (primedToStartRecording) {
-                    bool anyInput =
-                        input->Throttle != 0.0f || input->Steer != 0.0f ||
-                        input->Pitch != 0.0f || input->Yaw != 0.0f || input->Roll != 0.0f ||
-                        input->Jump || input->ActivateBoost || input->Handbrake;
-
-                    if (anyInput) {
-
-                        LOG("Starting recording from first detected input frame is  {}", startingFrame);
-                        primedToStartRecording = false;
+                    if ( testCalledInStartRound) {//hasAnyInput(input) &&
+                        LOG("Starting recording from first detected input frame is  {}", currentFrame);
                         startRecording = true;
-                    }
+                        primedToStartRecording = false;
+                        recording = true;
 
+                    }
                 }
                 if (startRecording && car.GetOwnerName() != "testplayers") {
+
                     inputs.push_back(*input);
                     ++frame;
                 }
+                else if (recording) {
+                    LOG("ending recording on frame {}", currentFrame);
+                    recording = false;
+                }
             }
-
         }
     );
-    //TAGame.CameraState_BallCam_TA.BeginCameraState
-   /* gameWrapper->HookEventWithCaller<CameraWrapper>(
-		"Function TAGame.CameraState_BallCam_TA.BeginCameraState",
-        [this](CameraWrapper camera, void* params, std::string eventName) {
-			
-		});*/
 
-   // gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.Ball_TA.GetTrajectoryStartLocation",
-   //     [this](ActorWrapper cw, void* params, std::string eventName) {
-   //         Vector location = gameWrapper->GetCurrentGameState().GetBall().GetLocation();
-   //         LOG("Ball - X: {}, Y: {}, Z: {}", location.X, location.Y, location.Z);
-
-   //     });
-   // gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.Ball_TA.GetTrajectoryStartRotation",
-   //     [this](ActorWrapper cw, void* params, std::string eventName) {
-   //         Rotator rotation = reinterpret_cast<Rotator*>(params)[0];
-   //         LOG("Ball - Rotation - Pitch: {}, Yaw: {}, Roll: {}", rotation.Pitch, rotation.Yaw, rotation.Roll);
-   //         /*float* floatView = reinterpret_cast<float*>(params);
-   //         for (int i = 0; i < 2048; ++i) {
-   //             LOG("rotation f[{}-{}]: {}, {}, {}", i, i + 2, floatView[i], floatView[i + 1], floatView[i + 2]);
-   //         }*/
-   //     });
-   // gameWrapper->HookEventWithCallerPost<BallWrapper>("Function TAGame.Ball_GameEditor_TA.GetTrajectoryStartVelocity",
-   //     [this](BallWrapper cw, void* params, std::string eventName) {
-   //         pGetTrajectoryStartVelocity* p = reinterpret_cast<pGetTrajectoryStartVelocity*>(params);
-   //         FVector velocity = p->ReturnValue;
-			//LOG("Ball - Velocity - X: {}, Y: {}, Z: {}", velocity.X, velocity.Y, velocity.Z);
-   //         
-			//
-   //     });
-
-//worst case if i cant figure it out, first tick with the values not 0
-    /*gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.Ball_GameEditor_TA.Tick",
-        [this](ActorWrapper cw, void* params, std::string eventName) {
-            Vector location = cw.GetLocation();
-			LOG("tick Ball - X: {}, Y: {}, Z: {}", location.X, location.Y, location.Z);
-		    Vector velocity = cw.GetVelocity();
-            LOG("Ball - Velocity - X: {}, Y: {}, Z: {}", velocity.X, velocity.Y, velocity.Z);
-            Rotator rotation = cw.GetRotation();
-            LOG("Ball - Rotation - Pitch: {}, Yaw: {}, Roll: {}", rotation.Pitch, rotation.Yaw, rotation.Roll);
-
-        });*/
+    
 
     gameWrapper->HookEventWithCallerPost<ActorWrapper>(
         "Function TAGame.TrainingEditorMetrics_TA.TrainingEditorExit",
@@ -671,8 +734,7 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
 
 void VersatileTraining::handleFreezeCar(ActorWrapper car, Vector loc, Rotator rot) {
     if (rot.Pitch != carRotationUsed.Pitch || rot.Yaw != carRotationUsed.Yaw) {
-        LOG("Current Rotation - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
-        LOG("Current location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+       
 
         if (!frozeZVal) {
             frozenZVal = loc.Z;
@@ -698,10 +760,11 @@ void VersatileTraining::handleFreezeCar(ActorWrapper car, Vector loc, Rotator ro
 
     car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
     Vector vel = car.GetVelocity();
-    car.SetVelocity({ vel.X, vel.Y, 5 });
-    LOG("keeping car frozen");
-    LOG("starting velocity - X: {}, Y: {}, Z: {}", startingVelocityTranslation.X, startingVelocityTranslation.Y, startingVelocityTranslation.Z);
+    car.SetVelocity({ vel.X, vel.Y, 5 });//5
+    
+    
 }
+
 
 void VersatileTraining::handleUnfrozenCar(ActorWrapper car, Vector loc, Rotator rot) {
     if (!frozeZVal) {
@@ -716,13 +779,8 @@ void VersatileTraining::handleStartRound() {
     
 
     if (gameWrapper->IsInCustomTraining()) {
-
-        
-        if (botSpawnedTest) {
-            LOG("setting round started to true");
-            //roundStarted = true;
-                //justStartedPlayback = true;
-        }
+        testCalledInStartRound = true;
+       
 
 
         if (!currentTrainingData.customPack) return;

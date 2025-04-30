@@ -235,7 +235,7 @@ std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int ext
 		extra += 20;
 	}
 
-	LOG("roll from getAxisBreakDown: {}", rot.Roll);
+	//LOG("roll from getAxisBreakDown: {}", rot.Roll);
 	// Determine how much of the extra should go to Z vs the axis
 	auto getZWeight = [this](int roll) -> float {
 		int center = 0;
@@ -251,8 +251,8 @@ std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int ext
 	float zExtra = extra * zWeight;
 	float axisExtra = extra * (1.0f - zWeight);
 
-	LOG("clampVal: {}", clampVal);
-	LOG("axisExtra: {}, zExtra: {}", axisExtra, zExtra);
+	//LOG("clampVal: {}", clampVal);
+	//LOG("axisExtra: {}, zExtra: {}", axisExtra, zExtra);
 	if (!isCeiling) {
 		zExtra *= -1;
 	}
@@ -268,13 +268,13 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		return { c, d };
 		};
 	float cornerVal = diagBound + 80;
-	LOG("in getclampchange rotation is Pitch :{} Yaw:{} Roll:{}",rot.Pitch,rot.Yaw,rot.Roll);
+	//LOG("in getclampchange rotation is Pitch :{} Yaw:{} Roll:{}",rot.Pitch,rot.Yaw,rot.Roll);
 	checkForClamping(loc, rot);
 
 	std::pair <float,float> axisBreakDown = getAxisBreakDown(rot,50);
-	LOG("axisBreakDown.first: {}, axisBreakDown.second: {}", axisBreakDown.first, axisBreakDown.second);
+	//LOG("axisBreakDown.first: {}, axisBreakDown.second: {}", axisBreakDown.first, axisBreakDown.second);
 	
-	LOG("clampVal: {}", clampVal);
+	//LOG("clampVal: {}", clampVal);
 	//6 p->NewLocation.X + p->NewLocation.Y < -diagBound bottom right
 	//7 diagBound < p->NewLocation.X + p->NewLocation.Y top left
 	//8 (p->NewLocation.X - p->NewLocation.Y) > diagBound top right

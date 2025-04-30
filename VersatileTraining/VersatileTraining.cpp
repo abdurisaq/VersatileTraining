@@ -187,71 +187,35 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->setBind("G", "editGoalBlocker");
 
 
-	/*cvarManager->registerNotifier("copystate", [this](std::vector<std::string> args) {
-
-		if (gameWrapper->IsInCustomTraining()) {
-			ServerWrapper serv = gameWrapper->GetGameEventAsServer();
-			if (!serv) return;
-			CarWrapper car = serv.GetGameCar();
-			BallWrapper ball = serv.GetBall();
-
-
-			Vector predictedVel;
-			float dt = 1.5f;
-			PredictionInfo p = ball.PredictPosition(dt);
-			predictedVel = (p.Location - ball.GetLocation()) / dt;
-			
-			Vector carLoc = car.GetLocation();
-			Rotator carRot = car.GetRotation();
-			Vector ballLoc = ball.GetLocation();
-			Rotator ballRot = ball.GetTrajectoryStartRotation();
-			Vector carRot2 = car.GetAngularVelocity();
-			Vector ballRot2 = ball.GetAngularVelocity();
-			Vector carVel = car.GetVelocity();
-			Vector ballVel = ball.GetTrajectoryStartVelocity();
-			BoostWrapper boost = car.GetBoostComponent();
-			float boostAmount = boost.GetCurrentBoostAmount();
-			LOG("car location: {}, {}, {}", carLoc.X, carLoc.Y, carLoc.Z);
-			LOG("car velocity: {}, {}, {}", carVel.X, carVel.Y, carVel.Z);
-			LOG("car rotation: {}, {}, {}", carRot.Pitch, carRot.Yaw, carRot.Roll);
-			LOG("car angular velocity: {}, {}, {}", carRot2.X, carRot2.Y, carRot2.Z);
-			LOG("car boost amount: {}", boostAmount);
-
-			
-			LOG("ball rotation: {}, {}, {}", ballRot.Pitch, ballRot.Yaw, ballRot.Roll);
-			LOG("ball velocity: {}, {}, {}", ballVel.X, ballVel.Y, ballVel.Z);
-			LOG("ball angular velocity: {}, {}, {}", ballRot2.X, ballRot2.Y, ballRot2.Z);
-
-
-		}
-		}, "copy state", PERMISSION_ALL);
-	cvarManager->setBind("V", "copystate");*/
-
-
-	/*struct ControllerInput {
-		float Throttle = .0f;
-		float Steer = .0f;
-		float Pitch = .0f;
-		float Yaw = .0f;
-		float Roll = .0f;
-		float DodgeForward = .0f;
-		float DodgeStrafe = .0f;
-		unsigned long Handbrake : 1;
-		unsigned long Jump : 1;
-		unsigned long ActivateBoost : 1;
-		unsigned long HoldingBoost : 1;
-		unsigned long Jumped : 1;
-	};*/
 	cvarManager->registerNotifier("spawnBot", [this](std::vector<std::string> args) {
-		if (botSpawnedTest) return;
+		if (botSpawnedTest) {
+			LOG("bot already spawned");
+			return;
+		}
 		if(currentShotRecording == nullptr) return;
-		if(currentShotRecording->inputs.size() == 0) return;
-		if (!canSpawnBot) return;
+		if (currentShotRecording->inputs.size() == 0) {
+			LOG("no inputs to play");
+			return;
+		}
+		/*if (!canSpawnBot) {
+			LOG("not in custom training");
+			return;
+		}*/
 		auto server = gameWrapper->GetCurrentGameState();
 		if (!server) return;
-
+		frame = 0;
+		ProfileCameraSettings settings = gameWrapper->GetSettings().GetCameraSettings();
+		std::vector<std::pair<std::string, std::string>> bindings = gameWrapper->GetSettings().GetAllPCBindings();
+		for (auto& binding : bindings) {
+			LOG("binding: {} : {}", binding.first, binding.second);
+		}
+		auto car = server.GetGameCar();
+		Vector carLoc = car.GetLocation();
+		Rotator carRot = car.GetRotation();
+		LOG(" car location: {:.7f}, {:.7f}, {:.7f}", car.GetLocation().X, car.GetLocation().Y, car.GetLocation().Z);
+		LOG(" rotation : {}, {}, {}", car.GetRotation().Pitch, car.GetRotation().Yaw, car.GetRotation().Roll);
 		server.DestroyCars();
-		gameWrapper->SetTimeout([this](GameWrapper* gw) {
+		gameWrapper->SetTimeout([this,settings](GameWrapper* gw) {
 			auto server = gw->GetCurrentGameState();
 
 			server.SpawnBot(this->currentShotRecording->carBody, "testplayers");
@@ -270,22 +234,77 @@ void VersatileTraining::registerNotifiers() {
 
 			CameraWrapper cam = gw->GetCamera();
 			cam.SetViewTarget(new_view_target);
+			cam.SetFlyCamBallTargetMode();
+			cam.SetFocusActor("ball");
 
 
 
 			}, 0.05f);
-		gameWrapper->SetTimeout([this](GameWrapper* gw) { //needs a timeout before setting boost for some reason, if set immediately, crashes game
+		gameWrapper->SetTimeout([this, settings](GameWrapper* gw) { //needs a timeout before setting boost for some reason, if set immediately, crashes game
 			auto server = gw->GetCurrentGameState();
 			if (!server) return;
 
 			auto car = server.GetGameCar();
 			BoostWrapper boost = car.GetBoostComponent();
-			
+			//car.SetbDriving(false);
 			boost.SetUnlimitedBoost2(true);
 			car.GetPRI().SetUserCarPreferences(currentShotRecording->settings.DodgeInputThreshold, currentShotRecording->settings.SteeringSensitivity, currentShotRecording->settings.AirControlSensitivity);
 			botSpawnedTest = true;
+			/*if (freezeForShot) {
+				car.SetLocation(currentShotRecording->initialState->location);
+			}*/
+			CameraWrapper cameraWrapper = gw->GetCamera();
+			cameraWrapper.SetCameraSettings(settings);
+			/*car.SetLocation(currentShotRecording->initialState->location);
+			car.SetRotation(currentShotRecording->initialState->rotation);*/
+			
 			}, 0.5f);
-		
+
+		gameWrapper->SetTimeout([this, settings](GameWrapper* gw) {
+			canStartPlayback = true;
+			auto server = gw->GetCurrentGameState();
+			if (!server) return;
+
+			auto car = server.GetGameCar();
+			RBState state = car.GetRBState();
+			LOG("=== RBState ===");
+			LOG("Location: ({}, {}, {})", state.Location.X, state.Location.Y, state.Location.Z);
+			LOG("LinearVelocity: ({}, {}, {})", state.LinearVelocity.X, state.LinearVelocity.Y, state.LinearVelocity.Z);
+			LOG("AngularVelocity: ({}, {}, {})", state.AngularVelocity.X, state.AngularVelocity.Y, state.AngularVelocity.Z);
+			LOG("Quaternion: ({}, {}, {}, {})", state.Quaternion.W, state.Quaternion.X, state.Quaternion.Y, state.Quaternion.Z);
+			LOG("Time: {}", state.Time);
+			LOG("bSleeping: {}", state.bSleeping ? "true" : "false");
+			LOG("bNewData: {}", state.bNewData ? "true" : "false");
+			LOG("frozen: {}", car.GetbFrozen());
+			LOG("sleeping: {}", car.GetbDisableSleeping());
+			LOG(" moving : {}", car.GetbIsMoving());
+			LOG("movable : {}", car.GetbMovable());
+			car.SetFrozen(false);
+			car.SetbDisableSleeping(true);
+			car.SetbFrozen(false);
+			car.SetbDriving(true);
+			GfxDataTrainingWrapper test= gameWrapper->GetGfxTrainingData();
+			ServerWrapper sw = gw->GetGameEventAsServer();
+			if (!sw) return;
+			GameEditorWrapper training = GameEditorWrapper(sw.memory_address);
+			LOG("awake: {} ", car.GetbRigidBodyWasAwake());
+			RBState playerState;
+			playerState.Location = currentShotRecording->initialState->location;
+			playerState.Quaternion= RotatorToQuat(currentShotRecording->initialState->rotation);
+			car.SetPhysicsState(startState);
+		//car.SetbDriving(false);
+
+
+		}, 0.5f);
+		gameWrapper->SetTimeout([this, settings](GameWrapper* gw) {
+				if (!startPlayback && canStartPlayback) {
+					frame = 0;
+
+					//roundStarted = true;
+					startPlayback = true;
+					canStartPlayback = false;
+				}
+			}, 0.5f);//0.5 1 
 
 		}, "spawn bot in custom training", PERMISSION_ALL);
 	cvarManager->setBind("M", "spawnBot");
@@ -293,6 +312,10 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->registerNotifier("startRecording", [this](std::vector<std::string> args) {
 		if(botSpawnedTest) return;
 		if (!startRecording) {
+			if (botSpawnedTest || playForNormalCar) {
+				botSpawnedTest = false;
+				playForNormalCar = false;
+			}
 			currentShotRecording = std::make_shared<ShotRecording>();
 			currentShotRecording->carBody = gameWrapper->GetLocalCar().GetLoadoutBody();
 			currentShotRecording->settings = gameWrapper->GetSettings().GetGamepadSettings();
@@ -302,8 +325,11 @@ void VersatileTraining::registerNotifiers() {
 			// Record initial state
 			auto car = gameWrapper->GetLocalCar();
 			currentShotRecording->initialState = std::make_shared<ShotRecording::InitialState>();
+			currentShotRecording->initialState->velocity = car.GetVelocity();
 			currentShotRecording->initialState->location = car.GetLocation();
 			currentShotRecording->initialState->rotation = car.GetRotation();
+
+			startState = car.GetRBState();
 			
 
 			primedToStartRecording = true;
@@ -313,11 +339,35 @@ void VersatileTraining::registerNotifiers() {
 
 	cvarManager->registerNotifier("playForNormalCar", [this](std::vector<std::string> args) {
 		playForNormalCar = !playForNormalCar;
+		canStartPlayback = true;
 		}, "start recording", PERMISSION_ALL);
 	cvarManager->setBind("V", "playForNormalCar");
 
-	//auto server = gameWrapper->GetCurrentGameState();
 
+	cvarManager->registerNotifier("startround", [this](std::vector<std::string> args) {
+
+		auto car = gameWrapper->GetLocalCar();
+		
+		if (!startPlayback&& canStartPlayback) {
+			frame = 0;
+
+			//roundStarted = true;
+			startPlayback = true;
+			canStartPlayback = false;
+		}
+		
+		
+		
+		}, "start recording", PERMISSION_ALL);
+	cvarManager->setBind("K", "startround");
+
+	cvarManager->registerNotifier("startboost", [this](std::vector<std::string> args) {
+
+		HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
+		PostMessage(hwnd, WM_KEYUP, 'D', 0);//'W'
+
+		}, "start recording", PERMISSION_ALL);
+	cvarManager->setBind("I", "startboost");
 }
 
 
@@ -460,6 +510,8 @@ bool inRectangle(const std::pair<Vector, Vector>& goalBlockerPos, const Vector& 
 
 void VersatileTraining::onTick(std::string eventName) {
 	
+
+
 	if (editingGoalBlocker) {
 		if (gameWrapper->IsKeyPressed(middleMouseIndex) && middleMouseReleased) {
 			saveCursorPos = true;
@@ -472,6 +524,8 @@ void VersatileTraining::onTick(std::string eventName) {
 	}
 
 	if (!gameWrapper->IsInCustomTraining())return;
+
+
 	if(!currentTrainingData.customPack) return;
 	if (!goalAnchors.first  || !goalAnchors.second) return;
 

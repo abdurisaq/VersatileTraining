@@ -152,12 +152,15 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	, public SettingsWindowBase // Uncomment if you wanna render your own tab in the settings menu
 	//,public PluginWindowBase // Uncomment if you want to render your own plugin window
 {
-
+	RBState startState;
+	Vector prevLocation = { 0, 0, 0 };
+	bool canStartPlayback = false;
+	bool jumpedFirstFrame = false;
 	int lastRecordedFrame = -1;
 	int lastPlaybackFrame = -1;
 	ControllerInput lastPlaybackInput;
-
-
+	bool startPlayback = false;
+	bool testCalledInStartRound = false;
 	BallState ballState;
 	bool botSpawnedTest = false;
 	bool canSpawnBot = false;
@@ -166,11 +169,18 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool justStartedPlayback = false;
 	int botSpawnTick = 0;
 	bool startRecording = false;
+	bool recording = false;
 	std::shared_ptr< ShotRecording> currentShotRecording;
 	int frame = 0;
 	int startingFrame = 0;
 
 	bool playForNormalCar = false;
+
+
+	bool waitingForInput = true;
+	bool waitingForDelay = false;
+	uint64_t startDelayFrame = 0;
+	const uint64_t framesToWaitBeforeStart = 50;
 
 	std::unordered_map<std::string, CustomTrainingData> trainingData;
 	std::string editingTrainingCode;
