@@ -18,6 +18,8 @@ void VersatileTraining::setupTrainingEditorHooks() {
     gameWrapper->HookEventWithCaller<ActorWrapper>(
         "Function TAGame.GameMetrics_TA.EndRound",
         [this](ActorWrapper cw, void* params, std::string eventName) {
+            
+            if (!(isInTrainingEditor() || isInTrainingPack())) return;
             shotReplicationManager.stopRecordingShot();
             auto server = gameWrapper->GetCurrentGameState();
 
@@ -64,13 +66,18 @@ void VersatileTraining::setupTrainingEditorHooks() {
 void VersatileTraining::handleTrainingEditorEnter() {
     LOG("Training editor enter");
     currentTrainingData.currentEditedShot = -1;
+    trainingData = LoadCompressedTrainingData(saveFilePath);
+    for (auto& [key, value] : trainingData) {
+        shiftToNegative(value);
+    }
+
 }
 
 void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::string eventName) {
-
+    if (!(isInTrainingEditor() || isInTrainingPack()))return;
 
     VersatileTraining::getTrainingData(cw, params, eventName);
-    currentShotState.hasJump = true;
+    
     shotReplicationManager.canSpawnBot = true;
     LOG("setting can spawn bot to true");
     freezeForShot = currentShotState.freezeCar;
@@ -80,6 +87,7 @@ void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::stri
     editingVariances = false;
     appliedWallClamping = false;
     editingGoalBlocker = false;
+    appliedJumpState= false;
 }
 
 void VersatileTraining::handleTrainingEditorExit() {
@@ -168,7 +176,7 @@ void VersatileTraining::handleStartEditing(ActorWrapper cw) {
 void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::string eventName) {
 
 
-
+    LOG("getTrainingData called, looking for custom training pack");
     auto tw = ((TrainingEditorWrapper)cw.memory_address);
     GameEditorSaveDataWrapper data = tw.GetTrainingData();
     TrainingEditorSaveDataWrapper td = data.GetTrainingData();
@@ -189,7 +197,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     LOG("Training current shot : {}", currentShot);
 
     std::string code = td.GetCode().ToString();
-
+    
     bool found = false;
     for (auto& [key, value] : trainingData) {
         if (value.name == name) {
@@ -206,9 +214,6 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             currentShotState = currentTrainingData.shots[currentShot];
             LOG("setting active boost amount to {}", currentShotState.boostAmount);
             LOG("setting active starting velocity to {}", currentShotState.startingVelocity);
-
-            currentShotState.goalAnchors = currentTrainingData.shots[currentShot].goalAnchors;
-            currentShotState.goalBlocker = currentTrainingData.shots[currentShot].goalBlocker;
             LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
 
             if (currentShotState.freezeCar) {

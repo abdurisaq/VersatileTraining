@@ -29,6 +29,14 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 			canvas.DrawString("Car unfrozen, press F to freeze", 2.0, 2.0, false);
 		}
 		canvas.SetPosition(Vector2F{ 0.0, 60.0 });
+		if (currentShotState.hasJump) {
+			canvas.DrawString("Jump available, press J to disable", 2.0, 2.0, false);
+		}
+		else {
+			canvas.DrawString("Jump disabled, press J to enable", 2.0, 2.0, false);
+
+		}
+		canvas.SetPosition(Vector2F{ 0.0, 80.0 });
 
 		canvas.DrawString("Starting Velocity: " + std::to_string(currentShotState.startingVelocity), 2.0, 2.0, false);
 	}
@@ -127,7 +135,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
 	}
 
-	//if (!gameWrapper->IsInCustomTraining()) return;
+	//if (!isInTrainingEditor()) return;
 
 	if (!(currentShotState.goalAnchors.first && currentShotState.goalAnchors.second)) return;
 

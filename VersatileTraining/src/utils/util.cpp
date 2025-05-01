@@ -452,3 +452,22 @@ void VersatileTraining::shiftToNegative(CustomTrainingData& data) {
 	}
 
 }
+
+bool VersatileTraining::isInTrainingEditor() {
+	ServerWrapper sw = gameWrapper->GetCurrentGameState();
+	if (!sw) return false;
+	GameSettingPlaylistWrapper playlist = sw.GetPlaylist();
+	if (!playlist) return false;
+	int playlistID = playlist.GetPlaylistId();
+	return (playlistID == 20);
+}
+
+bool VersatileTraining::isInTrainingPack() {
+	ServerWrapper sw = gameWrapper->GetCurrentGameState();
+	if (!sw) return false;
+	GameSettingPlaylistWrapper playlist = sw.GetPlaylist();
+	if (!playlist) return false;
+	int playlistID = playlist.GetPlaylistId();
+	return (playlistID == 21);
+
+}

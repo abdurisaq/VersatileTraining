@@ -47,7 +47,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	ShotState currentShotState;
 
 	
-	
+	std::filesystem::path saveFilePath;
 
 
 	std::unordered_map<std::string, CustomTrainingData> trainingData;
@@ -73,6 +73,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool editingVariances = false;
 	bool appliedStartingVelocity = false;
 	bool appliedWallClamping = false;
+	bool appliedJumpState = false;
 
 	// Rotation and clamping
 	Rotator carRotationUsed = { 0, 0, 0 };
@@ -99,8 +100,9 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool isCarRotatable = false;
 	bool test = false;
 	float t = 0.0f;
-	std::filesystem::path saveFilePath;
+	
 	Rotator localRotation = { 0, 0, 0 };
+
 
 
 
@@ -121,7 +123,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	Vector getStickingVelocity(Rotator rot);
 	bool changeCarSpawnRotation();
 
-	;
+	
 
 	// Data helpers
 	void CleanUp();
@@ -131,8 +133,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	void shiftVelocitiesToPositive(std::vector<int>& vec);
 	void shiftVelocitiesToNegative(std::vector<int>& vec);
 
-	void shiftGoalBlockerToPositive(std::vector<std::pair<Vector, Vector>>& vec);
-	void shiftGoalBlockerToNegative(std::vector<std::pair<Vector, Vector>>& vec);
+
 	void shiftToPositive(CustomTrainingData & data);
 	void shiftToNegative(CustomTrainingData& data);
 
@@ -150,18 +151,38 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool rectangleSaved = false;
 	int backWall = 5140;
 
-	//function hook handlers
-	void handleTrainingEditorActorModified();
-	void handleUpdateFlyPOV();
-	void handleStopEditingGoalBlocker();
-	void handleBallEditingBegin();
-	void handleGetRotateActorCameraOffset(ActorWrapper cw);
-	void handleEditorSetRotation(ActorWrapper cw);
-	void handleEditorMoveToLocation(ActorWrapper cw, void* params);
+	// overview group of hooks
+	void setupInputHandlingHooks();
+	void setupGoalBlockerHooks();
+	void setupEditorMovementHooks();
+	void setupTrainingShotHooks();
+	void setupTrainingEditorHooks();
+
+	//editor movement handlers
+	void handleUpdateCarData(ActorWrapper cw);
 	void handleStartRound();
+	void handleEditorMoveToLocation(ActorWrapper cw, void* params);
+	void handleEditorSetRotation(ActorWrapper cw);
+	void handleGetRotateActorCameraOffset(ActorWrapper cw);
+
+	//goal blocker handlers
+	void handleBallEditingBegin();
+	void handleStopEditingGoalBlocker();
+	void handleUpdateFlyPOV();
+
+	//input handlers
+	void handleTrainingEditorActorModified();
+	
+	//editor ui hooks
+	void handleTrainingEditorEnter();
+	void handleLoadRound(ActorWrapper cw, void* params, std::string eventName);
+	void handleTrainingSave();
+	void handleStartEditing(ActorWrapper cw);
+
+
+	//shot editor hooks
 	void handleUnfrozenCar(ActorWrapper car, Vector loc, Rotator rot);
 	void handleFreezeCar(CarWrapper car, Vector loc, Rotator rot);
-	void handleUpdateCarData(ActorWrapper cw);
 	void handleEndPlayTest();
 	void handleGameEditorActorEditingEnd();
 	void handleEditorModeEndState();
@@ -173,18 +194,14 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	void handleCreateRound();
 	void handleNewTrainingData(int currentShot);
 	void handleExistingTrainingData(int currentShot, int totalRounds);
-	void handleStartEditing(ActorWrapper cw);
-	void handleTrainingSave();
 	void handleTrainingEditorExit();
-	void handleLoadRound(ActorWrapper cw, void* params, std::string eventName);
-	void handleTrainingEditorEnter();
+	
+	
 
-	// hooks groups together
-	void setupInputHandlingHooks();
-	void setupGoalBlockerHooks();
-	void setupEditorMovementHooks();
-	void setupTrainingShotHooks();
-	void setupTrainingEditorHooks();
+	
+	bool isInTrainingEditor();
+	bool isInTrainingPack();
+
 
 public:
 

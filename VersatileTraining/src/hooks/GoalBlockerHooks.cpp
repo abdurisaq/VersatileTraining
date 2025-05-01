@@ -39,6 +39,7 @@ void VersatileTraining::handleStopEditingGoalBlocker() {
 }
 
 void VersatileTraining::handleUpdateFlyPOV() {
+    if (!isInTrainingEditor())return;
     if (editingGoalBlocker) {
         Rotator rot = gameWrapper->GetCamera().GetRotation();
         Vector loc = gameWrapper->GetCamera().GetLocation();

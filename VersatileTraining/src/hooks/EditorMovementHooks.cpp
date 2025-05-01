@@ -35,11 +35,14 @@ void VersatileTraining::setupEditorMovementHooks() {
 
 
 void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
-    if (!currentTrainingData.customPack) return;
+    if (!currentTrainingData.customPack) {
+        LOG("not in custom pack");
+        return;
+    }
 
     cw.SetbCollideWorld(0);
 
-    if (!gameWrapper->IsInCustomTraining()) return;
+    if (!(isInTrainingEditor() || isInTrainingPack())) return;
 
     ServerWrapper server = gameWrapper->GetCurrentGameState();
     if (!server) return;
@@ -56,9 +59,11 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
         car.SetLocation(loc2);
         appliedWallClamping = true;
     }
-    if (!currentShotState.hasJump) {
+    if (!currentShotState.hasJump&& !appliedJumpState) {
+        
         car.SetbJumped(true);
         car.SetbDoubleJumped(true);
+        appliedJumpState = true;
     }
     if (freezeForShot) {
         handleFreezeCar(car, loc, rot);
@@ -72,7 +77,7 @@ void VersatileTraining::handleStartRound() {
 
 
 
-    if (gameWrapper->IsInCustomTraining()) {
+    if (isInTrainingEditor() || isInTrainingPack()) {
         shotReplicationManager.testCalledInStartRound = true;
         
 
@@ -108,6 +113,7 @@ void VersatileTraining::handleStartRound() {
 
 
 void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params) {
+    if (!isInTrainingEditor())return;
     struct pExecEditorMoveToLocaction
     {
         struct Vector NewLocation;
@@ -181,6 +187,7 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
 
 
 void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
+    if (!isInTrainingEditor())return;
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
             LOG("Server not found");
@@ -225,6 +232,7 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
 }
 
 void VersatileTraining::handleGetRotateActorCameraOffset(ActorWrapper cw) {
+    if (!isInTrainingEditor())return;
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
             LOG("Server not found");

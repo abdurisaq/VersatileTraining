@@ -47,7 +47,7 @@ uint8_t CompressIntegers(
     return currentByte;
 }
 
-void CompressFreeze(const std::vector<bool>& freezeCar, std::vector<uint8_t>& bitstream,size_t & bitCount, uint8_t currentByte) {
+uint8_t CompressBits(const std::vector<bool>& freezeCar, std::vector<uint8_t>& bitstream,size_t & bitCount, uint8_t currentByte, bool finalWrite) {
     
     //uint8_t currentByte = 0;
     
@@ -65,10 +65,10 @@ void CompressFreeze(const std::vector<bool>& freezeCar, std::vector<uint8_t>& bi
             bitCount = 0;
         }
     }
-
-    if (bitCount > 0) {
+    if (finalWrite) {
         bitstream.push_back(currentByte);
     }
+    return currentByte;
 }
 
 size_t ReadBits(const std::vector<uint8_t>& bitstream, size_t& bitIndex, size_t numBits) {
@@ -112,11 +112,11 @@ void DecompressIntegers(
     }
 }
 
-void DecompressFreeze(std::vector<bool>& freezeCar, std::vector<uint8_t>& bitstream, size_t& bitIndex) {
+void DecompressBits(std::vector<bool>& vec, std::vector<uint8_t>& bitstream, size_t& bitIndex) {
     size_t bitCount = 0;
-    for (size_t i = 0; i < freezeCar.size(); ++i) {
+    for (size_t i = 0; i < vec.size(); ++i) {
         size_t bit = ReadBits(bitstream, bitIndex, 1);  
-        freezeCar[i] = (bit != 0);  
+        vec[i] = (bit != 0);
     }
 }
 std::pair<int,int> getMinMaxAmount(std::vector<int> arr) {
@@ -320,8 +320,9 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
         if (numBitsForZBlocker > 0) {
 			byte = CompressIntegers(zVals, boundaryZ.first, boundaryZ.second, bitstream, bitIndexInByte, byte, "goalblocker Z");
 		}
-        CompressFreeze(data.freezeCar, bitstream, bitIndexInByte, byte);
+        byte = CompressBits(data.freezeCar, bitstream, bitIndexInByte, byte,false);
         
+        byte = CompressBits(data.hasStartingJump, bitstream, bitIndexInByte, byte,true);
       
 
         // base64
@@ -463,10 +464,15 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
             LOG("startingVelocity : {}", startingVelocity);
         }
 
-        DecompressFreeze(trainingData.freezeCar, bitstream, bitIndex);
+        DecompressBits(trainingData.freezeCar, bitstream, bitIndex);
         for (bool freeze : trainingData.freezeCar) {
             LOG("freeze : {}", freeze);
         }
+        DecompressBits(trainingData.hasStartingJump, bitstream, bitIndex);
+        for (bool jump : trainingData.hasStartingJump) {
+			LOG("jump : {}", jump);
+		}
+
         LOG("loading training pack with name : {}", name);
         trainingDataMap[name] = trainingData.inflate();
     }

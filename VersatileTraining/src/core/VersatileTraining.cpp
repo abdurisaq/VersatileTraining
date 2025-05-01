@@ -93,6 +93,8 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->registerNotifier(
 		"findController",
 		[this](std::vector<std::string> args) {
+			if(!isInTrainingEditor())return;
+
 			HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
 			if (!hwnd) {
 				LOG("Failed to get Rocket League window handle.");
@@ -107,7 +109,7 @@ void VersatileTraining::registerNotifiers() {
 	);
 	cvarManager->setBind("O", "unlockCar");
 	cvarManager->registerNotifier("unlockCar", [this](std::vector<std::string> args) {
-
+		if (!isInTrainingEditor())return;
 		if (lockRotation) {
 			LOG("car unlocked");
 		}
@@ -121,7 +123,7 @@ void VersatileTraining::registerNotifiers() {
 
 	cvarManager->setBind("X", "unlockCar");
 	cvarManager->registerNotifier("freezeCar", [this](std::vector<std::string> args) {
-
+		if (!isInTrainingEditor())return;
 		if (currentShotState.freezeCar) {
 			LOG("car unfrozen");
 		}
@@ -136,17 +138,52 @@ void VersatileTraining::registerNotifiers() {
 
 	cvarManager->setBind("F", "freezeCar");
 
-	cvarManager->registerNotifier("printDataMap", [this](std::vector<std::string> args) {
+	cvarManager->registerNotifier("removeJump", [this](std::vector<std::string> args) {
+		if (!isInTrainingEditor())return;
+		if (currentShotState.hasJump) {
+			LOG("car's jump removed");
+		}
+		else {
+			LOG("car's jump returned");
+		}
+		LOG("flipped jump state");
+		currentShotState.hasJump = !currentShotState.hasJump;
 
+
+		}, "remove car's jump", PERMISSION_ALL);
+
+	cvarManager->setBind("J", "removeJump");
+
+	cvarManager->registerNotifier("printDataMap", [this](std::vector<std::string> args) {
+		
 		for (auto [key, value] : trainingData) {
 			LOG("Name: {}", value.name);
 			LOG("Code: {}", key);
 			LOG("Num Shots: {}", value.numShots);
 			for (int i = 0; i < value.numShots; i++) {
-				LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}. goal blocker x1 {}, z1 {} x2 {}, z2 {}", i, value.shots[i].boostAmount, value.shots[i].startingVelocity,
-					static_cast<int>(value.shots[i].freezeCar),static_cast<int>(value.shots[i].goalBlocker.first.X), static_cast<int>(value.shots[i].goalBlocker.first.Z),
-					static_cast<int>(value.shots[i].goalBlocker.second.X), static_cast<int>(value.shots[i].goalBlocker.second.Z));
-				LOG("goal anchors first: {}, second: {}", value.shots[i].goalAnchors.first ? "true" : "false", value.shots[i].goalAnchors.second ? "true" : "false");
+				LOG("Shot {}: Boost Amount: {}", i, value.shots[i].boostAmount);
+				LOG("Shot {}: Starting Velocity: {}", i, value.shots[i].startingVelocity);
+				LOG("Shot {}: Freeze Car: {}", i, static_cast<int>(value.shots[i].freezeCar));
+
+				// Jump state - fixed to use value.shots[i] instead of currentTrainingData
+				LOG("Shot {}: Has Jump: {}", i, static_cast<int>(value.shots[i].hasJump));
+
+				// Goal blocker positions
+				LOG("Shot {}: Goal Blocker First Point: X={}, Z={}",
+					i,
+					static_cast<int>(value.shots[i].goalBlocker.first.X),
+					static_cast<int>(value.shots[i].goalBlocker.first.Z));
+
+				LOG("Shot {}: Goal Blocker Second Point: X={}, Z={}",
+					i,
+					static_cast<int>(value.shots[i].goalBlocker.second.X),
+					static_cast<int>(value.shots[i].goalBlocker.second.Z));
+
+				// Goal anchors state
+				LOG("Shot {}: Goal Anchors: First={}, Second={}",
+					i,
+					value.shots[i].goalAnchors.first ? "true" : "false",
+					value.shots[i].goalAnchors.second ? "true" : "false");
 			}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
 			LOG("------------------------------");
 		}
@@ -157,13 +194,14 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->setBind("L", "printDataMap");
 
 	cvarManager->registerNotifier("printCurrentPack", [this](std::vector<std::string> args) {
+		if (!isInTrainingEditor())return;
 
 		//currentTrainingData
 		LOG("Name: {}", currentTrainingData.name);
 		LOG("Code: {}", currentPackKey);
 		LOG("Num Shots: {}", currentTrainingData.numShots);
 		for (int i = 0; i < currentTrainingData.numShots; i++) {
-			LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}", i, currentTrainingData.shots[i].boostAmount, currentTrainingData.shots[i].startingVelocity, static_cast<int>(currentTrainingData.shots[i].freezeCar));
+			LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, currentTrainingData.shots[i].boostAmount, currentTrainingData.shots[i].startingVelocity, static_cast<int>(currentTrainingData.shots[i].freezeCar), static_cast<int>(currentTrainingData.shots[i].hasJump));
 		}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
 
 		}, "print local data map", PERMISSION_ALL);
@@ -173,14 +211,14 @@ void VersatileTraining::registerNotifiers() {
 
 
 	cvarManager->registerNotifier("editGoalBlocker", [this](std::vector<std::string> args) {
-		
+		if (!isInTrainingEditor())return;
 		if (!editingGoalBlocker) {
 			LOG("Editing goal blocker");
 		}
 		else{
 			LOG("Not editing goal blocker");
 		}
-		if (currentTrainingData.customPack && goalBlockerEligbleToBeEdited ) {//&& gameWrapper->IsInCustomTraining()
+		if (currentTrainingData.customPack && goalBlockerEligbleToBeEdited ) {//&& isInTrainingEditor()
 			LOG("flipping editing goal blocker to {}", editingGoalBlocker ? "true" : "false");
 			editingGoalBlocker = !editingGoalBlocker;
 		}
@@ -192,18 +230,20 @@ void VersatileTraining::registerNotifiers() {
 
 
 	cvarManager->registerNotifier("spawnBot", [this](std::vector<std::string> args) {
+		if (!isInTrainingEditor())return;
 		shotReplicationManager.spawnBot(gameWrapper.get());
 
 		}, "spawn bot in custom training", PERMISSION_ALL);
 	cvarManager->setBind("M", "spawnBot");
 
 	cvarManager->registerNotifier("startRecording", [this](std::vector<std::string> args) {
+		if (!isInTrainingEditor())return;
 		shotReplicationManager.startRecordingShot(gameWrapper.get());
 		}, "start recording", PERMISSION_ALL);
 	cvarManager->setBind("N", "startRecording");
 
 	cvarManager->registerNotifier("dumpInputs", [this](std::vector<std::string> args) {
-
+		if (!isInTrainingEditor())return;
 		if (shotReplicationManager.currentShotRecording == nullptr) {
 			LOG("no inputs to dump");
 			return;
@@ -229,6 +269,20 @@ void VersatileTraining::registerNotifiers() {
 		}
 		}, "dump recorded inputs", PERMISSION_ALL);
 	cvarManager->setBind("I", "dumpInputs");
+
+
+	cvarManager->registerNotifier("printCurrentState", [this](std::vector<std::string> args) {
+		if (!isInTrainingEditor())return;
+		LOG("boost : {}", currentShotState.boostAmount);
+		LOG("starting velocity : {}", currentShotState.startingVelocity);
+		LOG("freeze car : {}", currentShotState.freezeCar);
+		LOG("goal blocker x1 : {}, z1 : {} x2 : {}, z2 : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
+		LOG("goal anchors first : {}, second : {}", currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
+		LOG("has jump : {}", currentShotState.hasJump ? "true" : "false");
+
+
+		}, "printing current state", PERMISSION_ALL);
+	cvarManager->setBind("Y", "printCurrentState");
 }
 
 
@@ -278,8 +332,7 @@ void VersatileTraining::onTick(std::string eventName) {
 		}
 	}
 
-	if (!gameWrapper->IsInCustomTraining())return;
-
+	if (!(isInTrainingEditor() || isInTrainingPack())) return;
 
 	if(!currentTrainingData.customPack) return;
 	if (!currentShotState.goalAnchors.first  || !currentShotState.goalAnchors.second) return;
