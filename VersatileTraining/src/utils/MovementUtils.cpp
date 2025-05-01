@@ -1,39 +1,16 @@
 #include <pch.h>
-#include "VersatileTraining.h"
-
-int VersatileTraining::getRandomNumber(int min, int max) {
-    std::random_device rd;  // Non-deterministic random number generator
-    std::mt19937 gen(rd()); // Mersenne Twister engine
-    std::uniform_int_distribution<> distrib(min, max);
-    return distrib(gen);
-}
-
-Rotator blendPitchRollClampSmooth(int pitch, int roll, int expectedPitch, int expectedRoll, int desiredYaw, float alpha = 1.0f) {
-	float pitchWeight = std::abs(static_cast<float>(pitch)) / 16384.0f;
-	pitchWeight = std::clamp(pitchWeight, 0.0f, 1.0f);
-
-	float rollWeight = 1.0f - pitchWeight;
-
-	int targetPitch = static_cast<int>(expectedPitch * pitchWeight + pitch * (1.0f - pitchWeight));
-	int targetRoll = static_cast<int>(expectedRoll * rollWeight + roll * (1.0f - rollWeight));
-
-	int blendedPitch = static_cast<int>(pitch + (targetPitch - pitch) * alpha);
-	int blendedRoll = static_cast<int>(roll + (targetRoll - roll) * alpha);
-
-	return Rotator{ blendedPitch, desiredYaw, blendedRoll };
-}
+#include "MovementUtils.h"
 
 
-Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 
-	
+Rotator MovementUtils::checkForClamping(Vector loc, Rotator rot) {
 	auto inThreshold = [](int value, int center, int threshold) {
 		return value >= (center - threshold) && value <= (center + threshold);
 		};
 
-	auto mapToRoll = [this,loc,rot](float value, float a, float b) {
+	auto mapToRoll = [this, loc, rot](float value, float a, float b) {
 		//float end = 0;
-		if (isCeiling ) {
+		if (isCeiling) {
 			if (b > 0) {
 				b = 32768;//for some reason using % didn't work
 			}
@@ -44,9 +21,9 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 
 		return a + (b - a) * value;
 		};
-	
+
 	auto cornerLine = [this](int x, int y) {
-		return (diagBound -25) + x + y;
+		return (diagBound - 25) + x + y;
 		};//7950
 	auto cornerLine2 = [this](int x, int y) {
 		return (diagBound - 25) + x - y;
@@ -90,14 +67,14 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	//summarize maybe into an easy to see loop later
 	if (loc.Y > (currentYBound - 10)) {
 
-		if (yaw1  && (roll1))
+		if (yaw1 && (roll1))
 		{
 
 			LOG("clamped to orange back wall1");
 			clampVal = 1;
 			return Rotator{ pitch,1, expectedRoll1 };
 		}
-		else if ( yaw2  && (roll2) )
+		else if (yaw2 && (roll2))
 		{
 			LOG("clamped to orange back wall2");
 			clampVal = 1;
@@ -109,12 +86,12 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll, pitch);
 		}
 	}
-	else if (loc.Y < -(currentYBound-10)) {
-		if ( yaw1 && (roll2) ) {
+	else if (loc.Y < -(currentYBound - 10)) {
+		if (yaw1 && (roll2)) {
 			clampVal = 2;
 			return Rotator{ pitch,1 ,expectedRoll2 };//16384
 		}
-		if ( yaw2 && (roll1) ) {
+		if (yaw2 && (roll1)) {
 			LOG("clamped to blue back wall");
 			clampVal = 2;
 			return Rotator{ pitch,32768 ,expectedRoll1 };//south
@@ -122,7 +99,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		}
 
 	}
-	else if (loc.X > currentXBound-10) {
+	else if (loc.X > currentXBound - 10) {
 		if (yaw3 && (roll1))
 		{
 			LOG("clamped on the left wall");
@@ -140,7 +117,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			return Rotator{ pitch,16384 ,expectedRoll2 };
 		}
 	}
-	else if (loc.X < -(currentXBound-10))
+	else if (loc.X < -(currentXBound - 10))
 	{
 		if (yaw3 && (roll2))
 		{
@@ -148,7 +125,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			clampVal = 4;
 			return Rotator{ pitch,south ,expectedRoll2 };
 		}
-		else if (yaw4 &&(roll1)) {
+		else if (yaw4 && (roll1)) {
 			LOG("clamped on the right wall1");
 			clampVal = 4;
 			return Rotator{ pitch,16384 ,expectedRoll1 };
@@ -169,19 +146,19 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 
 	//diagonal values?
 	else if (cornerLine(loc.X, loc.Y) <= 0) {
-		
+
 		if (yaw7 && roll1) {
 			LOG("clamped on the back right corner");
 			clampVal = 6;
 			return Rotator{ pitch,24576,south };
-			
+
 		}
 		else if (yaw8 && roll2) {
 			LOG("clamped on the back right corner");
 			clampVal = 6;
 			return Rotator{ pitch,57344,north };
 		}
-		
+
 	}
 	else if (cornerLine(loc.X, loc.Y) >= (diagBound - 25) * 2) {
 		if (yaw7 && roll2) {
@@ -194,22 +171,23 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			clampVal = 7;
 			return Rotator{ pitch,57344,south };
 		}
-		
+
 	}
 	else if (cornerLine2(loc.X, loc.Y) <= 0) {
-		
+
 		if (yaw5 && roll1) {
 			LOG("clamped on the top right corner");
 			clampVal = 8;
 			return Rotator{ pitch,8192,south };
-		}else if (yaw6 && roll2) {
+		}
+		else if (yaw6 && roll2) {
 			LOG("clamped on the top right corner");
 			clampVal = 8;
 			return Rotator{ pitch,40960,north };
 		}
 	}
 	else if (cornerLine2(loc.X, loc.Y) >= (diagBound - 25) * 2) {
-		
+
 		if (yaw5 && roll2) {
 			LOG("clamped on the back left corner");
 			clampVal = 9;
@@ -222,58 +200,25 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		}
 	}
 
-		clampVal = 0;
-		//LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll,rot.Pitch);
-		//LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
-	return Rotator{ 0,0,0};
-
+	clampVal = 0;
+	//LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll,rot.Pitch);
+	//LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+	return Rotator{ 0,0,0 };
 }
 
-
-std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int extra) {
-	if (isCeiling) {
-		extra += 20;
-	}
-
-	//LOG("roll from getAxisBreakDown: {}", rot.Roll);
-	// Determine how much of the extra should go to Z vs the axis
-	auto getZWeight = [this](int roll) -> float {
-		int center = 0;
-		if (isCeiling) {
-			center = (roll >= 0) ? 32768 : -32768;
-		}
-		float diff = std::abs(roll - center);
-		float clamped = std::clamp(diff / 16384.0f, 0.0f, 1.0f);
-		return 1.0f - clamped; // 1.0 to Z, 0.0 to other axis
-		};
-
-	float zWeight = getZWeight(rot.Roll);
-	float zExtra = extra * zWeight;
-	float axisExtra = extra * (1.0f - zWeight);
-
-	//LOG("clampVal: {}", clampVal);
-	//LOG("axisExtra: {}, zExtra: {}", axisExtra, zExtra);
-	if (!isCeiling) {
-		zExtra *= -1;
-	}
-	return std::make_pair(axisExtra, zExtra);
-
-};
-
-Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
-
+Vector MovementUtils::getClampChange(Vector loc, Rotator rot) {
 	auto perpendicularProjection = [](float m, float b, float a, float b0) -> std::pair<float, float> {
 		float c = (a + m * (b0 - b)) / (m * m + 1);
 		float d = m * c + b;
 		return { c, d };
 		};
 	float cornerVal = diagBound + 80;
-	//LOG("in getclampchange rotation is Pitch :{} Yaw:{} Roll:{}",rot.Pitch,rot.Yaw,rot.Roll);
+
 	checkForClamping(loc, rot);
 
-	std::pair <float,float> axisBreakDown = getAxisBreakDown(rot,50);
+	std::pair <float, float> axisBreakDown = getAxisBreakDown(rot, 50);
 	//LOG("axisBreakDown.first: {}, axisBreakDown.second: {}", axisBreakDown.first, axisBreakDown.second);
-	
+
 	//LOG("clampVal: {}", clampVal);
 	//6 p->NewLocation.X + p->NewLocation.Y < -diagBound bottom right
 	//7 diagBound < p->NewLocation.X + p->NewLocation.Y top left
@@ -282,7 +227,7 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 
 	switch (clampVal) {//5090
 	case 1: {
-		LOG("Old location: {}, {} {}", loc.X, loc.Y,loc.Z);
+		LOG("Old location: {}, {} {}", loc.X, loc.Y, loc.Z);
 		LOG("New location: {}, {} {}", loc.X, currentYBound + axisBreakDown.first, frozenZVal + axisBreakDown.second);
 		return Vector{ loc.X,currentYBound + axisBreakDown.first,frozenZVal + axisBreakDown.second };
 		break;
@@ -293,14 +238,14 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		break;
 	}
 	case 3: {
-		
-		return Vector{ (currentXBound+ axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
+
+		return Vector{ (currentXBound + axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
 
 		break;
 	}
 	case 4: {
-		
-		return Vector{ -(currentXBound+ axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
+
+		return Vector{ -(currentXBound + axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
 		break;
 	}
 	case 5: {
@@ -321,7 +266,7 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		break;
 	}
 	case 7: {
-		
+
 		std::pair<float, float> result = perpendicularProjection(-1, cornerVal, loc.X, loc.Y);
 		LOG("going to clamp on front left wall now");
 		LOG("result.first: {}, result.second: {}", result.first, result.second);
@@ -349,136 +294,14 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 	return Vector{ 0,0,0 };
 }
 
-Vector VersatileTraining::getStickingVelocity(Rotator rot) {
-	float stickingAmount = 20;
-	std::pair <float, float> axisBreakDown = getAxisBreakDown(rot, stickingAmount);
-	switch (clampVal) {//5090
-	case 1: {
-		return Vector{ 0,axisBreakDown.first,axisBreakDown.second};
-		break;
-	}
-	case 2: {
-		return Vector{0,-axisBreakDown.first,axisBreakDown.second };
+std::pair<float, float> MovementUtils::getAxisBreakDown(Rotator rot, int extra) {
 
-		break;
-	}
-	case 3: {
-		return Vector{ axisBreakDown.first,0,axisBreakDown.second };
-
-		break;
-	}
-	case 4: {
-		return Vector{ -axisBreakDown.first,0,axisBreakDown.second };
-		break;
-	}
-	case 5: {
-		return Vector{ 0,0,stickingAmount };
-		break;
-	}
-	case 6: {
-		return  Vector{ -stickingAmount,-stickingAmount,0 };
-		break;
-	}
-	case 7: {
-		return Vector{ stickingAmount,stickingAmount,0 };
-		break;
-	}
-	case 8: {
-		return  Vector{ -stickingAmount,stickingAmount,0 };
-		break;
-	}
-	case 9: {
-		return Vector{ stickingAmount,-stickingAmount,0 };
-		break;
-	}
-	default: {
-		break;
-	}
-		}
-	return Vector{ 0,0,0 };
 }
 
+Vector MovementUtils::getStickingVelocity(Rotator rot) {
 
-
-void VersatileTraining::ApplyLocalPitch(float pitchInput) {
-	// Get current rotation and position
-	Rotator rot = currentRotation;
-	Vector loc = currentLocation; // Get car location from your game wrapper
-
-	// Only apply local pitch when on curves (0 < t < 1)
-	if (t > 0.0f && t < 1.0f) {
-		// Calculate blend factor based on how far we are into the curve
-		float blendFactor = abs(t - 0.5f) * 2.0f; // 0 at middle, 1 at edges
-
-		// Convert angles to radians
-		const float UU_TO_RAD = 3.14159265358979323846f / 32768.0f;
-		float rollRad = rot.Roll * UU_TO_RAD;
-
-		// Compute local pitch adjustment
-		float adjustedPitch = pitchInput * cos(rollRad) * blendFactor;
-		float adjustedYaw = pitchInput * sin(rollRad) * blendFactor;
-
-		// Blend with standard pitch
-		rot.Pitch += static_cast<int>(adjustedPitch + pitchInput * (1.0f - blendFactor));
-		rot.Yaw += static_cast<int>(adjustedYaw);
-	}
-	else {
-		// Standard pitch behavior when not on curves
-		rot.Pitch += static_cast<int>(pitchInput);
-	}
-
-	localRotation = rot;
 }
 
+void MovementUtils::applyLocalPitch(Rotator& localRotation, float pitchInput) {
 
-void VersatileTraining::shiftVelocitiesToPositive(std::vector<int>& vec) {
-	for (int& value : vec) {	
-			value += 2000;
-	}
-}
-void VersatileTraining::shiftVelocitiesToNegative(std::vector<int>& vec) {
-	
-	for (int& value : vec) {
-		value -= 2000;
-	}
-}
-
-
-void VersatileTraining::shiftGoalBlockerToPositive(std::vector<std::pair<Vector, Vector>>& vec) {
-	LOG("before shifting");
-	for (std::pair<Vector, Vector>& value : vec) {
-		LOG("before shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
-		LOG("before shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
-	}
-	for (std::pair<Vector, Vector>& value : vec) {
-		value.first.X += 910;
-		value.second.X += 910;
-		value.second.Z += 20;
-		value.first.Z += 20;
-	}
-
-	LOG("after shifting");
-	for (std::pair<Vector, Vector>& value : vec) {
-		LOG("after shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
-		LOG("after shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
-	}
-}
-void VersatileTraining::shiftGoalBlockerToNegative(std::vector<std::pair<Vector, Vector>>& vec) {
-	LOG("before shifting");
-	for (std::pair<Vector, Vector>& value : vec) {
-		LOG("before shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
-		LOG("before shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
-	}
-
-	for (std::pair<Vector, Vector>& value : vec) {
-		value.first.X -= 910;
-		value.second.X -=910;
-		value.second.Z -= 20;
-		value.first.Z -= 20;
-	}
-	LOG("after shifting");
-	for (std::pair<Vector, Vector>& value : vec) {
-		LOG("after shifting first x: {}, y: {}, z: {}", value.first.X, value.first.Y, value.first.Z);
-		LOG("after shifting second x: {}, y: {}, z: {}", value.second.X, value.second.Y, value.second.Z);
-	}
 }

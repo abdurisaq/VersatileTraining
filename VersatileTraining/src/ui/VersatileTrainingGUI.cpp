@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "VersatileTraining.h"
+#include "src/core/VersatileTraining.h"
 
 void VersatileTraining::RenderSettings() {
 	ImGui::Text("Versatile Training Settings");
@@ -20,18 +20,18 @@ void VersatileTraining::RenderSettings() {
 	ImGui::InputText("custom Training code",trainingCode, IM_ARRAYSIZE(trainingCode));
 
 	
-	ImGui::SliderInt("Boost Amount", &boostAmount, boostMin, boostMax);
-	ImGui::SliderInt("Starting Velocity", &startingVelocity, minVelocity, maxVelocity);
+	ImGui::SliderInt("Boost Amount", &currentShotState.boostAmount, currentTrainingData.boostMin, currentTrainingData.boostMax);
+	ImGui::SliderInt("Starting Velocity", &currentShotState.startingVelocity, currentTrainingData.minVelocity, currentTrainingData.maxVelocity);
 	//ImGui::DragIntRange2("Starting Velocity", &startingVelocityMin, &startingVelocityMax, 1, 0, 100, "%d", "%d");
 	/*ImGui::RangeSliderInt("Starting Velocity", &startingVelocityMin, &startingVelocityMax, minVelocity, maxVelocity, "(%d,%d)");*/
 
-	if (ImGui::Button("Submit")) {
+	/*if (ImGui::Button("Submit")) {
 		CustomTrainingData data;
 		data.code = trainingCode;
 		data.boostAmounts.push_back(boostAmount);
 		data.startingVelocity.push_back(startingVelocity);
 		trainingData.insert_or_assign(trainingCode,data);
-	}
+	}*/
 
 	ImVec2 availableSize = ImGui::GetContentRegionAvail();
 	ImVec2 childSize = ImVec2(availableSize.x, availableSize.y);
@@ -42,8 +42,8 @@ void VersatileTraining::RenderSettings() {
 		ImGui::Text("Name: %s", value.name.c_str());
 		}
 		ImGui::Text("Code: %s", key.c_str());
-		ImGui::Text("Boost Amount: %d", value.boostAmounts[0]);
-		ImGui::Text("Starting Velocity: (%d)", value.startingVelocity[0]);
+		ImGui::Text("Boost Amount: %d", value.shots[0].boostAmount);
+		ImGui::Text("Starting Velocity: (%d)", value.shots[0].startingVelocity);
 	
 		if (ImGui::Button(("Edit##" + key).c_str())) {
 			
@@ -65,8 +65,8 @@ void VersatileTraining::RenderSettings() {
 		if (ImGui::BeginPopupModal("Edit Training Pack", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
 			CustomTrainingData& data = trainingData[editingTrainingCode];
 
-			ImGui::SliderInt("Boost Amount", &data.boostAmounts[0], boostMin, boostMax);
-			ImGui::SliderInt("Starting Velocity", &data.startingVelocity[0], minVelocity, maxVelocity);
+			ImGui::SliderInt("Boost Amount", &data.shots[0].boostAmount, data.boostMin, data.boostMax);
+			ImGui::SliderInt("Starting Velocity", &data.shots[0].startingVelocity, data.minVelocity, data.maxVelocity);
 		
 
 			if (ImGui::Button("Save")) {

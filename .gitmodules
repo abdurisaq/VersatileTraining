@@ -1,3 +1,3 @@
-[submodule "VersatileTraining/RenderingTools"]
-	path = VersatileTraining/RenderingTools
+[submodule "VersatileTraining/external/RenderingTools"]
+	path = VersatileTraining/external/RenderingTools
 	url = https://github.com/abdurisaq/RenderingTools

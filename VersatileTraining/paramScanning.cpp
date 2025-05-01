@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "versatileTraining.h"
+#include "src/core/versatileTraining.h"
 //
 //
 //void VersatileTraining::dumpParamsToFile(void* params, size_t length, const std::filesystem::path& filepath) {

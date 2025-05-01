@@ -1,6 +1,6 @@
 #include "pch.h"
-#include "versatileTraining.h"
-#include "base64.h"
+#include "src/core/versatileTraining.h"
+#include "include/base64.h"
 
 constexpr size_t NAME_LEN_BITS = 5;
 constexpr size_t NUM_SHOTS_BITS = 6;
@@ -167,9 +167,11 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
     std::ofstream outFile(fileName, std::ios::binary);
 
     
-    for (const auto& entry : trainingData) {
-        const CustomTrainingData& data = entry.second;
-        //
+    for (std::pair<std::string,CustomTrainingData> entry : trainingData) {
+        //const CustomTrainingData& data = entry.second;
+         const CustomTrainingDataflattened& data = entry.second.deflate();
+         
+  
         // update starting velocities, get rid of negatives by shifting the values up 2000
         
        
@@ -394,7 +396,7 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
         }
         LOG("name : {}", name);
 
-        CustomTrainingData trainingData;
+        CustomTrainingDataflattened trainingData;
         trainingData.initCustomTrainingData(numShots, name);
 
         if (numBitsForBoost == 0) {
@@ -465,8 +467,8 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
         for (bool freeze : trainingData.freezeCar) {
             LOG("freeze : {}", freeze);
         }
-
-        trainingDataMap[name] = trainingData;
+        LOG("loading training pack with name : {}", name);
+        trainingDataMap[name] = trainingData.inflate();
     }
 
     if (trainingDataMap.empty()) {

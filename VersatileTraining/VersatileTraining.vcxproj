@@ -78,7 +78,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)external;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -91,88 +91,102 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="controllerManipulation.cpp" />
-    <ClCompile Include="eventHooks.cpp" />
-    <ClCompile Include="imgui\imgui.cpp" />
-    <ClCompile Include="imgui\imguivariouscontrols.cpp" />
-    <ClCompile Include="imgui\imgui_additions.cpp" />
-    <ClCompile Include="imgui\imgui_demo.cpp" />
-    <ClCompile Include="imgui\imgui_draw.cpp" />
-    <ClCompile Include="imgui\imgui_impl_dx11.cpp" />
-    <ClCompile Include="imgui\imgui_impl_win32.cpp" />
-    <ClCompile Include="imgui\imgui_rangeslider.cpp" />
-    <ClCompile Include="imgui\imgui_searchablecombo.cpp" />
-    <ClCompile Include="IMGUI\imgui_stdlib.cpp" />
-    <ClCompile Include="imgui\imgui_timeline.cpp" />
-    <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\hooks\EditorMovementHooks.cpp" />
+    <ClCompile Include="src\hooks\GoalBlockerHooks.cpp" />
+    <ClCompile Include="src\hooks\InputHandlingHooks.cpp" />
+    <ClCompile Include="src\hooks\TrainingEditorHooks.cpp" />
+    <ClCompile Include="src\hooks\TrainingShotHooks.cpp" />
+    <ClCompile Include="src\input\ControllerManager.cpp" />
+    <ClCompile Include="external\imgui\imgui.cpp" />
+    <ClCompile Include="external\imgui\imguivariouscontrols.cpp" />
+    <ClCompile Include="external\imgui\imgui_additions.cpp" />
+    <ClCompile Include="external\imgui\imgui_demo.cpp" />
+    <ClCompile Include="external\imgui\imgui_draw.cpp" />
+    <ClCompile Include="external\imgui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="external\imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="external\imgui\imgui_rangeslider.cpp" />
+    <ClCompile Include="external\imgui\imgui_searchablecombo.cpp" />
+    <ClCompile Include="external\IMGUI\imgui_stdlib.cpp" />
+    <ClCompile Include="external\imgui\imgui_timeline.cpp" />
+    <ClCompile Include="external\imgui\imgui_widgets.cpp" />
     <ClCompile Include="paramScanning.cpp" />
-    <ClCompile Include="RenderingTools\Extra\CanvasExtensions.cpp" />
-    <ClCompile Include="RenderingTools\Extra\RenderingAssistant.cpp" />
-    <ClCompile Include="RenderingTools\Extra\RenderingMath.cpp" />
-    <ClCompile Include="RenderingTools\Extra\WrapperStructsExtensions.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Chevron.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Circle.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Circle2D.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Cone.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Cube.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Cylinder.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Frustum.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Grid.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Line.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Matrix3.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Plane.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Sphere.cpp" />
-    <ClCompile Include="RenderingTools\Objects\Triangle.cpp" />
-    <ClCompile Include="RenderingTools\Objects\VisualCamera.cpp" />
+    <ClCompile Include="external\RenderingTools\Extra\CanvasExtensions.cpp" />
+    <ClCompile Include="external\RenderingTools\Extra\RenderingAssistant.cpp" />
+    <ClCompile Include="external\RenderingTools\Extra\RenderingMath.cpp" />
+    <ClCompile Include="external\RenderingTools\Extra\WrapperStructsExtensions.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Chevron.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Circle.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Circle2D.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Cone.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Cube.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Cylinder.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Frustum.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Grid.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Line.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Matrix3.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Plane.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Sphere.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\Triangle.cpp" />
+    <ClCompile Include="external\RenderingTools\Objects\VisualCamera.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="saving.cpp" />
-    <ClCompile Include="util.cpp" />
-    <ClCompile Include="VersatileTraining.cpp" />
-    <ClCompile Include="GuiBase.cpp" />
-    <ClCompile Include="VersatileTrainingGUI.cpp" />
+    <ClCompile Include="src\input\ShotReplicationManager.cpp" />
+    <ClCompile Include="src\storage\saving.cpp" />
+    <ClCompile Include="src\training\CustomTrainingData.cpp" />
+    <ClCompile Include="src\ui\RenderCanvas.cpp" />
+    <ClCompile Include="src\utils\Math.cpp" />
+    <ClCompile Include="src\utils\MovementUtils.cpp" />
+    <ClCompile Include="src\utils\util.cpp" />
+    <ClCompile Include="src\core\VersatileTraining.cpp" />
+    <ClCompile Include="src\ui\GuiBase.cpp" />
+    <ClCompile Include="src\ui\VersatileTrainingGUI.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="base64.h" />
-    <ClInclude Include="imgui\imconfig.h" />
-    <ClInclude Include="imgui\imgui.h" />
-    <ClInclude Include="imgui\imguivariouscontrols.h" />
-    <ClInclude Include="imgui\imgui_additions.h" />
-    <ClInclude Include="imgui\imgui_impl_dx11.h" />
-    <ClInclude Include="imgui\imgui_impl_win32.h" />
-    <ClInclude Include="imgui\imgui_internal.h" />
-    <ClInclude Include="imgui\imgui_rangeslider.h" />
-    <ClInclude Include="imgui\imgui_searchablecombo.h" />
-    <ClInclude Include="IMGUI\imgui_stdlib.h" />
-    <ClInclude Include="imgui\imgui_timeline.h" />
-    <ClInclude Include="imgui\imstb_rectpack.h" />
-    <ClInclude Include="imgui\imstb_textedit.h" />
-    <ClInclude Include="imgui\imstb_truetype.h" />
-    <ClInclude Include="logging.h" />
+    <ClInclude Include="include\base64.h" />
+    <ClInclude Include="external\imgui\imconfig.h" />
+    <ClInclude Include="external\imgui\imgui.h" />
+    <ClInclude Include="external\imgui\imguivariouscontrols.h" />
+    <ClInclude Include="external\imgui\imgui_additions.h" />
+    <ClInclude Include="external\imgui\imgui_impl_dx11.h" />
+    <ClInclude Include="external\imgui\imgui_impl_win32.h" />
+    <ClInclude Include="external\imgui\imgui_internal.h" />
+    <ClInclude Include="external\imgui\imgui_rangeslider.h" />
+    <ClInclude Include="external\imgui\imgui_searchablecombo.h" />
+    <ClInclude Include="external\IMGUI\imgui_stdlib.h" />
+    <ClInclude Include="external\imgui\imgui_timeline.h" />
+    <ClInclude Include="external\imgui\imstb_rectpack.h" />
+    <ClInclude Include="external\imgui\imstb_textedit.h" />
+    <ClInclude Include="external\imgui\imstb_truetype.h" />
+    <ClInclude Include="include\logging.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="GuiBase.h" />
-    <ClInclude Include="VersatileTraining.h" />
-    <ClInclude Include="RenderingTools\Extra\CanvasExtensions.h" />
-    <ClInclude Include="RenderingTools\Extra\RenderingAssistant.h" />
-    <ClInclude Include="RenderingTools\Extra\RenderingMath.h" />
-    <ClInclude Include="RenderingTools\Extra\WrapperStructsExtensions.h" />
-    <ClInclude Include="RenderingTools\Objects\Chevron.h" />
-    <ClInclude Include="RenderingTools\Objects\Circle.h" />
-    <ClInclude Include="RenderingTools\Objects\Circle2D.h" />
-    <ClInclude Include="RenderingTools\Objects\Cone.h" />
-    <ClInclude Include="RenderingTools\Objects\Cube.h" />
-    <ClInclude Include="RenderingTools\Objects\Cylinder.h" />
-    <ClInclude Include="RenderingTools\Objects\Frustum.h" />
-    <ClInclude Include="RenderingTools\Objects\Grid.h" />
-    <ClInclude Include="RenderingTools\Objects\Line.h" />
-    <ClInclude Include="RenderingTools\Objects\Matrix3.h" />
-    <ClInclude Include="RenderingTools\Objects\Plane.h" />
-    <ClInclude Include="RenderingTools\Objects\Sphere.h" />
-    <ClInclude Include="RenderingTools\Objects\Triangle.h" />
-    <ClInclude Include="RenderingTools\Objects\VisualCamera.h" />
-    <ClInclude Include="RenderingTools\RenderingTools.h" />
+    <ClInclude Include="include\GuiBase.h" />
+    <ClInclude Include="src\core\VersatileTraining.h" />
+    <ClInclude Include="external\RenderingTools\Extra\CanvasExtensions.h" />
+    <ClInclude Include="external\RenderingTools\Extra\RenderingAssistant.h" />
+    <ClInclude Include="external\RenderingTools\Extra\RenderingMath.h" />
+    <ClInclude Include="external\RenderingTools\Extra\WrapperStructsExtensions.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Chevron.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Circle.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Circle2D.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Cone.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Cube.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Cylinder.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Frustum.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Grid.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Line.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Matrix3.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Plane.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Sphere.h" />
+    <ClInclude Include="external\RenderingTools\Objects\Triangle.h" />
+    <ClInclude Include="external\RenderingTools\Objects\VisualCamera.h" />
+    <ClInclude Include="external\RenderingTools\RenderingTools.h" />
+    <ClInclude Include="src\input\ControllerManager.h" />
+    <ClInclude Include="src\input\ShotReplicationManager.h" />
+    <ClInclude Include="src\training\CustomTrainingData.h" />
+    <ClInclude Include="src\utils\Math.h" />
+    <ClInclude Include="src\utils\MovementUtils.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
