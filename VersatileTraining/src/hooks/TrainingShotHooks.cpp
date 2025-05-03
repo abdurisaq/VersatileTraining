@@ -167,16 +167,19 @@ void VersatileTraining::handleStopEditing() {
 void VersatileTraining::handleBallEditingEnd() {
     LOG("car is being edited");
     editingVariances = true;
+    ballBeingEdited= false;
 }
 
 void VersatileTraining::handleEditorModeEndState() {
     editingVariances = false;
+    ballBeingEdited = false;
 }
 
 void VersatileTraining::handleGameEditorActorEditingEnd() {
     LOG("ball is being edited");
     editingVariances = false;
     lockRotation = true;
+    ballBeingEdited = true;
 }
 
 void VersatileTraining::handleEndPlayTest() {

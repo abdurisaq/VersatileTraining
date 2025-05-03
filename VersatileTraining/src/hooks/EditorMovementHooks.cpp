@@ -6,6 +6,7 @@ void VersatileTraining::setupEditorMovementHooks() {
         "Function TAGame.GFxHUD_TA.UpdateCarData",
         [this](ActorWrapper cw, void* params, std::string eventName) {
             handleUpdateCarData(cw);
+
         });
 
     gameWrapper->HookEvent(
@@ -36,7 +37,6 @@ void VersatileTraining::setupEditorMovementHooks() {
 
 void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
     if (!currentTrainingData.customPack) {
-        LOG("not in custom pack");
         return;
     }
 
@@ -65,6 +65,11 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
         car.SetbDoubleJumped(true);
         appliedJumpState = true;
     }
+    else if (!savedReplayState.hasJump && !appliedJumpState && savedReplayState.filled) {
+        car.SetbJumped(true);
+        car.SetbDoubleJumped(true);
+        appliedJumpState = true;
+    }
     if (freezeForShot) {
         handleFreezeCar(car, loc, rot);
     }
@@ -75,23 +80,40 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
 
 void VersatileTraining::handleStartRound() {
 
-
+    LOG("startround called");
 
     if (isInTrainingEditor() || isInTrainingPack()) {
         shotReplicationManager.testCalledInStartRound = true;
-        
 
 
-        if (!currentTrainingData.customPack) return;
+
+        //if (!currentTrainingData.customPack) return;
         freezeForShot = false;
         frozeZVal = false;
         appliedStartingVelocity = false;
 
         ServerWrapper server = gameWrapper->GetCurrentGameState();
-        if (!server) return;
+        if (!server) {
+            			LOG("server not found");
+			return;
+        }
         ActorWrapper car = server.GetGameCar();
-        if (!car) return;
+        if (!car) {
 
+            		LOG("car not found");
+			return;
+        }
+
+
+        if (savedReplayState.filled) {
+            LOG("applying saved replay state in start round");
+            car.SetVelocity(savedReplayState.carVelocity);
+            car.SetAngularVelocity(savedReplayState.carAngularVelocity, 0);
+            /*auto ball = server.GetBall();
+            ball.SetAngularVelocity(savedReplayState.ballAngularVelocity, 1);*/
+
+            return;
+        }
         Rotator rot = car.GetRotation();
 
         float pitchRad = (rot.Pitch / 16201.0f) * (PI / 2);
@@ -100,8 +122,8 @@ void VersatileTraining::handleStartRound() {
         float y = cosf(pitchRad) * sinf(yawRad);
         float x = cosf(pitchRad) * cosf(yawRad);
         Vector unitVector = { x, y, z };
-
-        int velocity = currentTrainingData.shots[currentTrainingData.currentEditedShot].startingVelocity;
+        //currentTrainingData.shots[currentTrainingData.currentEditedShot].startingVelocity
+        int velocity = currentShotState.startingVelocity;
         if (velocity == 0) return;
         startingVelocityTranslation = unitVector * velocity;
         Vector stickingVelocity = getStickingVelocity(rot);
@@ -109,11 +131,17 @@ void VersatileTraining::handleStartRound() {
 
         LOG("Calculated new velocity in StartRound");
     }
+    else {
+        LOG("not in training editor or pack");
+    }
+    
 }
 
 
 void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params) {
     if (!isInTrainingEditor())return;
+
+   
     struct pExecEditorMoveToLocaction
     {
         struct Vector NewLocation;
@@ -121,6 +149,10 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
     };
     auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
 
+    if (savedReplayState.filled) {
+        p->NewLocation = savedReplayState.carLocation;
+        return;
+    }
     const float diag = 7950;
     float diagReduction = 0;
     diagBound = 7950;
@@ -193,7 +225,10 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
             LOG("Server not found");
             return;
         }
-
+        if (savedReplayState.filled) {
+            cw.SetRotation(savedReplayState.carRotation);
+			return;
+        }
         Vector loc = cw.GetLocation();
         // Rotator rot = cw.GetRotation();
 

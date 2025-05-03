@@ -222,11 +222,16 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             else {
                 LOG("car is not frozen");
             }
-            if (currentShotState.boostAmount == 101) {
-                cvarManager->executeCommand("sv_training_limitboost -1");
+            if (savedReplayState.filled) {
+                cvarManager->executeCommand("sv_training_limitboost " + std::to_string(savedReplayState.focusPlayerBoostAmount * 100));
             }
             else {
-                cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
+                if (currentShotState.boostAmount == 101) {
+                    cvarManager->executeCommand("sv_training_limitboost -1");
+                }
+                else {
+                    cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
+                }
             }
             found = true;
         }
@@ -240,7 +245,12 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         else {
             currentTrainingData.customPack = false;
         }
-        cvarManager->executeCommand("sv_training_limitboost -1");
+        if (savedReplayState.filled) {
+            cvarManager->executeCommand("sv_training_limitboost " + std::to_string(savedReplayState.focusPlayerBoostAmount * 100));
+        }
+        else {
+            cvarManager->executeCommand("sv_training_limitboost -1");
+        }
     }
 
 

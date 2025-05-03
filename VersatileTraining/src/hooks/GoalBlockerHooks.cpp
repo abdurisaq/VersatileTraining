@@ -97,5 +97,7 @@ void VersatileTraining::handleUpdateFlyPOV() {
         previousRotBeforeGoalEdit = { 0, 0, 0 };
         savedPastCamera = false;
     }
+    
+    
 }
 

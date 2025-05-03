@@ -7,14 +7,17 @@ void ShotReplicationManager::startRecordingShot(GameWrapper* gw) {
 		if (botSpawnedTest) {
 			botSpawnedTest = false;
 		}
+		auto car = gw->GetLocalCar();
+		if (!car) return;
+
+
 		currentShotRecording = std::make_shared<ShotRecording>();
-		currentShotRecording->carBody = gw->GetLocalCar().GetLoadoutBody();
+		currentShotRecording->carBody = car.GetLoadoutBody();
 		currentShotRecording->settings = gw->GetSettings().GetGamepadSettings();
 
 
 		LOG("settings controllerDeadzone {}, DodgeInputThreshold {}, SteeringSensitivity {} , AirControlSensitivity {}", currentShotRecording->settings.ControllerDeadzone, currentShotRecording->settings.DodgeInputThreshold, currentShotRecording->settings.SteeringSensitivity, currentShotRecording->settings.AirControlSensitivity);
-		// Record initial state
-		auto car = gw->GetLocalCar();
+
 		currentShotRecording->initialState = std::make_shared<ShotRecording::InitialState>();
 		currentShotRecording->initialState->velocity = car.GetVelocity();
 		currentShotRecording->initialState->location = car.GetLocation();

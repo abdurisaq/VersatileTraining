@@ -94,6 +94,7 @@
     <ClCompile Include="src\hooks\EditorMovementHooks.cpp" />
     <ClCompile Include="src\hooks\GoalBlockerHooks.cpp" />
     <ClCompile Include="src\hooks\InputHandlingHooks.cpp" />
+    <ClCompile Include="src\hooks\ReplayHooks.cpp" />
     <ClCompile Include="src\hooks\TrainingEditorHooks.cpp" />
     <ClCompile Include="src\hooks\TrainingShotHooks.cpp" />
     <ClCompile Include="src\input\ControllerManager.cpp" />
@@ -138,6 +139,7 @@
     <ClCompile Include="src\ui\RenderCanvas.cpp" />
     <ClCompile Include="src\utils\Math.cpp" />
     <ClCompile Include="src\utils\MovementUtils.cpp" />
+    <ClCompile Include="src\utils\Notifiers.cpp" />
     <ClCompile Include="src\utils\util.cpp" />
     <ClCompile Include="src\core\VersatileTraining.cpp" />
     <ClCompile Include="src\ui\GuiBase.cpp" />
