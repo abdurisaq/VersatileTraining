@@ -64,7 +64,7 @@ void VersatileTraining::handleUpdateFlyPOV() {
         normalizedYawDist = std::clamp(normalizedYawDist, 0.f, 1.f);
 
         float extraPitch = (1.f - normalizedYawDist) * 600.f;
-        float allowedPitch = 2400.f + extraPitch;
+        int allowedPitch = (int)(2400.f + extraPitch);
 
         if (rot.Pitch > allowedPitch) {
             rot.Pitch = allowedPitch;
@@ -75,12 +75,12 @@ void VersatileTraining::handleUpdateFlyPOV() {
             rotChanged = true;
         }
 
-        if (rot.Yaw < 9384.f) {
-            rot.Yaw = 9384.f;
+        if (rot.Yaw < 9384) {
+            rot.Yaw = 9384;
             rotChanged = true;
         }
-        else if (rot.Yaw > 23384.f) {
-            rot.Yaw = 23384.f;
+        else if (rot.Yaw > 23384) {
+            rot.Yaw = 23384;
             rotChanged = true;
         }
 

@@ -14,8 +14,8 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
             float yaw_deg = static_cast<float>(currentShotState.carRotation.Yaw) * (360.0f / 65536.0f);
 
            
-            float pitch_rad = pitch_deg * (PI / 180.0f);
-            float yaw_rad = yaw_deg * (PI / 180.0f);
+            float pitch_rad = (float)(pitch_deg * (PI / 180.0f));
+            float yaw_rad = (float)(yaw_deg * (PI / 180.0f));
 
            
             float x = cosf(pitch_rad) * cosf(yaw_rad);
@@ -24,7 +24,7 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
 
            
             Vector direction = Vector(x, y, z);
-            velocity = direction * currentShotState.startingVelocity;
+            velocity = direction * (float)currentShotState.startingVelocity;
 
         }
         else if (currentShotState.extendedStartingVelocity != Vector(0, 0, 0)) {
@@ -64,7 +64,7 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
             float radius = 10.f;
 
             RT::Sphere sphere(pos, radius);
-            canvas.SetColor(255, 255, 255, static_cast<int>(alpha * 255));
+            canvas.SetColor((char)255,(char)255, (char)255, static_cast<char>(alpha * 255));
             sphere.Draw(canvas, frust, cameraLocation, 12); 
         }
 		

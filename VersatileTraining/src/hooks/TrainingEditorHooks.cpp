@@ -46,6 +46,11 @@ void VersatileTraining::setupTrainingEditorHooks() {
         [this](ActorWrapper cw, void* params, std::string eventName) {
             handleTrainingEditorExit();
         });
+    gameWrapper->HookEventWithCallerPost<ActorWrapper>(
+		"Function GameEvent_TrainingEditor_TA.Countdown.EndState",
+		[this](ActorWrapper cw, void* params, std::string eventName) {
+            snapshotManager.currentReplayState.capturedFromTraining = false;
+		});
 
     gameWrapper->HookEventWithCallerPost<ActorWrapper>(
         "Function TAGame.GameEvent_TrainingEditor_TA.Save",
@@ -184,6 +189,8 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     TrainingEditorSaveDataWrapper td = data.GetTrainingData();
     LOG("Training pack code: {}", td.GetCode().ToString());
     std::string name = td.GetTM_Name().ToString();
+    snapshotManager.currentReplayState.replayName = name; //training pack name
+    snapshotManager.currentReplayState.capturedFromTraining = true;
     LOG("Training pack name", name);
     /*GetCreatorName();
     GetDescription();*/

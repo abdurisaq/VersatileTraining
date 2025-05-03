@@ -198,14 +198,14 @@ void VersatileTraining::handleFreezeCar(CarWrapper car, Vector loc, Rotator rot)
         }
 
 
-        float pitchRad = (rot.Pitch / 16201.0f) * (PI / 2);
-        float yawRad = (rot.Yaw / 32768.0f) * PI;
+        float pitchRad = (float)((rot.Pitch / 16201.0f) * (PI / 2));
+        float yawRad = (float)((rot.Yaw / 32768.0f) * PI);
         float z = sinf(pitchRad);
         float y = cosf(pitchRad) * sinf(yawRad);
         float x = cosf(pitchRad) * cosf(yawRad);
         Vector unitVector = { x, y, z };
         int velocity = currentTrainingData.shots[currentTrainingData.currentEditedShot].startingVelocity;
-        startingVelocityTranslation = unitVector * velocity;
+        startingVelocityTranslation = unitVector * (float)velocity;
     }
 
     Vector loc2 = getClampChange(loc, rot);

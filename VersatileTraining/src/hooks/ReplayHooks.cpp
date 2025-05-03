@@ -13,9 +13,11 @@ void VersatileTraining::replayHooks() {
     //Function TAGame.ReplayManager_TA.PlayReplay
     gameWrapper->HookEventPost("Function TAGame.Replay_TA.StartPlaybackAtFrame", [this](std::string eventName) {
         isInReplay = true;
+        snapshotManager.currentReplayState.capturedFromReplay = true;
         });
     gameWrapper->HookEvent("Function TAGame.GameInfo_Replay_TA.Destroyed", [this](std::string eventName) {
         isInReplay = false;
+        snapshotManager.currentReplayState.capturedFromReplay = false;
         });
     
 
@@ -66,24 +68,37 @@ void VersatileTraining::replayHooks() {
 
     //TAGame.Ball_GameEditor_TA.EventVelocityStartSpeedChanged
     gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.Ball_GameEditor_TA.Tick", [this](ActorWrapper cw, void* params, std::string eventName) {
-        if (!isInTrainingEditor())return;
+        if (!(isInTrainingEditor()||isInTrainingPack()))return;
         struct cBall_GameEditor_TA {
             unsigned char pad[0x0AD0];
             Vector StartLocation;
             Rotator StartRotation;
             float VelocityStartSpeed;
-            Rotator VelocityStratRotation;
+            Rotator VelocityStartRotation;
         };
         cBall_GameEditor_TA* caller = (cBall_GameEditor_TA*)cw.memory_address;
+        
+        snapshotManager.currentReplayState.ballSpeed = caller->VelocityStartSpeed;
+        snapshotManager.currentReplayState.ballLocation = caller->StartLocation;
+        snapshotManager.currentReplayState.ballEditorRotation = caller->VelocityStartRotation;
+        LOG("ball speed: {}", caller->VelocityStartSpeed);
+        LOG("ball location: {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
+        LOG("velocity start rotation: {}, {}, {}", caller->VelocityStartRotation.Pitch, caller->VelocityStartRotation.Yaw, caller->VelocityStartRotation.Roll);
+
+
+        if (!isInTrainingEditor())return;
         if (!savedReplayState.filled) return;
         
+
+
         caller->VelocityStartSpeed = savedReplayState.getBallShotFromVelocity().second;
-        caller->VelocityStratRotation = savedReplayState.getBallShotFromVelocity().first;
+        caller->VelocityStartRotation = savedReplayState.getBallShotFromVelocity().first;
         currentShotState.extendedStartingVelocity = savedReplayState.carVelocity;
         
-        //LOG("speed: {}", caller->VelocityStartSpeed);
-        /*LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
-        LOG("ball velocity from tick : {}, {}, {}", caller->VelocityStratRotation.Pitch, caller->VelocityStratRotation.Yaw, caller->VelocityStratRotation.Roll);
+        LOG("speed: {}", caller->VelocityStartSpeed);
+        LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
+        
+        /*LOG("ball velocity from tick : {}, {}, {}", caller->VelocityStartRotation.Pitch, caller->VelocityStartRotation.Yaw, caller->VelocityStartRotation.Roll);
         LOG("ball speed from tick : {}", caller->VelocityStartSpeed);
         LOG("ball rotation from tick : {}, {}, {}", caller->StartRotation.Pitch, caller->StartRotation.Yaw, caller->StartRotation.Roll);*/
        //this works in other training packs, stuff can be captured this way to get the ball start strength and rotation

@@ -31,7 +31,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		return value >= (center - threshold) && value <= (center + threshold);
 		};
 
-	auto mapToRoll = [this,loc,rot](float value, float a, float b) {
+	auto mapToRoll = [this,loc,rot](float value, int a, int b) {
 		//float end = 0;
 		if (isCeiling ) {
 			if (b > 0) {
@@ -42,13 +42,13 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			}
 		}
 
-		return a + (b - a) * value;
+		return (int)(a + (b - a) * value);
 		};
 	
-	auto cornerLine = [this](int x, int y) {
+	auto cornerLine = [this](float x, float y) {
 		return (diagBound -25) + x + y;
 		};//7950
-	auto cornerLine2 = [this](int x, int y) {
+	auto cornerLine2 = [this](float x, float y) {
 		return (diagBound - 25) + x - y;
 		};
 	int yaw = rot.Yaw % 65536;//currentRotation.Yaw % 65536;
@@ -242,7 +242,7 @@ std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int ext
 		if (isCeiling) {
 			center = (roll >= 0) ? 32768 : -32768;
 		}
-		float diff = std::abs(roll - center);
+		float diff = (float)std::abs(roll - center);
 		float clamped = std::clamp(diff / 16384.0f, 0.0f, 1.0f);
 		return 1.0f - clamped; // 1.0 to Z, 0.0 to other axis
 		};
@@ -445,10 +445,10 @@ void VersatileTraining::shiftToPositive(CustomTrainingData& data) {
 void VersatileTraining::shiftToNegative(CustomTrainingData& data) {
 	for (ShotState& shot : data.shots) {
 		shot.startingVelocity -= 2000;
-		shot.goalBlocker.first.X -= 910;
-		shot.goalBlocker.second.X -= 910;
-		shot.goalBlocker.first.Z -= 20;
-		shot.goalBlocker.second.Z -= 20;
+		shot.goalBlocker.first.X -= 910.f;
+		shot.goalBlocker.second.X -= 910.f;
+		shot.goalBlocker.first.Z -= 20.f;
+		shot.goalBlocker.second.Z -= 20.f;
 	}
 
 }

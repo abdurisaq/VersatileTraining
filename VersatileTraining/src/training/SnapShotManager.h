@@ -12,6 +12,8 @@ struct ReplayState {
 
 	std::string focusPlayerName;
 
+	bool capturedFromReplay;
+	bool capturedFromTraining;
 
 	Vector carVelocity;
 	Vector carAngularVelocity;
@@ -23,10 +25,14 @@ struct ReplayState {
 	bool hasJump;
 	bool boosting;
 
-	Vector ballVelocity;
 	Vector ballLocation;
+	//option 1
+	Vector ballVelocity;
 	Rotator ballRotation;
 	Vector ballAngularVelocity;
+	//option 2
+	float ballSpeed;
+	Rotator ballEditorRotation;
 
 	bool filled = false;
 	std::pair<Rotator, float> getBallShotFromVelocity() const {
@@ -80,7 +86,7 @@ public:
 	bool isInReplay;
 	std::string focusCarID;
 
-
+	ReplayState currentReplayState;
 
 	void takeSnapShot(GameWrapper* gw);
 };

@@ -113,8 +113,8 @@ void VersatileTraining::handleStartRound() {
         }
         Rotator rot = car.GetRotation();
 
-        float pitchRad = (rot.Pitch / 16201.0f) * (PI / 2);
-        float yawRad = (rot.Yaw / 32768.0f) * PI;
+        float pitchRad = (float)((rot.Pitch / 16201.0f) * (PI / 2));
+        float yawRad = (float)((rot.Yaw / 32768.0f) * PI);
         float z = sinf(pitchRad);
         float y = cosf(pitchRad) * sinf(yawRad);
         float x = cosf(pitchRad) * cosf(yawRad);
@@ -122,7 +122,7 @@ void VersatileTraining::handleStartRound() {
         //currentTrainingData.shots[currentTrainingData.currentEditedShot].startingVelocity
         int velocity = currentShotState.startingVelocity;
         if (velocity == 0) return;
-        startingVelocityTranslation = unitVector * velocity;
+        startingVelocityTranslation = unitVector * (float)velocity;
         Vector stickingVelocity = getStickingVelocity(rot);
         car.SetVelocity(startingVelocityTranslation + stickingVelocity);
 

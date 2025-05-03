@@ -150,7 +150,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	
 	bool rectangleMade = false;
 	bool rectangleSaved = false;
-	int backWall = 5140;
+	float backWall = 5140.0f;
 
 	// overview group of hooks
 	void setupInputHandlingHooks();

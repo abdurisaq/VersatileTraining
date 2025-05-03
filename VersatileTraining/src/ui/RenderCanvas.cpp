@@ -51,11 +51,11 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 		RT::Frustum frust{ canvas, cam };
 
 		Vector projectedPoint;
-		if (ProjectToPlaneY(camLoc, forward, backWall, projectedPoint)) {
+		if (ProjectToPlaneY(camLoc, forward, (float)backWall, projectedPoint)) {
 			// Draw projected point as a small cross
 			Vector2 screenPoint = canvas.Project(projectedPoint);
-			float crossSize = 5.0f;
-			canvas.SetColor(255, 255, 255, 255);
+			int crossSize = 5;
+			canvas.SetColor((char)255, (char)255, (char)255, (char)255);
 			canvas.DrawLine(screenPoint - Vector2(crossSize, 0), screenPoint + Vector2(crossSize, 0), 1.0f);
 			canvas.DrawLine(screenPoint - Vector2(0, crossSize), screenPoint + Vector2(0, crossSize), 1.0f);
 
@@ -111,7 +111,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 				Vector bottomLeft(max(currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.second.X), backWall, min(currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.Z));
 				Vector bottomRight(min(currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.second.X), backWall, min(currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.Z));
 
-				canvas.SetColor(0, 255, 0, 255); // Green
+				canvas.SetColor((char)0, (char)255, (char)0, (char)255); // Green
 
 				RT::Line lineTop(topLeft, topRight, RT::GetVisualDistance(canvas, frust, cam, topLeft) * 1.5f);
 				RT::Line lineRight(topRight, bottomRight, RT::GetVisualDistance(canvas, frust, cam, topRight) * 1.5f);
@@ -129,8 +129,8 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 		// Optional: Draw center screen cursor
 		Vector2 screenSize = canvas.GetSize();
 		Vector2 center(screenSize.X / 2, screenSize.Y / 2);
-		canvas.SetColor(255, 255, 255, 255);
-		float length = 10.0f;
+		canvas.SetColor((char)255, (char)255, (char)255, (char)255);
+		int length = 10;
 		canvas.DrawLine(Vector2(center.X - length, center.Y), Vector2(center.X + length, center.Y), 1.5f);
 		canvas.DrawLine(Vector2(center.X, center.Y - length), Vector2(center.X, center.Y + length), 1.5f);
 
@@ -165,7 +165,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 	Vector2 bl2d = canvas.Project(bottomLeft);
 	Vector2 br2d = canvas.Project(bottomRight);
 
-	canvas.SetColor(0, 255, 0, 255); // Green
+	canvas.SetColor((char)0, (char)255, (char)0, (char)255); // Green
 
 	DrawLineClippedByCircle(canvas, tl2d, tr2d, ballScreenPos, ballRadius, topLeft, topRight, camera, frustum);
 	DrawLineClippedByCircle(canvas, tr2d, br2d, ballScreenPos, ballRadius, topRight, bottomRight, camera, frustum);

@@ -96,7 +96,7 @@ size_t ReadBits(const std::vector<uint8_t>& bitstream, size_t& bitIndex, size_t 
 
 void DecompressIntegers(
     std::vector<int>& output,
-    int globalMin,
+    size_t globalMin,
     int numBits,
     const std::vector<uint8_t>& bitstream,
     size_t& bitIndex,
@@ -107,8 +107,8 @@ void DecompressIntegers(
     }
 
     for (size_t i = 0; i < output.size(); ++i) {
-        int compressed = ReadBits(bitstream, bitIndex, numBits);
-        output[i] = compressed + globalMin;
+        size_t compressed = ReadBits(bitstream, bitIndex, numBits);
+        output[i] = (int)(compressed + globalMin);
     }
 }
 
@@ -326,7 +326,7 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
       
 
         // base64
-        std::string base64Encoded = base64_encode(bitstream.data(), bitstream.size());
+        std::string base64Encoded = base64_encode(bitstream.data(), (int)bitstream.size());
 
         
         outFile.write(base64Encoded.c_str(), base64Encoded.size());
@@ -368,23 +368,23 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
 
         size_t numShots = ReadBits(bitstream, bitIndex, NUM_SHOTS_BITS);
         LOG("numShots : {}", numShots);
-        int minBoost = ReadBits(bitstream, bitIndex, BOOST_MIN_BITS);
+        size_t minBoost = ReadBits(bitstream, bitIndex, BOOST_MIN_BITS);
         LOG("minBoost : {}", minBoost);
-        int minVelocity = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
+        size_t minVelocity = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
         LOG("minVelocity : {}", minVelocity);
 
-        int minGoalBlockX = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
+        size_t minGoalBlockX = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
         LOG("min goalblocker X : {}", minGoalBlockX);
-        int minGoalBlockZ = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
+        size_t minGoalBlockZ = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
         LOG("min goalblocker Z : {}", minGoalBlockZ);
 
-        uint8_t packedBits = ReadBits(bitstream, bitIndex, 7);
+        uint8_t packedBits = (uint8_t)ReadBits(bitstream, bitIndex, 7);
         int numBitsForBoost = (packedBits >> 4) & 0x07;
         int numBitsForVelocity = packedBits & 0x0F;
         LOG("num bits for boost : {}", numBitsForBoost);
         LOG("num bits for velocity : {}", numBitsForVelocity);
 
-        uint8_t packedGoalBlockerBits = ReadBits(bitstream, bitIndex, 8);
+        uint8_t packedGoalBlockerBits =(uint8_t) ReadBits(bitstream, bitIndex, 8);
         int numBitsForXBlocker = (packedGoalBlockerBits >> 4) & 0x0F;
         int numBitsForZBlocker = packedGoalBlockerBits & 0x0F;
 
@@ -393,12 +393,12 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
 
         std::string name(nameLength, '\0');
         for (size_t i = 0; i < nameLength; ++i) {
-            name[i] = ReadBits(bitstream, bitIndex, 7);
+            name[i] =(char) ReadBits(bitstream, bitIndex, 7);
         }
         LOG("name : {}", name);
 
         CustomTrainingDataflattened trainingData;
-        trainingData.initCustomTrainingData(numShots, name);
+        trainingData.initCustomTrainingData((int)numShots, name);
 
         if (numBitsForBoost == 0) {
             std::fill(trainingData.boostAmounts.begin(), trainingData.boostAmounts.end(), minBoost);
@@ -445,13 +445,13 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
         }
         // Now populate the goal blockers
         for (int i = 0; i < numGoalBlockers; i++) {
-            trainingData.goalBlockers[i].first.X = xVals[i * 2];
-            trainingData.goalBlockers[i].second.X = xVals[i * 2 + 1];
-            trainingData.goalBlockers[i].first.Z = zVals[i * 2];
-            trainingData.goalBlockers[i].second.Z = zVals[i * 2 + 1];
-            trainingData.goalBlockers[i].first.Y = 5140;
-            trainingData.goalBlockers[i].second.Y = 5140;
-            if (trainingData.goalBlockers[i].first.X == 910 && trainingData.goalBlockers[i].first.Z == 20 && trainingData.goalBlockers[i].second.X == 910 && trainingData.goalBlockers[i].second.Z == 20) {
+            trainingData.goalBlockers[i].first.X = (float)xVals[i * 2];
+            trainingData.goalBlockers[i].second.X = (float)xVals[i * 2 + 1];
+            trainingData.goalBlockers[i].first.Z = (float)zVals[i * 2];
+            trainingData.goalBlockers[i].second.Z = (float)zVals[i * 2 + 1];
+            trainingData.goalBlockers[i].first.Y = 5140.f;
+            trainingData.goalBlockers[i].second.Y = 5140.f;
+            if (trainingData.goalBlockers[i].first.X == 910.f && trainingData.goalBlockers[i].first.Z == 20.f && trainingData.goalBlockers[i].second.X == 910.f && trainingData.goalBlockers[i].second.Z == 20.f) {
 				trainingData.goalAnchors[i] = { false, false };
                 LOG("setting anchors to false");
             }
