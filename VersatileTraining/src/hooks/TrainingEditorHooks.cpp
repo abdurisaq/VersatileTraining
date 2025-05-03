@@ -49,7 +49,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
     gameWrapper->HookEventWithCallerPost<ActorWrapper>(
 		"Function GameEvent_TrainingEditor_TA.Countdown.EndState",
 		[this](ActorWrapper cw, void* params, std::string eventName) {
-            snapshotManager.currentReplayState.capturedFromTraining = false;
+            snapshotManager.currentReplayState.captureSource = CaptureSource::Training;
 		});
 
     gameWrapper->HookEventWithCallerPost<ActorWrapper>(
@@ -189,8 +189,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     TrainingEditorSaveDataWrapper td = data.GetTrainingData();
     LOG("Training pack code: {}", td.GetCode().ToString());
     std::string name = td.GetTM_Name().ToString();
-    snapshotManager.currentReplayState.replayName = name; //training pack name
-    snapshotManager.currentReplayState.capturedFromTraining = true;
+    
     LOG("Training pack name", name);
     /*GetCreatorName();
     GetDescription();*/
@@ -204,6 +203,9 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
     int currentShot = tw.GetActiveRoundNumber();
     LOG("Training current shot : {}", currentShot);
+
+    snapshotManager.currentReplayState.replayName = name + " Shot: " + std::to_string(currentShot); //training pack name
+    snapshotManager.currentReplayState.captureSource = CaptureSource::Training;
 
     std::string code = td.GetCode().ToString();
     
@@ -231,17 +233,14 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             else {
                 LOG("car is not frozen");
             }
-            if (savedReplayState.filled) {
-                cvarManager->executeCommand("sv_training_limitboost " + std::to_string(savedReplayState.focusPlayerBoostAmount * 100));
+           
+            if (currentShotState.boostAmount == 101) {
+                cvarManager->executeCommand("sv_training_limitboost -1");
             }
             else {
-                if (currentShotState.boostAmount == 101) {
-                    cvarManager->executeCommand("sv_training_limitboost -1");
-                }
-                else {
-                    cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
-                }
+                cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
             }
+            
             found = true;
         }
     }
@@ -261,12 +260,9 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         else {
             currentTrainingData.customPack = false;
         }
-        if (savedReplayState.filled) {
-            cvarManager->executeCommand("sv_training_limitboost " + std::to_string(savedReplayState.focusPlayerBoostAmount * 100));
-        }
-        else {
-            cvarManager->executeCommand("sv_training_limitboost -1");
-        }
+        
+        cvarManager->executeCommand("sv_training_limitboost -1");
+       
     }
 
 

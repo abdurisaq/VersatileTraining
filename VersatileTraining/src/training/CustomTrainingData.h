@@ -7,6 +7,7 @@ struct ShotState {
 	bool hasJump;
 	int startingVelocity;
 	Vector extendedStartingVelocity;
+	Vector extendedStartingAngularVelocity;
 	int boostAmount;
 	std::pair<Vector, Vector> goalBlocker;
 	std::pair<bool, bool> goalAnchors;

@@ -13,11 +13,11 @@ void VersatileTraining::replayHooks() {
     //Function TAGame.ReplayManager_TA.PlayReplay
     gameWrapper->HookEventPost("Function TAGame.Replay_TA.StartPlaybackAtFrame", [this](std::string eventName) {
         isInReplay = true;
-        snapshotManager.currentReplayState.capturedFromReplay = true;
+        snapshotManager.currentReplayState.captureSource = CaptureSource::Replay;
         });
     gameWrapper->HookEvent("Function TAGame.GameInfo_Replay_TA.Destroyed", [this](std::string eventName) {
         isInReplay = false;
-        snapshotManager.currentReplayState.capturedFromReplay = false;
+        snapshotManager.currentReplayState.captureSource = CaptureSource::Unknown;
         });
     
 
@@ -35,17 +35,55 @@ void VersatileTraining::replayHooks() {
             //LOG("Focus actor name: {}", focusCarID);
         });
 
+    gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function GameEvent_TrainingEditor_TA.Countdown.Tick", [this](ActorWrapper cw, void* params, std::string eventName) {
+        if (isInTrainingEditor()||isInTrainingPack()) {
+            
 
-//TAGame.GameEditor_Actor_TA.EditorMoveToLocation
-//TAGame.GameEditor_Actor_TA.EditorSetRotation
-// 
-// 
-// 
-//Function TAGame.Ball_GameEditor_TA.EditorMoveToLocation
-//Function TAGame.Ball_GameEditor_TA.EditorSetRotation
-//Function Engine.PrimitiveComponent.SetRBLinearVelocity
-//Function Engine.PrimitiveComponent.SetRBAngularVelocity
 
+            if (currentShotState.startingVelocity != 0.f) {
+                float pitch_deg = static_cast<float>(currentShotState.carRotation.Pitch) * (90.0f / 16384.0f);
+                float yaw_deg = static_cast<float>(currentShotState.carRotation.Yaw) * (360.0f / 65536.0f);
+
+
+                float pitch_rad = (float)(pitch_deg * (PI / 180.0f));
+                float yaw_rad = (float)(yaw_deg * (PI / 180.0f));
+
+
+                float x = cosf(pitch_rad) * cosf(yaw_rad);
+                float y = cosf(pitch_rad) * sinf(yaw_rad);
+                float z = sinf(pitch_rad);
+
+
+                Vector direction = Vector(x, y, z);
+                snapshotManager.currentReplayState.carVelocity = direction * (float)currentShotState.startingVelocity;
+
+            }
+            else if (currentShotState.extendedStartingVelocity != Vector(0, 0, 0)) {
+
+                snapshotManager.currentReplayState.carVelocity = currentShotState.extendedStartingVelocity;
+            }
+            auto server = gameWrapper->GetCurrentGameState();
+            auto car = server.GetGameCar();
+            if (car.IsNull()) {
+				LOG("Car is null");
+				return;
+			}
+            BoostWrapper boost = car.GetBoostComponent();
+            if (boost.IsNull()) {
+                LOG("Boost component is null");
+                return;
+            }
+            snapshotManager.currentReplayState.boostAmount = (boost.GetCurrentBoostAmount())*100.f;
+            snapshotManager.currentReplayState.carRotation = car.GetRotation();
+            snapshotManager.currentReplayState.carLocation = car.GetLocation();
+            snapshotManager.currentReplayState.hasJump = !car.GetbJumped();
+
+
+            currentShotState.carRotation = car.GetRotation();
+            currentShotState.carLocation = car.GetLocation();
+            //snapshotManager.currentReplayState
+		}
+		});
     gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.Ball_GameEditor_TA.EditorMoveToLocation", [this](ActorWrapper cw, void* params, std::string eventName) {
         if (!isInTrainingEditor())return;
         struct pExecEditorMoveToLocaction
@@ -53,13 +91,20 @@ void VersatileTraining::replayHooks() {
             struct Vector NewLocation;
           
         };
-        if (!savedReplayState.filled) return;
-        
         auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
-       
-        p->NewLocation.X = savedReplayState.ballLocation.X;
-        p->NewLocation.Y = savedReplayState.ballLocation.Y;
-        p->NewLocation.Z = savedReplayState.ballLocation.Z;
+        if (!savedReplayState.ballSet) {
+            p->NewLocation.X = savedReplayState.ballLocation.X;
+            p->NewLocation.Y = savedReplayState.ballLocation.Y;
+            p->NewLocation.Z = savedReplayState.ballLocation.Z;
+            snapshotManager.currentReplayState.ballLocation= p->NewLocation;
+            return;
+        } else if (lockScene) {
+            auto server = gameWrapper->GetCurrentGameState();
+            auto ball = server.GetBall();
+            p->NewLocation = snapshotManager.currentReplayState.ballLocation;
+            return;
+        }
+        
         
 
         });
@@ -80,23 +125,25 @@ void VersatileTraining::replayHooks() {
         
         snapshotManager.currentReplayState.ballSpeed = caller->VelocityStartSpeed;
         snapshotManager.currentReplayState.ballLocation = caller->StartLocation;
-        snapshotManager.currentReplayState.ballEditorRotation = caller->VelocityStartRotation;
-        LOG("ball speed: {}", caller->VelocityStartSpeed);
-        LOG("ball location: {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
-        LOG("velocity start rotation: {}, {}, {}", caller->VelocityStartRotation.Pitch, caller->VelocityStartRotation.Yaw, caller->VelocityStartRotation.Roll);
-
+        snapshotManager.currentReplayState.ballRotation = caller->VelocityStartRotation;
+        
+        //LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
 
         if (!isInTrainingEditor())return;
-        if (!savedReplayState.filled) return;
+        if (savedReplayState.ballSet) return;
         
 
-
-        caller->VelocityStartSpeed = savedReplayState.getBallShotFromVelocity().second;
-        caller->VelocityStartRotation = savedReplayState.getBallShotFromVelocity().first;
+        //caller->StartLocation = savedReplayState.ballLocation;
+        caller->VelocityStartSpeed = savedReplayState.ballSpeed;
+        caller->VelocityStartRotation = savedReplayState.ballRotation;
         currentShotState.extendedStartingVelocity = savedReplayState.carVelocity;
+        currentShotState.extendedStartingAngularVelocity = savedReplayState.carAngularVelocity;
+        if(caller->StartLocation == savedReplayState.ballLocation){
+            savedReplayState.ballSet = true;
+        }
         
-        LOG("speed: {}", caller->VelocityStartSpeed);
-        LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
+        /*LOG("speed: {}", caller->VelocityStartSpeed);
+        LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);*/
         
         /*LOG("ball velocity from tick : {}, {}, {}", caller->VelocityStartRotation.Pitch, caller->VelocityStartRotation.Yaw, caller->VelocityStartRotation.Roll);
         LOG("ball speed from tick : {}", caller->VelocityStartSpeed);
@@ -118,30 +165,11 @@ void VersatileTraining::replayHooks() {
         Rotator rot;
         };
         auto* p = reinterpret_cast<pReplicationRotation*>(params);
-        //LOG("rotation: {}, {}, {}", p->rot.Pitch, p->rot.Yaw, p->rot.Roll);
- 
-        Rotator newRot = savedReplayState.getBallShotFromVelocity().first;
-        //LOG("new rot : {}, {}, {}", newRot.Pitch, newRot.Yaw, newRot.Roll);
-
-
-         // this is the current rotation the game will use
-
-        const int32_t maxYawStep = 100;
-        const int32_t maxPitchStep = 50;
-        const int32_t fullCircle = 65536;
-
-        int32_t deltaYaw = ((newRot.Yaw - currentRotationInTrainingEditor.Yaw + fullCircle / 2) % fullCircle) - fullCircle / 2;
-        //LOG("delta yaw: {}", deltaYaw);
-        deltaYaw = std::clamp(deltaYaw, -maxYawStep, maxYawStep);
-
-        int32_t deltaPitch = newRot.Pitch - currentRotationInTrainingEditor.Pitch;
-        deltaPitch = std::clamp(deltaPitch, -maxPitchStep, maxPitchStep);
-
-        // Add delta to current value
-        /*p->rot.Yaw = deltaYaw;
-        p->rot.Pitch = deltaPitch;
-        p->rot.Roll = 0;*/
-
+        
+        if (lockScene) {
+            p->rot = Rotator(0, 0, 0);
+        }
+       
         });
 
     //TAGame.Ball_GameEditor_TA.ModfiyBlendedRotation

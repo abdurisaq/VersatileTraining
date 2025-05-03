@@ -5,6 +5,22 @@
 void VersatileTraining::registerNotifiers() {
 
 	cvarManager->registerNotifier(
+		"open_gallery",
+		[this](std::vector<std::string> args) {
+			cvarManager->executeCommand("togglemenu " + GetMenuName());
+		}, "Displays the window for bakkes garage.", PERMISSION_ALL
+	);
+	cvarManager->setBind("C", "open_gallery");
+
+	cvarManager->registerNotifier(
+		"lockScene",
+		[this](std::vector<std::string> args) {
+			lockScene = !lockScene;
+		}, "lock training sequence to current values", PERMISSION_ALL
+	);
+	cvarManager->setBind("V", "lockScene");
+
+	cvarManager->registerNotifier(
 		"findController",
 		[this](std::vector<std::string> args) {
 			if (!isInTrainingEditor())return;
@@ -21,7 +37,7 @@ void VersatileTraining::registerNotifiers() {
 			controllerManager.enumerateControllers();
 		}, "check to see if there's a connected controller", PERMISSION_ALL
 	);
-	cvarManager->setBind("O", "unlockCar");
+	cvarManager->setBind("O", "findController");
 	cvarManager->registerNotifier("unlockCar", [this](std::vector<std::string> args) {
 		if (!isInTrainingEditor())return;
 		if (lockRotation) {
@@ -199,6 +215,7 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->setBind("Y", "printCurrentState");
 
 	cvarManager->registerNotifier("saveReplaySnapshot", [this](std::vector<std::string> args) {
+		snapshotManager.takeSnapShot(gameWrapper.get(), focusCarID);
 		if (isInReplay) {
 
 			ReplayServerWrapper serverReplay = gameWrapper->GetGameEventAsReplay();
@@ -231,10 +248,11 @@ void VersatileTraining::registerNotifiers() {
 						LOG("Boost component is null");
 						return;
 					}
-					savedReplayState.focusPlayerBoostAmount = boost.GetCurrentBoostAmount();
+					
+					savedReplayState.boostAmount = static_cast<int>(boost.GetCurrentBoostAmount() * 100.0f);
 					savedReplayState.boosting = boost.GetbActive();
 
-					LOG("boost amount : {}", savedReplayState.focusPlayerBoostAmount);
+					LOG("boost amount : {}", savedReplayState.boostAmount);
 					LOG("boosting? : {}", boost.GetbActive()? "true" : "false");
 
 					JumpComponentWrapper jump = car.GetJumpComponent();
@@ -263,10 +281,9 @@ void VersatileTraining::registerNotifiers() {
 				return;
 			}
 
-			savedReplayState.ballAngularVelocity = ball.GetAngularVelocity();
+			
 			savedReplayState.ballLocation = ball.GetLocation();
-			savedReplayState.ballVelocity = ball.GetVelocity();
-			savedReplayState.ballRotation = ball.GetRotation();
+			savedReplayState.setBallStartingRotationAndStrength(ball.GetVelocity());
 
 			auto now = std::chrono::system_clock::now();
 			std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -290,7 +307,7 @@ void VersatileTraining::registerNotifiers() {
 			savedReplayState.timeRemainingInGame = oss1.str();
 			LOG("saved replay name : {}", savedReplayState.replayName);
 			LOG("saved replay player name : {}", savedReplayState.focusPlayerName);
-			LOG("saved replay player boost amount : {}", savedReplayState.focusPlayerBoostAmount);
+			LOG("saved replay player boost amount : {}", savedReplayState.boostAmount);
 			LOG("saved replay date : {}", savedReplayState.replayTime);
 			LOG("saved replay time stamp : {}", savedReplayState.formattedTimeStampOfSaved);
 			LOG("saved replay time remaining : {}", savedReplayState.timeRemainingInGame);
@@ -299,12 +316,10 @@ void VersatileTraining::registerNotifiers() {
 			LOG("car angular velocity: {:.7f}, {:.7f}, {:.7f}", savedReplayState.carAngularVelocity.X, savedReplayState.carAngularVelocity.Y, savedReplayState.carAngularVelocity.Z);
 			LOG("car rotation: {}, {}, {}", savedReplayState.carRotation.Pitch, savedReplayState.carRotation.Yaw, savedReplayState.carRotation.Roll);
 			LOG("ball location: {:.7f}, {:.7f}, {:.7f}", savedReplayState.ballLocation.X, savedReplayState.ballLocation.Y, savedReplayState.ballLocation.Z);
-			LOG("ball velocity: {:.7f}, {:.7f}, {:.7f}", savedReplayState.ballVelocity.X, savedReplayState.ballVelocity.Y, savedReplayState.ballVelocity.Z);
-			LOG("ball angular velocity: {:.7f}, {:.7f}, {:.7f}", savedReplayState.ballAngularVelocity.X, savedReplayState.ballAngularVelocity.Y, savedReplayState.ballAngularVelocity.Z);
 			LOG("ball rotation: {}, {}, {}", savedReplayState.ballRotation.Pitch, savedReplayState.ballRotation.Yaw, savedReplayState.ballRotation.Roll);
+			LOG("ball speed: {}", savedReplayState.ballSpeed);
 			//LOG("has jump? : {}", savedReplayState.hasJump ? "true" : "false");
 
-			savedReplayState.filled = true;
 		}
 
 

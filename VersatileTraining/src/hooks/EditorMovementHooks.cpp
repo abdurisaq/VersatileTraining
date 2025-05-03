@@ -102,13 +102,10 @@ void VersatileTraining::handleStartRound() {
         }
 
 
-        if (savedReplayState.filled) {
+        if (currentShotState.extendedStartingVelocity != Vector(0,0,0)) {
             LOG("applying saved replay state in start round");
-            car.SetVelocity(savedReplayState.carVelocity);
-            car.SetAngularVelocity(savedReplayState.carAngularVelocity, 0);
-            /*auto ball = server.GetBall();
-            ball.SetAngularVelocity(savedReplayState.ballAngularVelocity, 1);*/
-
+            car.SetVelocity(currentShotState.extendedStartingVelocity);
+            car.SetAngularVelocity(currentShotState.extendedStartingAngularVelocity, 0);
             return;
         }
         Rotator rot = car.GetRotation();
@@ -138,7 +135,7 @@ void VersatileTraining::handleStartRound() {
 void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params) {
     if (!isInTrainingEditor())return;
 
-   
+    
     struct pExecEditorMoveToLocaction
     {
         struct Vector NewLocation;
@@ -146,9 +143,20 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
     };
     auto* p = reinterpret_cast<pExecEditorMoveToLocaction*>(params);
 
-    if (savedReplayState.filled) {
+    if (!savedReplayState.carLocationSet) {
         p->NewLocation = savedReplayState.carLocation;
+        currentShotState.carLocation = savedReplayState.carLocation;
+        currentShotState.boostAmount = savedReplayState.boostAmount;
+        currentShotState.freezeCar = true;
+        savedReplayState.carLocationSet = true;
         return;
+    }
+    else if (lockScene) {
+        
+        p->NewLocation = currentShotState.carLocation;
+		currentShotState.boostAmount = savedReplayState.boostAmount;
+		currentShotState.freezeCar = true;
+		return;
     }
     const float diag = 7950;
     float diagReduction = 0;
@@ -217,19 +225,31 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
 
 void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
     if (!isInTrainingEditor())return;
-    currentShotState.carRotation = cw.GetRotation();
-    currentShotState.carLocation = cw.GetLocation();
+    
+    if (!savedReplayState.carRotationSet) {
+        cw.SetRotation(savedReplayState.carRotation);
+        currentShotState.carRotation = savedReplayState.carRotation;
+        savedReplayState.carRotationSet = true;
+        lockRotation = true;
+    }
+    if (lockScene) {
+        cw.SetRotation(currentShotState.carRotation);
+		lockRotation = true;
+		return;
+    }
+
+    Vector loc = cw.GetLocation();
+    Rotator rot = cw.GetRotation();
+
+    currentShotState.carRotation = rot;
+    currentShotState.carLocation = loc;
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
             LOG("Server not found");
             return;
         }
-        if (savedReplayState.filled) {
-            cw.SetRotation(savedReplayState.carRotation);
-			return;
-        }
-        Vector loc = cw.GetLocation();
-        Rotator rot = cw.GetRotation();
+        
+        
 
         //LOG("rotating car");
         if (rotationToApply.Pitch == 0) {
@@ -255,9 +275,19 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
 
         if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
 
+            LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
             cw.SetRotation({ rot1.Pitch,rot1.Yaw,rot1.Roll });
         }
 
+    }
+    else if (editingVariances) {
+
+        Rotator rot1 = checkForClamping(loc, rot);
+        if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
+
+            LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
+            cw.SetRotation({ rot1.Pitch,rot1.Yaw,rot1.Roll });
+        }
     }
 }
 

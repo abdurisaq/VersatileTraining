@@ -1,78 +1,50 @@
 #pragma once
 #include <pch.h>
 
+enum class CaptureSource {
+	Replay,
+	Training,
+	Unknown
+};
 
 struct ReplayState {
 
 	std::string replayName;
 
 	std::string formattedTimeStampOfSaved;
+	
+	//replay specific fields
 	std::string replayTime;
 	std::string timeRemainingInGame;
-
 	std::string focusPlayerName;
 
-	bool capturedFromReplay;
-	bool capturedFromTraining;
+	CaptureSource captureSource = CaptureSource::Unknown;
 
 	Vector carVelocity;
 	Vector carAngularVelocity;
 	Vector carLocation;
 	Rotator carRotation;
 
-	float focusPlayerBoostAmount;
+	int boostAmount;
 	float jumpTimer;
 	bool hasJump;
 	bool boosting;
 
 	Vector ballLocation;
-	//option 1
-	Vector ballVelocity;
-	Rotator ballRotation;
-	Vector ballAngularVelocity;
-	//option 2
 	float ballSpeed;
-	Rotator ballEditorRotation;
+	Rotator ballRotation;
 
-	bool filled = false;
-	std::pair<Rotator, float> getBallShotFromVelocity() const {
-		float vx = ballVelocity.X;
-		float vy = ballVelocity.Y;
-		float vz = ballVelocity.Z;
+	bool ballSet = false;
+	bool carLocationSet = false;
+	bool carRotationSet = false;
 
-		float speed = sqrtf(vx * vx + vy * vy + vz * vz);
+	void setBallStartingRotationAndStrength(Rotator rot, float strength);
+	void setBallStartingRotationAndStrength(Vector velocity);
 
-		if (speed == 0.0f) {
-			return { Rotator{0, 0, 0}, 0.0f };
-		}
-
-		float nx = vx / speed;
-		float ny = vy / speed;
-		float nz = vz / speed;
-
-		float pitch_deg = std::asin(nz) * (180.0f / static_cast<float>(PI));
-		float yaw_deg = std::atan2(ny, nx) * (180.0f / static_cast<float>(PI));
-
+	ReplayState(): replayName(""), formattedTimeStampOfSaved(""), replayTime(""), timeRemainingInGame(""), focusPlayerName(""),
+		captureSource(CaptureSource::Unknown), carVelocity({0,0,0}), carAngularVelocity({0,0,0}), carLocation({0,0,0}), carRotation({0,0,0}),
+		boostAmount(0), jumpTimer(0), hasJump(false), boosting(false), ballLocation({ 0, 0, 0 }), ballSpeed(0), ballRotation({ 0, 0, 0 }), ballSet(true), carLocationSet(true),carRotationSet(true) {}
 	
-		if (yaw_deg < 0.0f) {
-			yaw_deg += 360.0f;
-		}
-
-		int32_t pitch_units = static_cast<int32_t>(pitch_deg * (16384.0f / 90.0f));
-
-		
-		int32_t yaw_units = static_cast<int32_t>(yaw_deg * (65536.0f / 360.0f));
-
-		
-		pitch_units = max(-16384, min(16384, pitch_units));
-
-		Rotator rot{ pitch_units, yaw_units, 0 };
-		float clampedSpeed = min(speed, 6000.0f);
-
-		
-		return { rot, clampedSpeed };
-
-	}
 
 };
 
@@ -88,5 +60,5 @@ public:
 
 	ReplayState currentReplayState;
 
-	void takeSnapShot(GameWrapper* gw);
+	void takeSnapShot(GameWrapper* gw,std::string focusID);
 };

@@ -4,12 +4,13 @@
 void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
 
 	
-	if (isInTrainingPack() || isInTrainingEditor() &&(currentShotState.extendedStartingVelocity != Vector(0, 0, 0) || currentShotState.startingVelocity != 0.f)) {
+	if ((isInTrainingPack() || isInTrainingEditor()) &&(currentShotState.extendedStartingVelocity != Vector(0, 0, 0) || currentShotState.startingVelocity != 0.f)) {
 		//in a training pack/editor
 		
         Vector velocity= Vector(0, 0, 0);
         //reverse getting the velocity from the car rotation
         if (currentShotState.startingVelocity != 0.f) {
+          
             float pitch_deg = static_cast<float>(currentShotState.carRotation.Pitch) * (90.0f / 16384.0f);
             float yaw_deg = static_cast<float>(currentShotState.carRotation.Yaw) * (360.0f / 65536.0f);
 
@@ -31,8 +32,9 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
 			
 			velocity = currentShotState.extendedStartingVelocity;
         }
-    
-         
+        
+        
+             			
 		
 
         
@@ -58,7 +60,9 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
 
             Vector pos = start + velocity * t + 0.5f * gravity * t * t;
 
-            if (pos.Z <= 0.f) break;
+            if (pos.Z <= 0.f) {
+                pos.Z = 0.f;
+            }
 
             float alpha = 1.0f - static_cast<float>(i) / numSteps;
             float radius = 10.f;
@@ -70,6 +74,8 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
 		
 		
 
-	}
+    }
+    
+    
 	
 }

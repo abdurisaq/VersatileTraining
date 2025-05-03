@@ -3,14 +3,24 @@
 void VersatileTraining::Render(CanvasWrapper canvas) {
 
 	RenderVelocityOfCar(canvas);
+	
+	if(!(isInTrainingPack() || isInTrainingEditor())) return;
+	LinearColor colors;
+	colors.R = 255;
+	colors.G = 255;
+	colors.B = 0;
+	colors.A = 255;
+	canvas.SetColor(colors);
+	canvas.SetPosition(Vector2F{ 1400.0, 1040.0 });
+	if (lockScene && isInTrainingEditor()) {
+		canvas.DrawString("Scene locked, press V to unlock", 2.0, 2.0, false);
+	}
+	else if(isInTrainingEditor()) {
+		canvas.DrawString("Scene unlocked, press V to lock", 2.0, 2.0, false);
+	}
 	if (editingVariances) {
 
-		LinearColor colors;
-		colors.R = 255;
-		colors.G = 255;
-		colors.B = 0;
-		colors.A = 255;
-		canvas.SetColor(colors);
+		
 
 		canvas.SetPosition(Vector2F{ 0.0, 0.0 });
 		canvas.DrawString("Boost Amount: " + std::to_string(currentShotState.boostAmount), 2.0, 2.0, false);
@@ -41,6 +51,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 		canvas.SetPosition(Vector2F{ 0.0, 80.0 });
 
 		canvas.DrawString("Starting Velocity: " + std::to_string(currentShotState.startingVelocity), 2.0, 2.0, false);
+		
 	}
 	else if (editingGoalBlocker) {
 		CameraWrapper cam = gameWrapper->GetCamera();

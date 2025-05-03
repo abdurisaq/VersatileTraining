@@ -2,11 +2,13 @@
 
 
 
-void SnapShotManager::takeSnapShot(GameWrapper* gw) {
+void SnapShotManager::takeSnapShot(GameWrapper* gw, std::string focusID) {
 
-	ReplayState currentReplayState;
+	//temporary solution
+	focusCarID = focusID;
+	/*ReplayState currentReplayState;*/
 
-	if (currentReplayState.capturedFromReplay) {
+	if (currentReplayState.captureSource == CaptureSource::Replay) {
 
 		ReplayServerWrapper serverReplay = gw->GetGameEventAsReplay();
 		if (serverReplay.IsNull()) {
@@ -38,10 +40,10 @@ void SnapShotManager::takeSnapShot(GameWrapper* gw) {
 					LOG("Boost component is null");
 					return;
 				}
-				currentReplayState.focusPlayerBoostAmount = boost.GetCurrentBoostAmount();
+				currentReplayState.boostAmount = static_cast<int>(boost.GetCurrentBoostAmount() * 100.0f);
 				currentReplayState.boosting = boost.GetbActive();
 
-				LOG("boost amount : {}", currentReplayState.focusPlayerBoostAmount);
+				LOG("boost amount : {}", currentReplayState.boostAmount);
 				LOG("boosting? : {}", boost.GetbActive() ? "true" : "false");
 
 				JumpComponentWrapper jump = car.GetJumpComponent();
@@ -68,10 +70,9 @@ void SnapShotManager::takeSnapShot(GameWrapper* gw) {
 			return;
 		}
 
-		currentReplayState.ballAngularVelocity = ball.GetAngularVelocity();
+		
 		currentReplayState.ballLocation = ball.GetLocation();
-		currentReplayState.ballVelocity = ball.GetVelocity();
-		currentReplayState.ballRotation = ball.GetRotation();
+		currentReplayState.setBallStartingRotationAndStrength(ball.GetVelocity());
 
 		auto now = std::chrono::system_clock::now();
 		std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -95,7 +96,7 @@ void SnapShotManager::takeSnapShot(GameWrapper* gw) {
 		currentReplayState.timeRemainingInGame = oss1.str();
 		LOG("saved replay name : {}", currentReplayState.replayName);
 		LOG("saved replay player name : {}", currentReplayState.focusPlayerName);
-		LOG("saved replay player boost amount : {}", currentReplayState.focusPlayerBoostAmount);
+		LOG("saved replay player boost amount : {}", currentReplayState.boostAmount);
 		LOG("saved replay date : {}", currentReplayState.replayTime);
 		LOG("saved replay time stamp : {}", currentReplayState.formattedTimeStampOfSaved);
 		LOG("saved replay time remaining : {}", currentReplayState.timeRemainingInGame);
@@ -104,14 +105,26 @@ void SnapShotManager::takeSnapShot(GameWrapper* gw) {
 		LOG("car angular velocity: {:.7f}, {:.7f}, {:.7f}", currentReplayState.carAngularVelocity.X, currentReplayState.carAngularVelocity.Y, currentReplayState.carAngularVelocity.Z);
 		LOG("car rotation: {}, {}, {}", currentReplayState.carRotation.Pitch, currentReplayState.carRotation.Yaw, currentReplayState.carRotation.Roll);
 		LOG("ball location: {:.7f}, {:.7f}, {:.7f}", currentReplayState.ballLocation.X, currentReplayState.ballLocation.Y, currentReplayState.ballLocation.Z);
-		LOG("ball velocity: {:.7f}, {:.7f}, {:.7f}", currentReplayState.ballVelocity.X, currentReplayState.ballVelocity.Y, currentReplayState.ballVelocity.Z);
-		LOG("ball angular velocity: {:.7f}, {:.7f}, {:.7f}", currentReplayState.ballAngularVelocity.X, currentReplayState.ballAngularVelocity.Y, currentReplayState.ballAngularVelocity.Z);
 		LOG("ball rotation: {}, {}, {}", currentReplayState.ballRotation.Pitch, currentReplayState.ballRotation.Yaw, currentReplayState.ballRotation.Roll);
+		LOG("ball speed: {}", currentReplayState.ballSpeed);
 		LOG("has jump? : {}", currentReplayState.hasJump ? "true" : "false");
 
-		currentReplayState.filled = true;
+		
 	}
-	else if (currentReplayState.capturedFromTraining) {
+	else if (currentReplayState.captureSource == CaptureSource::Training) {
+		auto now = std::chrono::system_clock::now();
+		std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+
+		std::tm local_tm;
+		#ifdef _WIN32
+				localtime_s(&local_tm, &now_time); // Windows-safe version
+		#else
+				localtime_r(&now_time, &local_tm); // POSIX-safe version
+		#endif	
+
+		std::ostringstream oss;
+		oss << std::put_time(&local_tm, "%d-%m-%Y %H:%M:%S");
+		currentReplayState.formattedTimeStampOfSaved = oss.str();
 
 
 	}
@@ -121,4 +134,51 @@ void SnapShotManager::takeSnapShot(GameWrapper* gw) {
 	}
 
 	replayStates.push_back(currentReplayState);
+}
+
+
+
+
+
+
+void ReplayState::setBallStartingRotationAndStrength(Rotator rot, float strength) {
+	ballRotation = rot;
+	ballSpeed = strength;
+}
+void ReplayState::setBallStartingRotationAndStrength(Vector velocity) {
+	float vx = velocity.X;
+	float vy = velocity.Y;
+	float vz = velocity.Z;
+
+	float speed = sqrtf(vx * vx + vy * vy + vz * vz);
+
+	if (speed == 0.0f) {
+		ballRotation  =  Rotator(0, 0, 0);
+		ballSpeed = 0.0f;
+		return; 
+	}
+
+	float nx = vx / speed;
+	float ny = vy / speed;
+	float nz = vz / speed;
+
+	float pitch_deg = std::asin(nz) * (180.0f / static_cast<float>(PI));
+	float yaw_deg = std::atan2(ny, nx) * (180.0f / static_cast<float>(PI));
+
+
+	if (yaw_deg < 0.0f) {
+		yaw_deg += 360.0f;
+	}
+
+	int32_t pitch_units = static_cast<int32_t>(pitch_deg * (16384.0f / 90.0f));
+
+
+	int32_t yaw_units = static_cast<int32_t>(yaw_deg * (65536.0f / 360.0f));
+
+
+	pitch_units = max(-16384, min(16384, pitch_units));
+
+	ballRotation = Rotator( pitch_units, yaw_units, 0 );
+	ballSpeed = min(speed, 6000.0f);
+	
 }

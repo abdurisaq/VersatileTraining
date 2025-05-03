@@ -40,7 +40,7 @@ void GameWrapper::HookEventWithCaller(std::string eventName,
 }
 class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	, public SettingsWindowBase // Uncomment if you wanna render your own tab in the settings menu
-	//,public PluginWindowBase // Uncomment if you want to render your own plugin window
+	,public PluginWindowBase // Uncomment if you want to render your own plugin window
 {
 	ShotReplicationManager shotReplicationManager;
 	
@@ -83,7 +83,9 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 
 	bool lockRotation = true;
 	bool ballBeingEdited = false;
-	
+	bool lockScene = false;
+
+
 	bool freezeForShot = false;
 
 
@@ -219,5 +221,5 @@ public:
 	void Render(CanvasWrapper canvas);
 	void RenderVelocityOfCar(CanvasWrapper canvas);
 	void onTick(std::string eventName);
-	//void RenderWindow() override; // Uncomment if you want to render your own plugin window
+	void RenderWindow() override; // Uncomment if you want to render your own plugin window
 };

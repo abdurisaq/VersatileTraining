@@ -197,17 +197,17 @@ void VersatileTraining::setupInputHandlingHooks() {
 void VersatileTraining::handleTrainingEditorActorModified() {
     if (editingVariances) {
         if (!lockRotation) {
-            controllerManager.checkForButtonPress(4);
-            controllerManager.checkForButtonPress(5);
+            /*controllerManager.checkForButtonPress(4);
+            controllerManager.checkForButtonPress(5);*/
 
-            if (GetAsyncKeyState('R') & 0x8000) {
+            /*if (GetAsyncKeyState('R') & 0x8000) {
                 ApplyLocalPitch(500.0f);
                 LOG("applying localPitch");
             }
             if (GetAsyncKeyState('C') & 0x8000) {
                 ApplyLocalPitch(-500.0f);
                 LOG("applying localPitch");
-            }
+            }*/
             if (GetAsyncKeyState('Q') & 0x8000) {
                 rotationToApply.Roll -= 75;
             }

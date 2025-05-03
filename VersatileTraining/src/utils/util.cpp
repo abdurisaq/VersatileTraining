@@ -26,7 +26,8 @@ Rotator blendPitchRollClampSmooth(int pitch, int roll, int expectedPitch, int ex
 
 Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 
-	
+	LOG("rotation : {}", rot.Roll);
+	LOG("location Z: {}", loc.Z);
 	auto inThreshold = [](int value, int center, int threshold) {
 		return value >= (center - threshold) && value <= (center + threshold);
 		};
@@ -77,6 +78,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	bool roll1 = inThreshold(roll, expectedRoll1, tolerance) || inThreshold(roll, -expectedRoll2, tolerance);//south
 	bool roll2 = inThreshold(roll, expectedRoll2, tolerance) || inThreshold(roll, -expectedRoll1, tolerance);
 	bool roll3 = inThreshold(roll, east, tolerance) || inThreshold(roll, -east, tolerance);
+	bool roll4 = inThreshold(roll, west, tolerance) || inThreshold(roll, -end, tolerance);
 	bool pitch1 = inThreshold(pitch, 0, 2500);
 
 
@@ -164,7 +166,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		if (roll != 32768) {
 			LOG("roll is changing");
 		}
-		return Rotator{ 0,yaw,32768 };//0
+		return Rotator{ 1,yaw,32768 };//0
 	}
 
 	//diagonal values?
@@ -221,8 +223,17 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			return Rotator{ pitch,40960,south };
 		}
 	}
+	else if (loc.Z < 45 && roll4) {
+		LOG("clamped to the ground");
+		clampVal = 10;
+		return Rotator{ 1,yaw,1 };
+	}
+	else {
 
 		clampVal = 0;
+	}
+
+		
 		//LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll,rot.Pitch);
 		//LOG("X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
 	return Rotator{ 0,0,0};
@@ -262,6 +273,7 @@ std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int ext
 
 Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 
+	LOG("clampVal: {}", clampVal);
 	auto perpendicularProjection = [](float m, float b, float a, float b0) -> std::pair<float, float> {
 		float c = (a + m * (b0 - b)) / (m * m + 1);
 		float d = m * c + b;
@@ -282,7 +294,7 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 
 	switch (clampVal) {//5090
 	case 1: {
-		LOG("Old location: {}, {} {}", loc.X, loc.Y,loc.Z);
+		LOG("Old location: {}, {} {}", loc.X, loc.Y, loc.Z);
 		LOG("New location: {}, {} {}", loc.X, currentYBound + axisBreakDown.first, frozenZVal + axisBreakDown.second);
 		return Vector{ loc.X,currentYBound + axisBreakDown.first,frozenZVal + axisBreakDown.second };
 		break;
@@ -293,14 +305,14 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		break;
 	}
 	case 3: {
-		
-		return Vector{ (currentXBound+ axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
+
+		return Vector{ (currentXBound + axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
 
 		break;
 	}
 	case 4: {
-		
-		return Vector{ -(currentXBound+ axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
+
+		return Vector{ -(currentXBound + axisBreakDown.first),loc.Y,frozenZVal + axisBreakDown.second };
 		break;
 	}
 	case 5: {
@@ -321,7 +333,7 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		break;
 	}
 	case 7: {
-		
+
 		std::pair<float, float> result = perpendicularProjection(-1, cornerVal, loc.X, loc.Y);
 		LOG("going to clamp on front left wall now");
 		LOG("result.first: {}, result.second: {}", result.first, result.second);
@@ -341,6 +353,11 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		LOG("result.first: {}, result.second: {}", result.first, result.second);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
+	}
+	case 10: {
+		//clamping to the ground
+		LOG("getting clamp to move the car to the ground");
+		return Vector{ loc.X,loc.Y,20 };
 	}
 	default: {
 		break;
