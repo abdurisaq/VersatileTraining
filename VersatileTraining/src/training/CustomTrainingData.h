@@ -6,12 +6,16 @@ struct ShotState {
 	bool freezeCar;
 	bool hasJump;
 	int startingVelocity;
+	Vector extendedStartingVelocity;
 	int boostAmount;
 	std::pair<Vector, Vector> goalBlocker;
 	std::pair<bool, bool> goalAnchors;
-	ShotState() : freezeCar(false), hasJump(true), startingVelocity(0), boostAmount(101), goalBlocker({ { 0, 0, 0 }, { 0, 0, 0 } }), goalAnchors({ false, false }) {}
-	ShotState(bool freeze, bool jump, int velocity, int boost, std::pair<Vector, Vector> blocker, std::pair<bool, bool> anchors)
-		: freezeCar(freeze), hasJump(jump), startingVelocity(velocity), boostAmount(boost), goalBlocker(blocker), goalAnchors(anchors) {}
+
+	Vector carLocation = Vector(0,0,0);
+	Rotator carRotation = Rotator(0,0,0);
+	ShotState() : freezeCar(false), hasJump(true), startingVelocity(0), boostAmount(101), goalBlocker({ { 0, 0, 0 }, { 0, 0, 0 } }), goalAnchors({ false, false }), carLocation({ 0,0,0 }), carRotation({0,0,0}), extendedStartingVelocity({ 0,0,0 }) {}
+	ShotState(bool freeze, bool jump, int velocity, int boost, std::pair<Vector, Vector> blocker, std::pair<bool, bool> anchors,  Vector startingVelocity)
+		: freezeCar(freeze), hasJump(jump), startingVelocity(velocity), boostAmount(boost), goalBlocker(blocker), goalAnchors(anchors), extendedStartingVelocity(startingVelocity) {}
 
 };
 
@@ -26,6 +30,7 @@ struct CustomTrainingDataflattened {
 	std::vector<std::pair<Vector, Vector>> goalBlockers;
 	std::vector<std::pair<bool, bool>>goalAnchors;
 	std::vector<bool> hasStartingJump;
+	std::vector<Vector> extendedStartingVelocities;
 	bool customPack = false;
 
 	void initCustomTrainingData(int shotAmount, std::string packName) {
@@ -39,6 +44,7 @@ struct CustomTrainingDataflattened {
 		goalBlockers = std::vector<std::pair<Vector, Vector>>(shotAmount, { { 0, 0, 0 }, { 0, 0, 0 } });
 		goalAnchors = std::vector<std::pair<bool, bool>>(shotAmount, { false, false });
 		hasStartingJump = std::vector<bool>(shotAmount, true);
+		extendedStartingVelocities = std::vector<Vector>(shotAmount, { 0,0,0 });
 	}
 	void addShot(int boostAmount = 101, int velocity = 0, bool frozen = false, Vector firstAnchor = { 0,0,0 }, Vector secondAnchor = { 0,0,0 }) {
 		numShots++;
@@ -64,7 +70,7 @@ struct CustomTrainingDataflattened {
 		goalBlockers.clear();
 		goalAnchors.clear();
 		hasStartingJump.clear();
-
+		extendedStartingVelocities.clear();
 	}
 	CustomTrainingData inflate();
 };

@@ -80,6 +80,7 @@ void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::stri
     
     shotReplicationManager.canSpawnBot = true;
     LOG("setting can spawn bot to true");
+    
     freezeForShot = currentShotState.freezeCar;
     frozeZVal = !currentShotState.freezeCar;
     lockRotation = true;
@@ -146,6 +147,7 @@ void VersatileTraining::handleStartEditing(ActorWrapper cw) {
     LOG("Training num rounds: {}", totalRounds);
 
     if (currentTrainingData.currentEditedShot != -1) {
+        currentTrainingData.currentEditedShot = currentShot;
         LOG("already loaded, skipping searching training data, current shot: {}, total rounds: {}", currentTrainingData.currentEditedShot, totalRounds);
         handleExistingTrainingData(currentShot, totalRounds);
         return;
@@ -238,7 +240,14 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     }
     if (!found) {
         LOG("didn't find this traini pack in training data");
-        currentTrainingData.initCustomTrainingData(totalRounds, name);
+        if (currentTrainingData.name == name) {
+            
+        }
+        else {
+            currentTrainingData.initCustomTrainingData(totalRounds, name);
+        }
+        currentShotState = currentTrainingData.shots[currentShot];
+        
         if (td.GetCode().ToString().empty()) {
             currentTrainingData.customPack = true;
         }

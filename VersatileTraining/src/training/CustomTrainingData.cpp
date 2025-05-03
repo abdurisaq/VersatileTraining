@@ -41,7 +41,8 @@ CustomTrainingData CustomTrainingDataflattened::inflate() {
             i < startingVelocity.size() ? startingVelocity[i] : 0,
             i < boostAmounts.size() ? boostAmounts[i] : 101,
             i < goalBlockers.size() ? goalBlockers[i] : std::pair<Vector, Vector>{ {0,0,0},{0,0,0} },
-            i < goalAnchors.size() ? goalAnchors[i] : std::pair<bool, bool>{ false, false }
+            i < goalAnchors.size() ? goalAnchors[i] : std::pair<bool, bool>{ false, false },
+            i < extendedStartingVelocities.size() ? extendedStartingVelocities[i] : Vector{ 0,0,0 }
         );
         inflatedData.shots.push_back(shot);
     }

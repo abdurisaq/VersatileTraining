@@ -65,11 +65,8 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
         car.SetbDoubleJumped(true);
         appliedJumpState = true;
     }
-    else if (!savedReplayState.hasJump && !appliedJumpState && savedReplayState.filled) {
-        car.SetbJumped(true);
-        car.SetbDoubleJumped(true);
-        appliedJumpState = true;
-    }
+    
+    
     if (freezeForShot) {
         handleFreezeCar(car, loc, rot);
     }
@@ -220,6 +217,8 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
 
 void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
     if (!isInTrainingEditor())return;
+    currentShotState.carRotation = cw.GetRotation();
+    currentShotState.carLocation = cw.GetLocation();
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
             LOG("Server not found");
@@ -230,10 +229,6 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
 			return;
         }
         Vector loc = cw.GetLocation();
-        // Rotator rot = cw.GetRotation();
-
-
-         //if (!lockRotation) {
         Rotator rot = cw.GetRotation();
 
         //LOG("rotating car");

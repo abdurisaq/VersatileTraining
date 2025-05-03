@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "src/core/VersatileTraining.h"
 void VersatileTraining::Render(CanvasWrapper canvas) {
+
+	RenderVelocityOfCar(canvas);
 	if (editingVariances) {
 
 		LinearColor colors;

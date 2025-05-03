@@ -125,7 +125,7 @@ void VersatileTraining::handleDuplicateRound(TrainingEditorWrapper cw) {
 }
 
 void VersatileTraining::handleStartPlayTest() {
-    if (!currentTrainingData.customPack) return;
+    
 
     currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
     //trainingData[currentTrainingData.name] = currentTrainingData; //suspect line, dont know if it should be here

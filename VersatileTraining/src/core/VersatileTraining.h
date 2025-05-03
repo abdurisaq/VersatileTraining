@@ -9,77 +9,7 @@
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
 
-struct ReplayState {
 
-	std::string replayName;
-
-	std::string formattedTimeStampOfSaved;
-	std::string replayTime;
-	std::string timeRemainingInGame;
-
-	std::string focusPlayerName;
-	
-
-	Vector carVelocity;
-	Vector carAngularVelocity;
-	Vector carLocation;
-	Rotator carRotation;
-
-	float focusPlayerBoostAmount;
-	float jumpTimer;
-	bool hasJump;
-	bool boosting;
-
-	Vector ballVelocity;
-	Vector ballLocation;
-	Rotator ballRotation;
-	Vector ballAngularVelocity;
-
-	bool filled = false;
-	std::pair<Rotator, float> getBallShotFromVelocity() const {
-		float vx = ballVelocity.X;
-		float vy = ballVelocity.Y;
-		float vz = ballVelocity.Z;
-
-		float speed = sqrtf(vx * vx + vy * vy + vz * vz);
-
-		if (speed == 0.0f) {
-			return { Rotator{0, 0, 0}, 0.0f };
-		}
-
-		float nx = vx / speed;
-		float ny = vy / speed;
-		float nz = vz / speed;
-
-		// Calculate angles in degrees
-		float pitch_deg = std::asin(nz) * (180.0f / static_cast<float>(PI));
-		float yaw_deg = std::atan2(ny, nx) * (180.0f / static_cast<float>(PI));
-
-		// Normalize yaw_deg to [0, 360)
-		if (yaw_deg < 0.0f) {
-			yaw_deg += 360.0f;
-		}
-
-		// Convert to Unreal units
-		// Pitch: -90° to +90° maps to -16384 to +16384
-		int32_t pitch_units = static_cast<int32_t>(pitch_deg * (16384.0f / 90.0f));
-
-		// Yaw: 0° to 360° maps to 0 to 65536
-		int32_t yaw_units = static_cast<int32_t>(yaw_deg * (65536.0f / 360.0f));
-
-		// Clamp pitch (though the calculation should already be in range)
-		pitch_units = max(-16384, min(16384, pitch_units));
-
-		Rotator rot{ pitch_units, yaw_units, 0 };
-		float clampedSpeed = min(speed, 6000.0f);
-
-		LOG("desired rotation {} {} {} " , rot.Pitch, rot.Yaw, rot.Roll);
-		LOG("desired speed {}", clampedSpeed);
-		return { rot, clampedSpeed };
-
-	}
-
-};
 
 
 
@@ -131,14 +61,12 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	Rotator previousRotBeforeGoalEdit = { 0, 0, 0 };
 
 	CustomTrainingData currentTrainingData;
-	
-
 	std::string currentPackKey;
 	int currentShotIndex = 0;
 
+	SnapShotManager snapshotManager;
 	
 	
-	int activeStartingVelocity = 0;
 
 	bool editingVariances = false;
 	bool appliedStartingVelocity = false;
@@ -289,7 +217,7 @@ public:
 
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
 	void Render(CanvasWrapper canvas);
-
+	void RenderVelocityOfCar(CanvasWrapper canvas);
 	void onTick(std::string eventName);
 	//void RenderWindow() override; // Uncomment if you want to render your own plugin window
 };

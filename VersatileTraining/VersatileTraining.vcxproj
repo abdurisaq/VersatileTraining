@@ -136,7 +136,9 @@
     <ClCompile Include="src\input\ShotReplicationManager.cpp" />
     <ClCompile Include="src\storage\saving.cpp" />
     <ClCompile Include="src\training\CustomTrainingData.cpp" />
+    <ClCompile Include="src\training\SnapShotManager.cpp" />
     <ClCompile Include="src\ui\RenderCanvas.cpp" />
+    <ClCompile Include="src\ui\RenderVelocity.cpp" />
     <ClCompile Include="src\utils\Math.cpp" />
     <ClCompile Include="src\utils\MovementUtils.cpp" />
     <ClCompile Include="src\utils\Notifiers.cpp" />
@@ -187,6 +189,7 @@
     <ClInclude Include="src\input\ControllerManager.h" />
     <ClInclude Include="src\input\ShotReplicationManager.h" />
     <ClInclude Include="src\training\CustomTrainingData.h" />
+    <ClInclude Include="src\training\SnapShotManager.h" />
     <ClInclude Include="src\utils\Math.h" />
     <ClInclude Include="src\utils\MovementUtils.h" />
     <ClInclude Include="version.h" />

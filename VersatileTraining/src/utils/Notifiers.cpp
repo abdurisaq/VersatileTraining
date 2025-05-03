@@ -245,11 +245,13 @@ void VersatileTraining::registerNotifiers() {
 					
 
 					savedReplayState.jumpTimer = !car.GetbJumped() ||  car.GetJumpComponent().GetInactiveTime();
-					savedReplayState.hasJump = 1.25f > savedReplayState.jumpTimer && !car.GetbDoubleJumped(); // dodge timer at a minimum is 1.25 seconds and a max of 1.45 if you held jump. going to be conservative and use 1.25
+					savedReplayState.hasJump = jump.GetbActive(); // this is called the second the car jumps set to 1, and then immediately set to 0.
+					//i guess in the tick function, ill need to continuously check for it getting set to 1, and then save the time in game it happened, and if the snapshot is saved before 
+					//1.25 seconds after in game time, then they have a jump, and dodge timer is set to the difference
 					
 					LOG("jump inactive timer : {}", car.GetJumpComponent().GetInactiveTime());
 					LOG("double jumped? : {}", car.GetbDoubleJumped() ? "true" : "false");
-					LOG("jumped? : {}", car.GetbJumped() ? "true" : "false");
+					LOG("jumped? : {}", savedReplayState.hasJump ? "true" : "false");
 					found = true;
 					break;
 				}
@@ -300,7 +302,7 @@ void VersatileTraining::registerNotifiers() {
 			LOG("ball velocity: {:.7f}, {:.7f}, {:.7f}", savedReplayState.ballVelocity.X, savedReplayState.ballVelocity.Y, savedReplayState.ballVelocity.Z);
 			LOG("ball angular velocity: {:.7f}, {:.7f}, {:.7f}", savedReplayState.ballAngularVelocity.X, savedReplayState.ballAngularVelocity.Y, savedReplayState.ballAngularVelocity.Z);
 			LOG("ball rotation: {}, {}, {}", savedReplayState.ballRotation.Pitch, savedReplayState.ballRotation.Yaw, savedReplayState.ballRotation.Roll);
-			LOG("has jump? : {}", savedReplayState.hasJump ? "true" : "false");
+			//LOG("has jump? : {}", savedReplayState.hasJump ? "true" : "false");
 
 			savedReplayState.filled = true;
 		}

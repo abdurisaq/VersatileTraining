@@ -79,12 +79,14 @@ void VersatileTraining::replayHooks() {
         
         caller->VelocityStartSpeed = savedReplayState.getBallShotFromVelocity().second;
         caller->VelocityStratRotation = savedReplayState.getBallShotFromVelocity().first;
+        currentShotState.extendedStartingVelocity = savedReplayState.carVelocity;
+        
         //LOG("speed: {}", caller->VelocityStartSpeed);
-        LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
+        /*LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
         LOG("ball velocity from tick : {}, {}, {}", caller->VelocityStratRotation.Pitch, caller->VelocityStratRotation.Yaw, caller->VelocityStratRotation.Roll);
         LOG("ball speed from tick : {}", caller->VelocityStartSpeed);
-        LOG("ball rotation from tick : {}, {}, {}", caller->StartRotation.Pitch, caller->StartRotation.Yaw, caller->StartRotation.Roll);
-       
+        LOG("ball rotation from tick : {}, {}, {}", caller->StartRotation.Pitch, caller->StartRotation.Yaw, caller->StartRotation.Roll);*/
+       //this works in other training packs, stuff can be captured this way to get the ball start strength and rotation
 
 
 
@@ -114,7 +116,7 @@ void VersatileTraining::replayHooks() {
         const int32_t fullCircle = 65536;
 
         int32_t deltaYaw = ((newRot.Yaw - currentRotationInTrainingEditor.Yaw + fullCircle / 2) % fullCircle) - fullCircle / 2;
-        LOG("delta yaw: {}", deltaYaw);
+        //LOG("delta yaw: {}", deltaYaw);
         deltaYaw = std::clamp(deltaYaw, -maxYawStep, maxYawStep);
 
         int32_t deltaPitch = newRot.Pitch - currentRotationInTrainingEditor.Pitch;
@@ -138,7 +140,7 @@ void VersatileTraining::replayHooks() {
         auto * p = reinterpret_cast<pReplicationRotation*>(params);
 
         currentRotationInTrainingEditor = p->rot;
-        LOG("rotation12: {}, {}, {}", p->rot.Pitch, p->rot.Yaw, p->rot.Roll);
+        //LOG("rotation12: {}, {}, {}", p->rot.Pitch, p->rot.Yaw, p->rot.Roll);
         //p->rot.Pitch = 2000;
         });
 }
