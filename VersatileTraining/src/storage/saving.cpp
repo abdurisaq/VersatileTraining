@@ -8,10 +8,50 @@ constexpr size_t BOOST_MIN_BITS = 7;
 constexpr size_t VELOCITY_MIN_BITS = 12;
 constexpr size_t GOAL_X_MIN_BITS = 11;
 constexpr size_t GOAL_Z_MIN_BITS = 10;
+constexpr size_t NUM_FLOAT_BITS = 16;
 inline static size_t CalculateRequiredBits(int range) {
     return (size_t)std::ceil(std::log2(range));
 }
 
+
+uint8_t CompressVectors(
+    const std::vector<Vector>& vectors,
+    float maxMagnitude,
+    std::vector<uint8_t>& bitstream,
+    size_t& bitIndexInByte,
+    uint8_t currentByte,
+    const std::string& debugLabel = ""
+) {
+    const int numBits = 16; // haven't changed this yet, works for now
+    const float range = 2.0f * maxMagnitude;
+
+    if (!debugLabel.empty()) {
+        LOG("Compressing {} with {} bits per float and max magnitude {}", debugLabel, numBits, maxMagnitude);
+    }
+
+    for (const Vector& v : vectors) {
+        for (float value : {v.X, v.Y, v.Z}) {
+            float clamped = std::clamp(value, -maxMagnitude, maxMagnitude);
+            float normalized = (clamped + maxMagnitude) / range;
+            uint32_t quantized = static_cast<uint32_t>(std::round(normalized * ((1 << numBits) - 1)));
+            LOG("original Value : {}", value);
+            LOG("quantized value being saved : {}", quantized);
+            for (int i = 0; i < numBits; ++i) {
+                bool bit = (quantized >> (numBits - 1 - i)) & 1;
+                currentByte |= (bit << (7 - bitIndexInByte));
+                bitIndexInByte++;
+
+                if (bitIndexInByte == 8) {
+                    bitstream.push_back(currentByte);
+                    currentByte = 0;
+                    bitIndexInByte = 0;
+                }
+            }
+        }
+    }
+
+    return currentByte;
+}
 
 uint8_t CompressIntegers(
     const std::vector<int>& values,
@@ -93,6 +133,32 @@ size_t ReadBits(const std::vector<uint8_t>& bitstream, size_t& bitIndex, size_t 
     return value;
 }
 
+void DecompressVectors(
+    std::vector<Vector>& output,
+    float maxMagnitude,
+    const std::vector<uint8_t>& bitstream,
+    size_t& bitIndex,
+    const std::string& debugLabel = ""
+) {
+
+    int numBits = 16;//CalculateRequiredBits(maxMagnitude*2)
+    const float range = 2.0f * maxMagnitude;
+    const float scale = 1.0f / ((1 << numBits) - 1);
+
+    if (!debugLabel.empty()) {
+        LOG("Decompressing {} with {} bits per float and max magnitude {}", debugLabel, numBits, maxMagnitude);
+    }
+
+    for (size_t i = 0; i < output.size(); ++i) {
+        uint32_t xBits = ReadBits(bitstream, bitIndex, numBits);
+        uint32_t yBits = ReadBits(bitstream, bitIndex, numBits);
+        uint32_t zBits = ReadBits(bitstream, bitIndex, numBits);
+
+        output[i].X = (xBits * scale * range) - maxMagnitude;
+        output[i].Y = (yBits * scale * range) - maxMagnitude;
+        output[i].Z = (zBits * scale * range) - maxMagnitude;
+    }
+}
 
 void DecompressIntegers(
     std::vector<int>& output,
@@ -111,6 +177,7 @@ void DecompressIntegers(
         output[i] = (int)(compressed + globalMin);
     }
 }
+
 
 void DecompressBits(std::vector<bool>& vec, std::vector<uint8_t>& bitstream, size_t& bitIndex) {
     size_t bitCount = 0;
@@ -212,6 +279,24 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
         LOG("writing min velocity : {} to file", ((boundaryVelocities.first) & 0xF));
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
+        
+        std::vector<int> magnitudes;
+        for (const auto& vec : data.extendedStartingVelocities) {
+            int magnitude = static_cast<int>(vec.magnitude());
+            LOG("extended starting velocity magnitude: {}", magnitude);
+            magnitudes.push_back(magnitude);
+        }
+        std::pair<int, int> magnitudeBounds = getMinMaxAmount(magnitudes);
+
+        binaryDataToWrite.clear();
+        binaryDataToWrite.push_back((magnitudeBounds.second >> 4) & 0xFF);            // Top 8 bits (bits 12 to 5)
+        binaryDataToWrite.push_back((magnitudeBounds.second & 0xF));            // Lower 5 bits (bits 4 to 0), shifted into high bits of next byte
+
+        LOG("writing 12-bit value: {}", magnitudeBounds.second);
+        LOG("byte 1: {:#010b}", binaryDataToWrite[0]);
+        LOG("byte 2: {:#010b}", binaryDataToWrite[1]);
+        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 12); // 13 bits for the magnitude
+
         std::vector<int> xVals;
         std::vector<int> zVals;
 
@@ -261,6 +346,8 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
 
 
         
+        
+        
         size_t numBitsForXBlocker = 0;
         if (boundaryX.first != boundaryX.second) {
 			numBitsForXBlocker = CalculateRequiredBits(boundaryX.second - boundaryX.first);
@@ -280,6 +367,11 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
 
         LOG("writing num bits for velocity : {} to file", numBitsForVelocity & 0xFF);
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
+
+        
+
+        
+
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(numBitsForXBlocker & 0xFF);
@@ -308,6 +400,8 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
         if (numBitsForVelocity > 0) {
             byte = CompressIntegers(data.startingVelocity, boundaryVelocities.first, boundaryVelocities.second, bitstream, bitIndexInByte, byte, "velocity");
         }
+        byte = CompressVectors(data.extendedStartingVelocities, magnitudeBounds.second, bitstream, bitIndexInByte, byte, "extended starting velocity");
+
         for (int val : xVals) {
             LOG("x vals writing : {}", val);
         }
@@ -320,6 +414,8 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
         if (numBitsForZBlocker > 0) {
 			byte = CompressIntegers(zVals, boundaryZ.first, boundaryZ.second, bitstream, bitIndexInByte, byte, "goalblocker Z");
 		}
+
+
         byte = CompressBits(data.freezeCar, bitstream, bitIndexInByte, byte,false);
         
         byte = CompressBits(data.hasStartingJump, bitstream, bitIndexInByte, byte,true);
@@ -373,6 +469,10 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
         size_t minVelocity = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
         LOG("minVelocity : {}", minVelocity);
 
+        size_t maxMagnitude = ReadBits(bitstream, bitIndex, 12);
+        LOG("maxMagnitude : {}", maxMagnitude);
+
+
         size_t minGoalBlockX = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
         LOG("min goalblocker X : {}", minGoalBlockX);
         size_t minGoalBlockZ = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
@@ -383,6 +483,8 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
         int numBitsForVelocity = packedBits & 0x0F;
         LOG("num bits for boost : {}", numBitsForBoost);
         LOG("num bits for velocity : {}", numBitsForVelocity);
+
+        
 
         uint8_t packedGoalBlockerBits =(uint8_t) ReadBits(bitstream, bitIndex, 8);
         int numBitsForXBlocker = (packedGoalBlockerBits >> 4) & 0x0F;
@@ -416,6 +518,13 @@ std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompr
         }
         else {
             DecompressIntegers(trainingData.startingVelocity, minVelocity, numBitsForVelocity, bitstream, bitIndex, "velocity");
+        }
+
+        if (maxMagnitude == 0) {
+            			std::fill(trainingData.extendedStartingVelocities.begin(), trainingData.extendedStartingVelocities.end(), Vector(0, 0, 0));
+		}
+        else {
+			DecompressVectors(trainingData.extendedStartingVelocities, maxMagnitude, bitstream, bitIndex, "extended starting velocity");
         }
         size_t numGoalBlockers = numShots; // or whatever your logic should be
         trainingData.goalBlockers.resize(numGoalBlockers);

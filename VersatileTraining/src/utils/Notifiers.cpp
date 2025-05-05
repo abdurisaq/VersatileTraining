@@ -97,7 +97,7 @@ void VersatileTraining::registerNotifiers() {
 
 				// Jump state - fixed to use value.shots[i] instead of currentTrainingData
 				LOG("Shot {}: Has Jump: {}", i, static_cast<int>(value.shots[i].hasJump));
-
+				LOG("Shot {} : starting velocity : {} {} {}", i, value.shots[i].extendedStartingVelocity.X, value.shots[i].extendedStartingVelocity.Y, value.shots[i].extendedStartingVelocity.Z);
 				// Goal blocker positions
 				LOG("Shot {}: Goal Blocker First Point: X={}, Z={}",
 					i,

@@ -15,6 +15,7 @@ CustomTrainingDataflattened CustomTrainingData::deflate() {
 		flatData.goalBlockers.push_back(shot.goalBlocker);
 		flatData.goalAnchors.push_back(shot.goalAnchors);
 		flatData.hasStartingJump.push_back(shot.hasJump);
+        flatData.extendedStartingVelocities.push_back(shot.extendedStartingVelocity);
 		LOG("jump state being pushed back: {}", shot.hasJump ? "true" : "false");
 	}
 

@@ -151,13 +151,7 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
         savedReplayState.carLocationSet = true;
         return;
     }
-    else if (lockScene) {
-        
-        p->NewLocation = currentShotState.carLocation;
-		currentShotState.boostAmount = savedReplayState.boostAmount;
-		currentShotState.freezeCar = true;
-		return;
-    }
+    
     const float diag = 7950;
     float diagReduction = 0;
     diagBound = 7950;
@@ -186,14 +180,17 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
             ? (p->NewLocation.Z - zMax) / rampDepth
             : (zMin - p->NewLocation.Z) / rampDepth;
         t = std::clamp(t, 0.0f, 1.0f);
-
+        
         float maxShrinkRatio = (xbuff - boundaryShrink) / xbuff;
         float circleFactor = sqrt(1.0f - t * t * (1 - maxShrinkRatio * maxShrinkRatio));
         currentXBound = xbuff * circleFactor;
         currentYBound = ybuff * circleFactor;
         diagBound = diag * circleFactor;
     }
-
+    else {
+        t = 0.f;
+    }
+    
     auto clampToDiagonal = [](float& x, float& y, float A, float B, float C) {
         float d = (A * x + B * y + C) / (A * A + B * B);
         x = x - A * d;
@@ -217,6 +214,15 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
         clampToDiagonal(p->NewLocation.X, p->NewLocation.Y, 1, -1, diagBound);
     }
 
+
+    else if (lockScene) {
+
+        p->NewLocation = currentShotState.carLocation;
+        currentShotState.boostAmount = savedReplayState.boostAmount;
+        currentShotState.freezeCar = true;
+        return;
+    }
+
     // apply bounding
     p->NewLocation.X = std::clamp(p->NewLocation.X, -currentXBound, currentXBound);
     p->NewLocation.Y = std::clamp(p->NewLocation.Y, -currentYBound, currentYBound);
@@ -232,14 +238,18 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
         savedReplayState.carRotationSet = true;
         lockRotation = true;
     }
+
+    Vector loc = cw.GetLocation();
+    Rotator rot = cw.GetRotation();
+
     if (lockScene) {
         cw.SetRotation(currentShotState.carRotation);
+        checkForClamping(loc, rot);
 		lockRotation = true;
 		return;
     }
 
-    Vector loc = cw.GetLocation();
-    Rotator rot = cw.GetRotation();
+    
 
     currentShotState.carRotation = rot;
     currentShotState.carLocation = loc;

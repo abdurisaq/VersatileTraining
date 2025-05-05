@@ -66,6 +66,12 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	int expectedRoll1 = mapToRoll(t, south, 65535);
 	int expectedRoll2 = mapToRoll(t, north, west);
 	int expectedPitch = mapToRoll(t, 0, 16384);
+
+
+	LOG("expectedRoll 1: {}", expectedRoll1);
+	LOG("expectedRoll 2: {}", expectedRoll2);
+	LOG("yaw : {}", yaw);
+	LOG("roll : {}", roll);
 	//LOG("expectedRoll: {}", expectedRoll1);
 	//LOG("actual roll: {}", roll);
 	int tolerance = 5000;

@@ -133,7 +133,7 @@ void VersatileTraining::handleStartPlayTest() {
 
 void VersatileTraining::handleStopEditing() {
     if (!currentTrainingData.customPack) return;
-
+    lockScene = false;
     LOG("stopped editing");
     isCarRotatable = false;
     lockRotation = true;
