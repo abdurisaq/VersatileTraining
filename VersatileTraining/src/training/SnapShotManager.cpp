@@ -26,8 +26,11 @@ void SnapShotManager::takeSnapShot(GameWrapper* gw, std::string focusID) {
 
 		ArrayWrapper<CarWrapper> cars = serverReplay.GetCars();
 		bool found = false;
+		int teamNum = 0;
 		for (auto car : cars) {
 			if (car.GetPRI().GetUniqueIdWrapper().str() == focusCarID) {
+				teamNum = car.GetPRI().GetTeamNum2();
+				LOG("team id : {}", teamNum);
 				LOG("car location: {:.7f}, {:.7f}, {:.7f}", car.GetLocation().X, car.GetLocation().Y, car.GetLocation().Z);
 				currentReplayState.carLocation = car.GetLocation();
 				currentReplayState.carVelocity = car.GetVelocity();
@@ -74,6 +77,19 @@ void SnapShotManager::takeSnapShot(GameWrapper* gw, std::string focusID) {
 		currentReplayState.ballLocation = ball.GetLocation();
 		currentReplayState.setBallStartingRotationAndStrength(ball.GetVelocity());
 
+
+
+		if (teamNum == 1) { // on orange team, need to reflect the scenario
+			currentReplayState.carLocation = Vector(-currentReplayState.carLocation.X, -currentReplayState.carLocation.Y, currentReplayState.carLocation.Z);
+			currentReplayState.carRotation = Rotator(currentReplayState.carRotation.Pitch, currentReplayState.carRotation.Yaw + 32768, currentReplayState.carRotation.Roll);//+32768
+			currentReplayState.carAngularVelocity = Vector(-currentReplayState.carAngularVelocity.X, -currentReplayState.carAngularVelocity.Y, currentReplayState.carAngularVelocity.Z);
+			currentReplayState.carVelocity = Vector(-currentReplayState.carVelocity.X, -currentReplayState.carVelocity.Y, currentReplayState.carVelocity.Z);
+
+
+			currentReplayState.ballLocation = Vector(-currentReplayState.ballLocation.X, -currentReplayState.ballLocation.Y, currentReplayState.ballLocation.Z);
+			currentReplayState.ballRotation = Rotator(currentReplayState.ballRotation.Pitch, currentReplayState.ballRotation.Yaw + 32768, currentReplayState.ballRotation.Roll+32768);
+			
+		}
 		auto now = std::chrono::system_clock::now();
 		std::time_t now_time = std::chrono::system_clock::to_time_t(now);
 
