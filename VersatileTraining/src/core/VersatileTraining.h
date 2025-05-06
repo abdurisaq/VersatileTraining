@@ -6,10 +6,8 @@
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 #include "bakkesmod/plugin/bakkesmodsdk.h"
 #include "version.h"
+
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
-
-
-
 
 
 
@@ -46,8 +44,9 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	
 	ShotState currentShotState;
 
+	StorageManager storageManager;
 	
-	std::filesystem::path saveFilePath;
+	
 
 
 	std::unordered_map<std::string, CustomTrainingData> trainingData;
@@ -84,6 +83,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool lockRotation = true;
 	bool ballBeingEdited = false;
 	bool lockScene = false;
+	bool unlockStartingVelocity = false;
 
 
 	bool freezeForShot = false;
@@ -131,8 +131,8 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	// Data helpers
 	void CleanUp();
 	int getRandomNumber(int min, int max);
-	void SaveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
-	std::unordered_map<std::string, CustomTrainingData> LoadCompressedTrainingData(const std::filesystem::path& fileName);
+	/*void SaveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
+	std::unordered_map<std::string, CustomTrainingData> LoadCompressedTrainingData(const std::filesystem::path& fileName);*/
 	void shiftVelocitiesToPositive(std::vector<int>& vec);
 	void shiftVelocitiesToNegative(std::vector<int>& vec);
 

@@ -250,9 +250,14 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
     }
 
     
+    
 
     currentShotState.carRotation = rot;
     currentShotState.carLocation = loc;
+
+    if (unlockStartingVelocity) {
+        currentShotState.extendedStartingVelocity = convertRotationAndMagnitudeToVector(currentShotState.carRotation, currentShotState.startingVelocity);
+    }
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
             LOG("Server not found");

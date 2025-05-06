@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "src/core/versatileTraining.h"
+#include "src/storage/StorageManager.h"
 #include "include/base64.h"
 
 constexpr size_t NAME_LEN_BITS = 5;
@@ -229,7 +229,7 @@ uint8_t writeBits(uint8_t byte, size_t& bitIndex, std::vector<uint8_t>& bitstrea
 
 }
 
-void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName) {
+void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName) {
     std::filesystem::create_directories(fileName.parent_path());
     std::ofstream outFile(fileName, std::ios::binary);
 
@@ -433,7 +433,7 @@ void VersatileTraining::SaveCompressedTrainingData(const std::unordered_map<std:
 
     outFile.close();
 }
-std::unordered_map<std::string, CustomTrainingData> VersatileTraining::LoadCompressedTrainingData(const std::filesystem::path& fileName) {
+std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompressedTrainingData(const std::filesystem::path& fileName) {
     LOG("loading from file");
     std::ifstream inFile(fileName, std::ios::binary);
     if (!inFile.is_open()) {

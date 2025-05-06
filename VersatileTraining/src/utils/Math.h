@@ -14,3 +14,6 @@ void DrawLineClippedByCircle(CanvasWrapper& canvas, const Vector2& a, const Vect
 float Distance(Vector2 a, Vector2 b);
 
 bool inRectangle(const std::pair<Vector, Vector>& goalBlockerPos, const Vector& ballLoc);
+
+
+Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude);

@@ -51,3 +51,5 @@
 #include "src/utils/Math.h"
 #include "src/training/CustomTrainingData.h"
 #include "src/training/SnapShotManager.h"
+
+#include "src/storage/StorageManager.h"

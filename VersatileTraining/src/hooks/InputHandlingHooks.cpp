@@ -197,6 +197,8 @@ void VersatileTraining::setupInputHandlingHooks() {
 void VersatileTraining::handleTrainingEditorActorModified() {
     if (editingVariances) {
         if (!lockRotation) {
+
+
             /*controllerManager.checkForButtonPress(4);
             controllerManager.checkForButtonPress(5);*/
 
@@ -243,6 +245,10 @@ void VersatileTraining::handleTrainingEditorActorModified() {
                 currentShotState.startingVelocity = currentTrainingData.minVelocity;
             }
             LOG("starting velocity decreased to {}", currentShotState.startingVelocity);
+        }
+
+        if (unlockStartingVelocity) {
+            currentShotState.extendedStartingVelocity = convertRotationAndMagnitudeToVector(currentShotState.carRotation, currentShotState.startingVelocity);
         }
     }
 }

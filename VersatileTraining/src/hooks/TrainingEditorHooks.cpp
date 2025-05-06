@@ -71,7 +71,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
 void VersatileTraining::handleTrainingEditorEnter() {
     LOG("Training editor enter");
     currentTrainingData.currentEditedShot = -1;
-    trainingData = LoadCompressedTrainingData(saveFilePath);
+    trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);
     for (auto& [key, value] : trainingData) {
         shiftToNegative(value);
     }
@@ -116,8 +116,8 @@ void VersatileTraining::handleTrainingSave() {
         for (auto& [key, value] : trainingData) {
             shiftToPositive(value);
         }
-        SaveCompressedTrainingData(trainingData, saveFilePath);
-        trainingData = LoadCompressedTrainingData(saveFilePath);
+        storageManager.saveCompressedTrainingData(trainingData, storageManager.saveTrainingFilePath);
+        trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);
         for (auto& [key, value] : trainingData) {
             shiftToNegative(value);
         }
@@ -176,6 +176,7 @@ void VersatileTraining::handleStartEditing(ActorWrapper cw) {
         currentPackKey = name;
     }
 
+    unlockStartingVelocity = false;
     handleNewTrainingData(currentShot);
 }
 

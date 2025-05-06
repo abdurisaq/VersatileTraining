@@ -192,6 +192,9 @@
     <ClCompile Include="src\ui\RenderVelocity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\storage\saveReplayStates.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="version.h">
@@ -327,6 +330,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\training\SnapShotManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\storage\StorageManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

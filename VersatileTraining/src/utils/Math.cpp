@@ -101,3 +101,28 @@ bool inRectangle(const std::pair<Vector, Vector>& goalBlockerPos, const Vector& 
 	return (ballLoc.X >= minX && ballLoc.X <= maxX &&
 		ballLoc.Z >= minZ && ballLoc.Z <= maxZ);
 }
+
+
+Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude) {
+
+	float pitch_deg = rot.Pitch * (90.0f / 16384.0f);
+	float yaw_deg = rot.Yaw * (360.0f / 65536.0f);
+
+	// Convert degrees to radians
+	float pitch_rad = pitch_deg * (PI / 180.0f);
+	float yaw_rad = yaw_deg * (PI / 180.0f);
+
+	// Compute normalized direction vector
+	float nx = std::cos(pitch_rad) * std::cos(yaw_rad);
+	float ny = std::cos(pitch_rad) * std::sin(yaw_rad);
+	float nz = std::sin(pitch_rad);
+
+	// Scale by magnitude
+	Vector result;
+	result.X = nx * magnitude;
+	result.Y = ny * magnitude;
+	result.Z = nz * magnitude;
+
+	return result;
+
+}

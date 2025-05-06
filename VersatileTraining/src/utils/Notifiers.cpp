@@ -84,6 +84,17 @@ void VersatileTraining::registerNotifiers() {
 
 	cvarManager->setBind("J", "removeJump");
 
+	cvarManager->registerNotifier("lockStartingVelocity", [this](std::vector<std::string> args) {
+		if (!isInTrainingEditor())return;
+		
+		unlockStartingVelocity = !unlockStartingVelocity;
+
+
+		}, "remove car's jump", PERMISSION_ALL);
+
+	cvarManager->setBind("B", "lockStartingVelocity");
+
+
 	cvarManager->registerNotifier("printDataMap", [this](std::vector<std::string> args) {
 
 		for (auto [key, value] : trainingData) {

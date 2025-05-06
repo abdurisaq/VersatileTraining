@@ -26,9 +26,11 @@ void VersatileTraining::onLoad()
 	controllerManager.initializeCallBacks();
 
 	std::filesystem::path myDataFolder = gameWrapper->GetDataFolder() / "VersatileTraining";
-	saveFilePath = myDataFolder / "packs.txt";
+	storageManager.saveTrainingFilePath = myDataFolder / "packs.txt";
+	storageManager.saveReplayStateFilePath = myDataFolder / "replayStates.txt";
 
-	trainingData = LoadCompressedTrainingData(saveFilePath);
+	snapshotManager.replayStates = storageManager.loadReplayStates(storageManager.saveReplayStateFilePath);
+	trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);
 	for (auto& [key, value] : trainingData) {
 		shiftToNegative(value);
 
@@ -97,10 +99,12 @@ void VersatileTraining::loadHooks() {
 
 void VersatileTraining::onUnload() {
 	LOG("Unloading Versatile Training");
+
+	storageManager.saveReplayStates( snapshotManager.replayStates, storageManager.saveReplayStateFilePath);
 	for (auto& [key, value] : trainingData) {
 		shiftToPositive(value);
 	}
-	SaveCompressedTrainingData(trainingData, saveFilePath);
+	storageManager.saveCompressedTrainingData(trainingData, storageManager.saveTrainingFilePath);
 	CleanUp();
 }
 

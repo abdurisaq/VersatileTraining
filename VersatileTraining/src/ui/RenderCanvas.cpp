@@ -49,6 +49,13 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
 		}
 		canvas.SetPosition(Vector2F{ 0.0, 80.0 });
+		if (!unlockStartingVelocity) {
+			canvas.DrawString("Starting velocity locked, press B to unlock", 2.0, 2.0, false);
+		}
+		else {
+			canvas.DrawString("Starting velocity unlocked, press B to lock", 2.0, 2.0, false);
+		}
+		canvas.SetPosition(Vector2F{ 0.0, 100.0 });
 
 		canvas.DrawString("Starting Velocity: " + std::to_string(currentShotState.startingVelocity), 2.0, 2.0, false);
 		
