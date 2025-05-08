@@ -10,6 +10,11 @@
 
 
 class StorageManager {
+
+
+	RecordingStorage recordingStorage;
+
+	
 public:
 	std::filesystem::path saveTrainingFilePath;
 	std::filesystem::path saveReplayStateFilePath;
@@ -22,5 +27,12 @@ public:
 
 	std::vector<ReplayState> loadReplayStates(const std::filesystem::path& fileName);
 	void saveReplayStates(const std::vector<ReplayState>& replays, const std::filesystem::path& fileName);
+
+
+	void saveCompressedTrainingDataWithRecordings(const std::unordered_map<std::string, CustomTrainingData>& trainingData,
+		const std::filesystem::path& dataFolder);
+
+	std::unordered_map<std::string, CustomTrainingData> loadCompressedTrainingDataWithRecordings(
+		const std::filesystem::path& dataFolder);
 
 };

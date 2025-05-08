@@ -2,7 +2,7 @@
 #include "src/core/VersatileTraining.h"
 
 void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
-
+    if (shotReplicationManager.testCalledInStartRound)return;
 	
 	if ((isInTrainingPack() || isInTrainingEditor()) &&(currentShotState.extendedStartingVelocity != Vector(0, 0, 0) || currentShotState.startingVelocity != 0.f)) {
 		//in a training pack/editor

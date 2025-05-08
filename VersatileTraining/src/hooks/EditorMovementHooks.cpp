@@ -290,7 +290,7 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
 
         if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
 
-            LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
+            //LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
             cw.SetRotation({ rot1.Pitch,rot1.Yaw,rot1.Roll });
         }
 
@@ -300,7 +300,7 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
         Rotator rot1 = checkForClamping(loc, rot);
         if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
 
-            LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
+            //LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
             cw.SetRotation({ rot1.Pitch,rot1.Yaw,rot1.Roll });
         }
     }

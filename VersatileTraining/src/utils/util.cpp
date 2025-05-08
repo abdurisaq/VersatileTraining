@@ -26,8 +26,8 @@ Rotator blendPitchRollClampSmooth(int pitch, int roll, int expectedPitch, int ex
 
 Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 
-	LOG("rotation : {}", rot.Roll);
-	LOG("location Z: {}", loc.Z);
+	//LOG("rotation : {}", rot.Roll);
+	//LOG("location Z: {}", loc.Z);
 	auto inThreshold = [](int value, int center, int threshold) {
 		return value >= (center - threshold) && value <= (center + threshold);
 		};
@@ -68,10 +68,10 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	int expectedPitch = mapToRoll(t, 0, 16384);
 
 
-	LOG("expectedRoll 1: {}", expectedRoll1);
+	/*LOG("expectedRoll 1: {}", expectedRoll1);
 	LOG("expectedRoll 2: {}", expectedRoll2);
 	LOG("yaw : {}", yaw);
-	LOG("roll : {}", roll);
+	LOG("roll : {}", roll);*/
 	//LOG("expectedRoll: {}", expectedRoll1);
 	//LOG("actual roll: {}", roll);
 	int tolerance = 5000;
@@ -101,20 +101,20 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 		if (yaw1  && (roll1))
 		{
 
-			LOG("clamped to orange back wall1");
+			//LOG("clamped to orange back wall1");
 			clampVal = 1;
 			return Rotator{ pitch,1, expectedRoll1 };
 		}
 		else if ( yaw2  && (roll2) )
 		{
-			LOG("clamped to orange back wall2");
+			//LOG("clamped to orange back wall2");
 			clampVal = 1;
 			return Rotator{ pitch,32768 ,expectedRoll2 };
 		}
 		else {
-			LOG("passed 5050 buyt one of these dont work");
+			/*LOG("passed 5050 buyt one of these dont work");
 			LOG("loc.Y: {}, currentYBound: {}", loc.Y, currentYBound);
-			LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll, pitch);
+			LOG("yaw : {}, roll: {}, pitch: {}", yaw, roll, pitch);*/
 		}
 	}
 	else if (loc.Y < -(currentYBound-10)) {
@@ -123,7 +123,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 			return Rotator{ pitch,1 ,expectedRoll2 };//16384
 		}
 		if ( yaw2 && (roll1) ) {
-			LOG("clamped to blue back wall");
+			//LOG("clamped to blue back wall");
 			clampVal = 2;
 			return Rotator{ pitch,32768 ,expectedRoll1 };//south
 
@@ -133,16 +133,16 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	else if (loc.X > currentXBound-10) {
 		if (yaw3 && (roll1))
 		{
-			LOG("clamped on the left wall");
-			LOG("expected roll :{} ", expectedRoll1);
+			/*LOG("clamped on the left wall");
+			LOG("expected roll :{} ", expectedRoll1);*/
 			clampVal = 3;
 			//(pRoll1 || nRoll2)
 			return Rotator{ pitch,south ,expectedRoll1 };
 		}
 		else if (yaw4 && (roll2))
 		{
-			LOG("clamped on the left wall");
-			LOG("expected roll :{} ", expectedRoll2);
+			/*LOG("clamped on the left wall");
+			LOG("expected roll :{} ", expectedRoll2);*/
 			clampVal = 3;
 
 			return Rotator{ pitch,16384 ,expectedRoll2 };
@@ -152,26 +152,20 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	{
 		if (yaw3 && (roll2))
 		{
-			LOG("clamped on the right wall");
+			//LOG("clamped on the right wall");
 			clampVal = 4;
 			return Rotator{ pitch,south ,expectedRoll2 };
 		}
 		else if (yaw4 &&(roll1)) {
-			LOG("clamped on the right wall1");
+			//LOG("clamped on the right wall1");
 			clampVal = 4;
 			return Rotator{ pitch,16384 ,expectedRoll1 };
 		}
 	}
 	else if (loc.Z > 2000 && pitch1 && roll3) {
-		LOG("clamped on the ceiling");
+		//LOG("clamped on the ceiling");
 		clampVal = 5;
-		if (pitch != 0) {
-			LOG("pitch is changing");
-
-		}
-		if (roll != 32768) {
-			LOG("roll is changing");
-		}
+		
 		return Rotator{ 1,yaw,32768 };//0
 	}
 
@@ -179,13 +173,13 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	else if (cornerLine(loc.X, loc.Y) <= 0) {
 		
 		if (yaw7 && roll1) {
-			LOG("clamped on the back right corner");
+			//LOG("clamped on the back right corner");
 			clampVal = 6;
 			return Rotator{ pitch,24576,south };
 			
 		}
 		else if (yaw8 && roll2) {
-			LOG("clamped on the back right corner");
+			//LOG("clamped on the back right corner");
 			clampVal = 6;
 			return Rotator{ pitch,57344,north };
 		}
@@ -193,12 +187,12 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	}
 	else if (cornerLine(loc.X, loc.Y) >= (diagBound - 25) * 2) {
 		if (yaw7 && roll2) {
-			LOG("clamped on the top left corner");
+			//LOG("clamped on the top left corner");
 			clampVal = 7;
 			return Rotator{ pitch,24576,north };
 		}
 		else if (yaw8 && roll1) {
-			LOG("clamped on the top left corner");
+			//LOG("clamped on the top left corner");
 			clampVal = 7;
 			return Rotator{ pitch,57344,south };
 		}
@@ -207,11 +201,11 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	else if (cornerLine2(loc.X, loc.Y) <= 0) {
 		
 		if (yaw5 && roll1) {
-			LOG("clamped on the top right corner");
+			//LOG("clamped on the top right corner");
 			clampVal = 8;
 			return Rotator{ pitch,8192,south };
 		}else if (yaw6 && roll2) {
-			LOG("clamped on the top right corner");
+			//LOG("clamped on the top right corner");
 			clampVal = 8;
 			return Rotator{ pitch,40960,north };
 		}
@@ -219,18 +213,18 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	else if (cornerLine2(loc.X, loc.Y) >= (diagBound - 25) * 2) {
 		
 		if (yaw5 && roll2) {
-			LOG("clamped on the back left corner");
+			//LOG("clamped on the back left corner");
 			clampVal = 9;
 			return Rotator{ pitch,8192,north };
 		}
 		else if (yaw6 && roll1) {
-			LOG("clamped on the back left corner");
+			//LOG("clamped on the back left corner");
 			clampVal = 9;
 			return Rotator{ pitch,40960,south };
 		}
 	}
 	else if (loc.Z < 45 && roll4) {
-		LOG("clamped to the ground");
+		//LOG("clamped to the ground");
 		clampVal = 10;
 		return Rotator{ 1,yaw,1 };
 	}
@@ -279,7 +273,7 @@ std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int ext
 
 Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 
-	LOG("clampVal: {}", clampVal);
+	//LOG("clampVal: {}", clampVal);
 	auto perpendicularProjection = [](float m, float b, float a, float b0) -> std::pair<float, float> {
 		float c = (a + m * (b0 - b)) / (m * m + 1);
 		float d = m * c + b;
@@ -297,11 +291,11 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 	//7 diagBound < p->NewLocation.X + p->NewLocation.Y top left
 	//8 (p->NewLocation.X - p->NewLocation.Y) > diagBound top right
 	//9 (p->NewLocation.Y - p->NewLocation.X) > diagBound down left
-
+	/*LOG("Old location: {}, {} {}", loc.X, loc.Y, loc.Z);
+	LOG("New location: {}, {} {}", loc.X, currentYBound + axisBreakDown.first, frozenZVal + axisBreakDown.second);*/
 	switch (clampVal) {//5090
 	case 1: {
-		LOG("Old location: {}, {} {}", loc.X, loc.Y, loc.Z);
-		LOG("New location: {}, {} {}", loc.X, currentYBound + axisBreakDown.first, frozenZVal + axisBreakDown.second);
+		
 		return Vector{ loc.X,currentYBound + axisBreakDown.first,frozenZVal + axisBreakDown.second };
 		break;
 	}
@@ -331,38 +325,38 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 	//9 (p->NewLocation.Y - p->NewLocation.X) > diagBound down left
 	case 6: {
 		//double m, double b, double a, double b0
-		LOG("x : {}, y: {}, diagBound: {}", loc.X, loc.Y, cornerVal);
+		//LOG("x : {}, y: {}, diagBound: {}", loc.X, loc.Y, cornerVal);
 		std::pair<float, float> result = perpendicularProjection(-1, -cornerVal, loc.X, loc.Y);
-		LOG("going to clamp on back right wall now");
-		LOG("result.first: {}, result.second: {}, diagBound: {}", result.first, result.second, -cornerVal);
+		//LOG("going to clamp on back right wall now");
+		//LOG("result.first: {}, result.second: {}, diagBound: {}", result.first, result.second, -cornerVal);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}
 	case 7: {
 
 		std::pair<float, float> result = perpendicularProjection(-1, cornerVal, loc.X, loc.Y);
-		LOG("going to clamp on front left wall now");
-		LOG("result.first: {}, result.second: {}", result.first, result.second);
+		//LOG("going to clamp on front left wall now");
+		//LOG("result.first: {}, result.second: {}", result.first, result.second);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}
 	case 8: {
 		std::pair<float, float> result = perpendicularProjection(1, cornerVal, loc.X, loc.Y);
-		LOG("going to clamp on top right wall now");
-		LOG("result.first: {}, result.second: {}", result.first, result.second);
+		//LOG("going to clamp on top right wall now");
+		//LOG("result.first: {}, result.second: {}", result.first, result.second);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}
 	case 9: {
 		std::pair<float, float> result = perpendicularProjection(1, -cornerVal, loc.X, loc.Y);
-		LOG("going to clamp on back left wall now");
-		LOG("result.first: {}, result.second: {}", result.first, result.second);
+		//LOG("going to clamp on back left wall now");
+		//LOG("result.first: {}, result.second: {}", result.first, result.second);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}
 	case 10: {
 		//clamping to the ground
-		LOG("getting clamp to move the car to the ground");
+		//LOG("getting clamp to move the car to the ground");
 		return Vector{ loc.X,loc.Y,20 };
 	}
 	default: {

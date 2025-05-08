@@ -25,7 +25,7 @@ void readBinary(std::ifstream& in, T& val) {
     in.read(reinterpret_cast<char*>(&val), sizeof(T));
 }
 
-
+//small enough that this doesn't need to be compressed, so gonna straight right to file everything, then read
 void StorageManager::saveReplayStates(const std::vector<ReplayState>& replays, const std::filesystem::path& fileName) {
     std::filesystem::create_directories(fileName.parent_path());
     std::ofstream outFile(fileName, std::ios::binary);

@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "src/core/VersatileTraining.h"
 
-
 BAKKESMOD_PLUGIN(VersatileTraining, "write a plugin description here", plugin_version, PLUGINTYPE_FREEPLAY)
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
@@ -25,16 +24,16 @@ void VersatileTraining::onLoad()
 
 	controllerManager.initializeCallBacks();
 
-	std::filesystem::path myDataFolder = gameWrapper->GetDataFolder() / "VersatileTraining";
+	 myDataFolder = gameWrapper->GetDataFolder() / "VersatileTraining";
 	storageManager.saveTrainingFilePath = myDataFolder / "packs.txt";
 	storageManager.saveReplayStateFilePath = myDataFolder / "replayStates.txt";
 
 	snapshotManager.replayStates = storageManager.loadReplayStates(storageManager.saveReplayStateFilePath);
-	trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);
+	/*trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);*/
+
+	trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
 	for (auto& [key, value] : trainingData) {
 		shiftToNegative(value);
-
-		
 	}
 
 	//		
@@ -101,10 +100,13 @@ void VersatileTraining::onUnload() {
 	LOG("Unloading Versatile Training");
 
 	storageManager.saveReplayStates( snapshotManager.replayStates, storageManager.saveReplayStateFilePath);
+
+	
 	for (auto& [key, value] : trainingData) {
 		shiftToPositive(value);
 	}
-	storageManager.saveCompressedTrainingData(trainingData, storageManager.saveTrainingFilePath);
+	storageManager.saveCompressedTrainingDataWithRecordings(trainingData, myDataFolder);
+	//storageManager.saveCompressedTrainingData(trainingData, storageManager.saveTrainingFilePath);
 	CleanUp();
 }
 

@@ -2,7 +2,7 @@
 #include "pch.h"
 
 struct ShotRecording {
-    int carBody = 23; // default octane
+    int carBody = 0; // default octane
     GamepadSettings settings = GamepadSettings(0, 0.5, 1, 1);
     std::vector<ControllerInput> inputs;
     RBState startState;
@@ -12,7 +12,9 @@ struct ShotRecording {
         Vector velocity;
     };
 
-    std::shared_ptr<InitialState> initialState;
+   InitialState initialState;
+
+   ShotRecording(): carBody(0), settings(GamepadSettings(0, 0.5, 1, 1)), inputs(std::vector<ControllerInput>()), startState(RBState()), initialState({ {0,0,0}, {0,0,0}, {0,0,0} }) {}
 };
 
 class ShotReplicationManager {
@@ -31,8 +33,10 @@ public:
 	bool startRecording = false;
 	bool recording = false;
 	int frame = 0;
-	std::shared_ptr< ShotRecording> currentShotRecording;
+	ShotRecording currentShotRecording;
 	
+
+
 	void startRecordingShot(GameWrapper* gw);
 	void spawnBot(GameWrapper* gw);
 	void stopRecordingShot();

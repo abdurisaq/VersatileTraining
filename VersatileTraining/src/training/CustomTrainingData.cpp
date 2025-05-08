@@ -19,6 +19,11 @@ CustomTrainingDataflattened CustomTrainingData::deflate() {
 		LOG("jump state being pushed back: {}", shot.hasJump ? "true" : "false");
 	}
 
+    LOG("extendedStartingVelocities size: {}", flatData.extendedStartingVelocities.size());
+    for (auto velocity  :flatData.extendedStartingVelocities) {
+		LOG("extendedStartingVelocity: {} {} {}", velocity.X, velocity.Y, velocity.Z);
+	}
+
 	return flatData;
 }
 
@@ -43,7 +48,8 @@ CustomTrainingData CustomTrainingDataflattened::inflate() {
             i < boostAmounts.size() ? boostAmounts[i] : 101,
             i < goalBlockers.size() ? goalBlockers[i] : std::pair<Vector, Vector>{ {0,0,0},{0,0,0} },
             i < goalAnchors.size() ? goalAnchors[i] : std::pair<bool, bool>{ false, false },
-            i < extendedStartingVelocities.size() ? extendedStartingVelocities[i] : Vector{ 0,0,0 }
+            i < extendedStartingVelocities.size() ? extendedStartingVelocities[i] : Vector{ 0,0,0 },
+            ShotRecording()
         );
         inflatedData.shots.push_back(shot);
     }

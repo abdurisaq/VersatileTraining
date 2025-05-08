@@ -48,8 +48,8 @@ void VersatileTraining::setupInputHandlingHooks() {
                 return;
             }
 
-            ControllerInput* input = static_cast<ControllerInput*>(params);
-            auto& inputs = shotReplicationManager.currentShotRecording->inputs;
+            ControllerInput* input = static_cast<ControllerInput*>(params); // currentShotState.recording.inputs
+            auto& inputs = shotReplicationManager.currentShotRecording.inputs;//shotReplicationManager.currentShotRecording.inputs
             auto currentFrame = gameWrapper->GetEngine().GetPhysicsFrame();
             if (shotReplicationManager.botSpawnedTest) {
                 if (!shotReplicationManager.roundStarted) {
@@ -153,7 +153,10 @@ void VersatileTraining::setupInputHandlingHooks() {
                     }
                 }
                 if (shotReplicationManager.roundStarted) {
-                    if (!shotReplicationManager.currentShotRecording) return; //shared_ptr to recording
+                    if (currentShotState.recording.carBody == 0) {
+                        LOG("no inputs to play back, returning" );
+                        return;
+                    }
 
                     if (shotReplicationManager.frame <= inputs.size()) {
 
@@ -191,6 +194,21 @@ void VersatileTraining::setupInputHandlingHooks() {
             }
         }
     );
+
+
+
+    gameWrapper->HookEventWithCaller<PlayerControllerWrapper>(
+		"Function TAGame.PlayerController_TA.OnOpenPauseMenu",
+        [this](PlayerControllerWrapper cw, void* params, std::string eventName) {
+            settingsOpen = true;
+		});
+
+    gameWrapper->HookEventWithCaller<PlayerControllerWrapper>(
+		"Function Engine.ControllerLayoutStack.Pop",
+        [this](PlayerControllerWrapper cw, void* params, std::string eventName) {
+            settingsOpen = false;
+		});
+
 }
 
 
@@ -232,22 +250,23 @@ void VersatileTraining::handleTrainingEditorActorModified() {
             }
             LOG("boost decreased to {}", currentShotState.boostAmount);
         }
-        if (GetAsyncKeyState('4') & 0x8000) {
-            currentShotState.startingVelocity++;
-            if (currentShotState.startingVelocity > currentTrainingData.maxVelocity) {
-                currentShotState.startingVelocity = currentTrainingData.maxVelocity;
-            }
-            LOG("starting velocity increased to {}", currentShotState.startingVelocity);
-        }
-        if (GetAsyncKeyState('3') & 0x8000) {
-            currentShotState.startingVelocity--;
-            if (currentShotState.startingVelocity < currentTrainingData.minVelocity) {
-                currentShotState.startingVelocity = currentTrainingData.minVelocity;
-            }
-            LOG("starting velocity decreased to {}", currentShotState.startingVelocity);
-        }
+        
 
         if (unlockStartingVelocity) {
+            if (GetAsyncKeyState('3') & 0x8000) {
+                currentShotState.startingVelocity--;
+                if (currentShotState.startingVelocity < currentTrainingData.minVelocity) {
+                    currentShotState.startingVelocity = currentTrainingData.minVelocity;
+                }
+                LOG("starting velocity decreased to {}", currentShotState.startingVelocity);
+            }
+            if (GetAsyncKeyState('4') & 0x8000) {
+                currentShotState.startingVelocity++;
+                if (currentShotState.startingVelocity > currentTrainingData.maxVelocity) {
+                    currentShotState.startingVelocity = currentTrainingData.maxVelocity;
+                }
+                LOG("starting velocity increased to {}", currentShotState.startingVelocity);
+            }
             currentShotState.extendedStartingVelocity = convertRotationAndMagnitudeToVector(currentShotState.carRotation, currentShotState.startingVelocity);
         }
     }

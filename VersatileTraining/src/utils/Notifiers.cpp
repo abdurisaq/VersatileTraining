@@ -102,6 +102,8 @@ void VersatileTraining::registerNotifiers() {
 			LOG("Code: {}", key);
 			LOG("Num Shots: {}", value.numShots);
 			for (int i = 0; i < value.numShots; i++) {
+
+
 				LOG("Shot {}: Boost Amount: {}", i, value.shots[i].boostAmount);
 				LOG("Shot {}: Starting Velocity: {}", i, value.shots[i].startingVelocity);
 				LOG("Shot {}: Freeze Car: {}", i, static_cast<int>(value.shots[i].freezeCar));
@@ -119,7 +121,25 @@ void VersatileTraining::registerNotifiers() {
 					i,
 					static_cast<int>(value.shots[i].goalBlocker.second.X),
 					static_cast<int>(value.shots[i].goalBlocker.second.Z));
+				LOG("has recording ? {}", value.shots[i].recording.inputs.size() > 0 ? "true" : "false");
+				LOG("number of inputs : {}", value.shots[i].recording.inputs.size());
 
+				for (int j = 0; j < value.shots[i].recording.inputs.size(); j++) {
+					LOG("input {}: Throttle: {:.7f}, Steer: {:.7f}, Pitch: {:.7f}, Yaw: {:.7f}, Roll: {:.7f}, DodgeForward: {:.7f}, DodgeStrafe: {:.7f}, Handbrake: {}, Jump: {}, ActivateBoost: {}, HoldingBoost: {}, Jumped: {}",
+												j,
+												value.shots[i].recording.inputs[j].Throttle,
+												value.shots[i].recording.inputs[j].Steer,
+												value.shots[i].recording.inputs[j].Pitch,
+												value.shots[i].recording.inputs[j].Yaw,
+												value.shots[i].recording.inputs[j].Roll,
+												value.shots[i].recording.inputs[j].DodgeForward,
+												value.shots[i].recording.inputs[j].DodgeStrafe,
+												value.shots[i].recording.inputs[j].Handbrake ? "true" : "false",
+												value.shots[i].recording.inputs[j].Jump ? "true" : "false",
+												value.shots[i].recording.inputs[j].ActivateBoost ? "true" : "false",
+												value.shots[i].recording.inputs[j].HoldingBoost ? "true" : "false",
+												value.shots[i].recording.inputs[j].Jumped ? "true" : "false");
+				}
 				// Goal anchors state
 				LOG("Shot {}: Goal Anchors: First={}, Second={}",
 					i,
@@ -135,7 +155,7 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->setBind("L", "printDataMap");
 
 	cvarManager->registerNotifier("printCurrentPack", [this](std::vector<std::string> args) {
-		if (!isInTrainingEditor())return;
+		//if (!isInTrainingEditor())return;
 
 		//currentTrainingData
 		LOG("Name: {}", currentTrainingData.name);
@@ -143,6 +163,7 @@ void VersatileTraining::registerNotifiers() {
 		LOG("Num Shots: {}", currentTrainingData.numShots);
 		for (int i = 0; i < currentTrainingData.numShots; i++) {
 			LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, currentTrainingData.shots[i].boostAmount, currentTrainingData.shots[i].startingVelocity, static_cast<int>(currentTrainingData.shots[i].freezeCar), static_cast<int>(currentTrainingData.shots[i].hasJump));
+			LOG("has recording? {}", currentTrainingData.shots[i].recording.inputs.size() > 0 ? "true" : "false");
 		}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
 
 		}, "print local data map", PERMISSION_ALL);
@@ -172,6 +193,7 @@ void VersatileTraining::registerNotifiers() {
 
 	cvarManager->registerNotifier("spawnBot", [this](std::vector<std::string> args) {
 		if (!(isInTrainingEditor() || isInTrainingPack())) return;
+		shotReplicationManager.currentShotRecording = currentShotState.recording;
 		shotReplicationManager.spawnBot(gameWrapper.get());
 
 		}, "spawn bot in custom training", PERMISSION_ALL);
@@ -184,8 +206,9 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->setBind("N", "startRecording");
 
 	cvarManager->registerNotifier("dumpInputs", [this](std::vector<std::string> args) {
-		if (!isInTrainingEditor())return;
-		if (shotReplicationManager.currentShotRecording == nullptr) {
+		
+		shotReplicationManager.currentShotRecording = currentShotState.recording;
+		if (shotReplicationManager.currentShotRecording.carBody == 0) {
 			LOG("no inputs to dump");
 			return;
 		}
@@ -203,7 +226,8 @@ void VersatileTraining::registerNotifiers() {
 			unsigned long HoldingBoost : 1;
 			unsigned long Jumped : 1;
 		};
-		for (const auto& input : shotReplicationManager.currentShotRecording->inputs) {
+		LOG("input size : {}", shotReplicationManager.currentShotRecording.inputs.size() );
+		for (const auto& input : shotReplicationManager.currentShotRecording.inputs) {
 			LOG("Throttle: {:.7f}, Steer: {:.7f}, Pitch: {:.7f}, Yaw: {:.7f}, Roll: {:.7f}, DodgeForward: {:.7f}, DodgeStrafe: {:.7f}, Handbrake: {}, Jump: {}, ActivateBoost: {}, HoldingBoost: {}, Jumped: {}",
 				input.Throttle, input.Steer, input.Pitch, input.Yaw, input.Roll, input.DodgeForward, input.DodgeStrafe,
 				input.Handbrake ? "true" : "false", input.Jump ? "true" : "false", input.ActivateBoost ? "true" : "false", input.HoldingBoost ? "true" : "false", input.Jumped ? "true" : "false");

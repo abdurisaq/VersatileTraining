@@ -3,6 +3,7 @@
 
 struct CustomTrainingData;
 struct ShotState {
+	int shotIndex = 0;
 	bool freezeCar;
 	bool hasJump;
 	int startingVelocity;
@@ -12,13 +13,50 @@ struct ShotState {
 	std::pair<Vector, Vector> goalBlocker;
 	std::pair<bool, bool> goalAnchors;
 
+	ShotRecording recording;
 	Vector carLocation = Vector(0,0,0);
 	Rotator carRotation = Rotator(0,0,0);
-	ShotState() : freezeCar(false), hasJump(true), startingVelocity(0), boostAmount(101), goalBlocker({ { 0, 0, 0 }, { 0, 0, 0 } }), goalAnchors({ false, false }), carLocation({ 0,0,0 }), carRotation({0,0,0}), extendedStartingVelocity({ 0,0,0 }) {}
-	ShotState(bool freeze, bool jump, int velocity, int boost, std::pair<Vector, Vector> blocker, std::pair<bool, bool> anchors,  Vector startingVelocity)
-		: freezeCar(freeze), hasJump(jump), startingVelocity(velocity), boostAmount(boost), goalBlocker(blocker), goalAnchors(anchors), extendedStartingVelocity(startingVelocity) {}
+	ShotState() : freezeCar(false), hasJump(true), startingVelocity(0), boostAmount(101), goalBlocker({ { 0, 0, 0 }, { 0, 0, 0 } }), goalAnchors({ false, false }), carLocation({ 0,0,0 }), carRotation({0,0,0}), extendedStartingVelocity({ 0,0,0 }),recording(ShotRecording()) {}
+	ShotState(bool freeze, bool jump, int velocity, int boost, std::pair<Vector, Vector> blocker, std::pair<bool, bool> anchors,  Vector startingVelocity,ShotRecording recording)
+		: freezeCar(freeze), hasJump(jump), startingVelocity(velocity), boostAmount(boost), goalBlocker(blocker), goalAnchors(anchors), extendedStartingVelocity(startingVelocity), recording(recording) {}
 
+	ShotState& operator=(const ShotState& other) {
+		if (this != &other) {
+			freezeCar = other.freezeCar;
+			hasJump = other.hasJump;
+			startingVelocity = other.startingVelocity;
+			extendedStartingVelocity = other.extendedStartingVelocity;
+			extendedStartingAngularVelocity = other.extendedStartingAngularVelocity;
+			boostAmount = other.boostAmount;
+			goalBlocker = other.goalBlocker;
+			goalAnchors = other.goalAnchors;
+			carLocation = other.carLocation;
+			carRotation = other.carRotation;
+
+			// Safe copying of recording
+			try {
+				if (other.recording.inputs.size() > 100000) {
+					// Skip copying suspiciously large input vectors
+					recording = ShotRecording();
+					recording.carBody = other.recording.carBody;
+					recording.settings = other.recording.settings;
+					recording.initialState = other.recording.initialState;
+					recording.startState = other.recording.startState;
+					// Don't copy inputs
+				}
+				else {
+					recording = other.recording;
+				}
+			}
+			catch (const std::exception&) {
+				// If copy fails, create a clean recording
+				recording = ShotRecording();
+			}
+		}
+		return *this;
+	}
 };
+
 
 struct CustomTrainingDataflattened {
 	std::string code;
@@ -101,6 +139,7 @@ struct CustomTrainingData {
 	void addShot(const ShotState& state = ShotState()) {
 		numShots++;
 		shots.push_back(state);
+		shots.back().shotIndex = numShots - 1;
 	}
 	void reset() {
 		numShots = 0;

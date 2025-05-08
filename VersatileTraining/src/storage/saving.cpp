@@ -91,8 +91,9 @@ uint8_t CompressBits(const std::vector<bool>& freezeCar, std::vector<uint8_t>& b
     
     //uint8_t currentByte = 0;
     
-
+    
     for (bool freeze : freezeCar) {
+        LOG("in compress bits frozen ? {} ", freeze ? "true" : "false");
         if (freeze) {
             currentByte |= (1 <<(7- bitCount));  
         }
@@ -105,8 +106,10 @@ uint8_t CompressBits(const std::vector<bool>& freezeCar, std::vector<uint8_t>& b
             bitCount = 0;
         }
     }
-    if (finalWrite) {
+    if (finalWrite && bitCount > 0) {
         bitstream.push_back(currentByte);
+        currentByte = 0;
+        bitCount = 0;
     }
     return currentByte;
 }
@@ -284,6 +287,8 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         for (const auto& vec : data.extendedStartingVelocities) {
             int magnitude = static_cast<int>(vec.magnitude());
             LOG("extended starting velocity magnitude: {}", magnitude);
+            LOG("float velocity magnitude: {}", vec.magnitude());
+            LOG("velocity: {} {} {}", vec.X, vec.Y, vec.Z);
             magnitudes.push_back(magnitude);
         }
         std::pair<int, int> magnitudeBounds = getMinMaxAmount(magnitudes);

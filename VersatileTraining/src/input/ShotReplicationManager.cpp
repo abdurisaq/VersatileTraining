@@ -10,20 +10,17 @@ void ShotReplicationManager::startRecordingShot(GameWrapper* gw) {
 		auto car = gw->GetLocalCar();
 		if (!car) return;
 
+		
+		currentShotRecording = ShotRecording();
+		currentShotRecording.carBody = car.GetLoadoutBody();
+		LOG("car body: {}", currentShotRecording.carBody);
+		currentShotRecording.settings = gw->GetSettings().GetGamepadSettings();
+		
+		currentShotRecording.initialState.velocity = car.GetVelocity();
+		currentShotRecording.initialState.location = car.GetLocation();
+		currentShotRecording.initialState.rotation = car.GetRotation();
 
-		currentShotRecording = std::make_shared<ShotRecording>();
-		currentShotRecording->carBody = car.GetLoadoutBody();
-		currentShotRecording->settings = gw->GetSettings().GetGamepadSettings();
-
-
-		LOG("settings controllerDeadzone {}, DodgeInputThreshold {}, SteeringSensitivity {} , AirControlSensitivity {}", currentShotRecording->settings.ControllerDeadzone, currentShotRecording->settings.DodgeInputThreshold, currentShotRecording->settings.SteeringSensitivity, currentShotRecording->settings.AirControlSensitivity);
-
-		currentShotRecording->initialState = std::make_shared<ShotRecording::InitialState>();
-		currentShotRecording->initialState->velocity = car.GetVelocity();
-		currentShotRecording->initialState->location = car.GetLocation();
-		currentShotRecording->initialState->rotation = car.GetRotation();
-
-		currentShotRecording->startState = car.GetRBState();
+		currentShotRecording.startState = car.GetRBState();
 		primedToStartRecording = true;
 	}
 
@@ -35,8 +32,12 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 		LOG("bot already spawned");
 		return;
 	}
-	if (currentShotRecording == nullptr) return;
-	if (currentShotRecording->inputs.size() == 0) {
+	LOG("car body: {}", currentShotRecording.carBody);
+	if (currentShotRecording.inputs.empty()) {
+		LOG("inputs are empty");
+		return;
+	}
+	if (currentShotRecording.inputs.size() == 0) {
 		LOG("no inputs to play");
 		return;
 	}
@@ -51,6 +52,7 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 		LOG("binding: {} : {}", binding.first, binding.second);
 	}
 	auto car = server.GetGameCar();
+	if (!car) return;
 	Vector carLoc = car.GetLocation();
 	Rotator carRot = car.GetRotation();
 	LOG(" car location: {:.7f}, {:.7f}, {:.7f}", car.GetLocation().X, car.GetLocation().Y, car.GetLocation().Z);
@@ -59,7 +61,7 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 	gameWrapper->SetTimeout([this, settings](GameWrapper* gw) {
 		auto server = gw->GetCurrentGameState();
 
-		server.SpawnBot(this->currentShotRecording->carBody, "testplayers");
+		server.SpawnBot(currentShotRecording.carBody, "testplayers");
 
 		auto car = server.GetGameCar();
 
@@ -89,7 +91,7 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 		BoostWrapper boost = car.GetBoostComponent();
 		//car.SetbDriving(false);
 		boost.SetUnlimitedBoost2(true);
-		car.GetPRI().SetUserCarPreferences(currentShotRecording->settings.DodgeInputThreshold, currentShotRecording->settings.SteeringSensitivity, currentShotRecording->settings.AirControlSensitivity);
+		car.GetPRI().SetUserCarPreferences(currentShotRecording.settings.DodgeInputThreshold, currentShotRecording.settings.SteeringSensitivity, currentShotRecording.settings.AirControlSensitivity);
 		botSpawnedTest = true;
 		/*if (freezeForShot) {
 			car.SetLocation(currentShotRecording->initialState->location);
@@ -119,9 +121,9 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 		GameEditorWrapper training = GameEditorWrapper(sw.memory_address);
 		LOG("awake: {} ", car.GetbRigidBodyWasAwake());
 		RBState playerState;
-		playerState.Location = currentShotRecording->initialState->location;
-		playerState.Quaternion = RotatorToQuat(currentShotRecording->initialState->rotation);
-		car.SetPhysicsState(currentShotRecording->startState);
+		playerState.Location = currentShotRecording.initialState.location;
+		playerState.Quaternion = RotatorToQuat(currentShotRecording.initialState.rotation);
+		car.SetPhysicsState(playerState); //currentShotRecording.startState
 
 
 

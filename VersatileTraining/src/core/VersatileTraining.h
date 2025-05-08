@@ -47,6 +47,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	StorageManager storageManager;
 	
 	
+	std::filesystem::path myDataFolder;
 
 
 	std::unordered_map<std::string, CustomTrainingData> trainingData;
@@ -84,8 +85,8 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool ballBeingEdited = false;
 	bool lockScene = false;
 	bool unlockStartingVelocity = false;
-
-
+	bool settingsOpen = false;
+	bool playTestStarted = false;
 	bool freezeForShot = false;
 
 
@@ -214,6 +215,29 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool isInTrainingEditor();
 	bool isInTrainingPack();
 
+
+	void RenderEnhancedGoalBlocker(
+		CanvasWrapper& canvas,
+		CameraWrapper& camera,
+		RT::Frustum& frustum,
+		BallWrapper& ball,
+		const Vector& topLeft,
+		const Vector& topRight,
+		const Vector& bottomLeft,
+		const Vector& bottomRight);
+
+	void DrawGoalBlockerGrid(
+		CanvasWrapper& canvas,
+		CameraWrapper& camera,
+		RT::Frustum& frustum,
+		BallWrapper& ball,
+		const Vector& topLeft,
+		const Vector& topRight,
+		const Vector& bottomLeft,
+		const Vector& bottomRight);
+
+	Vector LerpVector(const Vector& a, const Vector& b, float t);
+	LinearColor LerpColor(const LinearColor& a, const LinearColor& b, float t);
 
 public:
 

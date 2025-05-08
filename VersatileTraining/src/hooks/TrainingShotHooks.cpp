@@ -26,6 +26,11 @@ void VersatileTraining::setupTrainingShotHooks() {
         [this](TrainingEditorWrapper cw, void* params, std::string eventName) {
             handleStartPlayTest();
         });
+    gameWrapper->HookEvent(
+		"Function TAGame.GameEvent_TrainingEditor_TA.EndPlayTest",
+        [this](std::string eventName) {
+			playTestStarted = false;
+		});
 
     gameWrapper->HookEventWithCallerPost<TrainingEditorWrapper>(
         "Function GameEvent_TrainingEditor_TA.EditorMode.StopEditing",
@@ -65,28 +70,30 @@ void VersatileTraining::handleExistingTrainingData(int currentShot, int totalRou
 
     LOG("already loaded, skipping searching training data");
     LOG("currentShot: {}", currentTrainingData.currentEditedShot);
-    LOG("amount of shots in found training data: {}", currentTrainingData.numShots);
+    LOG("amount of shots in found training data existing: {}", currentTrainingData.shots.size());
 
-    while (currentShot >= currentTrainingData.numShots) {
-        LOG("adding shot");
-        currentTrainingData.addShot();
+    /*while (currentShot >= currentTrainingData.shots.size()) {
+        LOG("resizing");
+        currentTrainingData.shots.resize(currentShot + 1);
+        currentTrainingData.numShots = currentShot + 1;
         LOG("now this many shots in training data: {}", currentTrainingData.numShots);
-    }
+    }*/
 
     currentShotState = currentTrainingData.shots[currentShot];
-
+    shotReplicationManager.currentShotRecording = currentShotState.recording;
     LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
 }
 
 void VersatileTraining::handleNewTrainingData(int currentShot) {
     LOG("currentShot: {}", currentShot);
-    LOG("amount of shots in found training data: {}", currentTrainingData.numShots);
+    LOG("amount of shots in found training data new : {}", currentTrainingData.shots.size());
 
-    while (currentShot >= currentTrainingData.numShots) {
-        LOG("adding shot");
-        currentTrainingData.addShot();
+    /*while (currentShot >= currentTrainingData.shots.size()) {
+        LOG("resizing");
+        currentTrainingData.shots.resize(currentShot + 1);
+        currentTrainingData.numShots = currentShot + 1;
         LOG("now this many shots in training data: {}", currentTrainingData.numShots);
-    }
+    }*/
 
     currentShotState = currentTrainingData.shots[currentShot];
     LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
@@ -128,6 +135,7 @@ void VersatileTraining::handleStartPlayTest() {
     
 
     currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
+    playTestStarted = true;
     //trainingData[currentTrainingData.name] = currentTrainingData; //suspect line, dont know if it should be here
 }
 
@@ -184,6 +192,8 @@ void VersatileTraining::handleGameEditorActorEditingEnd() {
 
 void VersatileTraining::handleEndPlayTest() {
     isCarRotatable = true;
+    currentShotState.recording = shotReplicationManager.currentShotRecording;
+
 }
 
 
@@ -210,8 +220,8 @@ void VersatileTraining::handleFreezeCar(CarWrapper car, Vector loc, Rotator rot)
 
     Vector loc2 = getClampChange(loc, rot);
     if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
-        LOG("old location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
-        LOG("new location - X: {}, Y: {}, Z: {}", loc2.X, loc2.Y, loc2.Z);
+        /*LOG("old location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
+        LOG("new location - X: {}, Y: {}, Z: {}", loc2.X, loc2.Y, loc2.Z);*/
         car.SetLocation(loc2);
     }
 

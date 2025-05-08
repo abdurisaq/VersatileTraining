@@ -50,6 +50,9 @@
     <OutDir>$(SolutionDir)plugins\</OutDir>
     <IntDir>$(SolutionDir)build\.intermediates\$(Configuration)\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -134,11 +137,16 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\input\ShotReplicationManager.cpp" />
+    <ClCompile Include="src\storage\Compressing.cpp" />
+    <ClCompile Include="src\storage\Decoding.cpp" />
+    <ClCompile Include="src\storage\RecordingStorage.cpp" />
     <ClCompile Include="src\storage\saveReplayStates.cpp" />
     <ClCompile Include="src\storage\saving.cpp" />
+    <ClCompile Include="src\storage\StorageManager.cpp" />
     <ClCompile Include="src\training\CustomTrainingData.cpp" />
     <ClCompile Include="src\training\SnapShotManager.cpp" />
     <ClCompile Include="src\ui\RenderCanvas.cpp" />
+    <ClCompile Include="src\ui\RenderGoalBlocker.cpp" />
     <ClCompile Include="src\ui\RenderVelocity.cpp" />
     <ClCompile Include="src\utils\Math.cpp" />
     <ClCompile Include="src\utils\MovementUtils.cpp" />
@@ -189,6 +197,7 @@
     <ClInclude Include="external\RenderingTools\RenderingTools.h" />
     <ClInclude Include="src\input\ControllerManager.h" />
     <ClInclude Include="src\input\ShotReplicationManager.h" />
+    <ClInclude Include="src\storage\RecordingStorage.h" />
     <ClInclude Include="src\storage\StorageManager.h" />
     <ClInclude Include="src\training\CustomTrainingData.h" />
     <ClInclude Include="src\training\SnapShotManager.h" />

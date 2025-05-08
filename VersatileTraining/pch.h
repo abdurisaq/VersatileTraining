@@ -32,12 +32,15 @@
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/wrappers/includes.h"
 
-// External libraries - keep folder name casing consistent!
+// External libraries 
 #include "external/RenderingTools/RenderingTools.h"
 #include "external/IMGUI/imgui.h"
 #include "external/IMGUI/imgui_stdlib.h"
 #include "external/IMGUI/imgui_searchablecombo.h"
 #include "external/IMGUI/imgui_rangeslider.h"
+
+//vcpkg includes
+#include <zlib.h>
 
 // Math constants
 #define PI 3.14159265358979323846
@@ -51,5 +54,6 @@
 #include "src/utils/Math.h"
 #include "src/training/CustomTrainingData.h"
 #include "src/training/SnapShotManager.h"
-
+#include "src/storage/RecordingStorage.h"
 #include "src/storage/StorageManager.h"
+
