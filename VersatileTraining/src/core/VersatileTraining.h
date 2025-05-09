@@ -107,7 +107,12 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	
 	Rotator localRotation = { 0, 0, 0 };
 
-
+	std::atomic<bool> serverRunning;
+	std::thread serverThread;
+	void runServer(std::atomic<bool>* isRunning,
+		std::string playerId,
+		std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>> trainingDataPtr,
+		std::filesystem::path dataFolder);
 
 
 	void onLoad() override;

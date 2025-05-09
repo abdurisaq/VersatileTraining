@@ -597,3 +597,118 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
 
     return trainingDataMap;
 }
+
+
+
+//this is so scuffed defining this here, but i dont want to duplicate the helper functions here
+
+std::string CustomTrainingData::compressAndEncodeTrainingData() {
+    const CustomTrainingDataflattened& data = this->deflate();
+
+    size_t nameLength = data.name.size();
+    std::vector<uint8_t> bitstream;
+    uint8_t byte = 0;
+    size_t bitIndexInByte = 0;
+    std::vector<uint8_t> binaryDataToWrite;
+
+    // Write name length
+    binaryDataToWrite.push_back(nameLength & 0xFF);
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NAME_LEN_BITS);
+
+    // Write numShots
+    binaryDataToWrite = { static_cast<uint8_t>(data.numShots & 0xFF) };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NUM_SHOTS_BITS);
+
+    // Min/max boost & velocity
+    auto boundaryBoosts = getMinMaxAmount(data.boostAmounts);
+    auto boundaryVelocities = getMinMaxAmount(data.startingVelocity);
+
+    binaryDataToWrite = { static_cast<uint8_t>(boundaryBoosts.first & 0xFF) };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, BOOST_MIN_BITS);
+
+    binaryDataToWrite = {
+        static_cast<uint8_t>((boundaryVelocities.first >> 4) & 0xFF),
+        static_cast<uint8_t>(boundaryVelocities.first & 0xF)
+    };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
+
+    // Magnitudes
+    std::vector<int> magnitudes;
+    for (const auto& vec : data.extendedStartingVelocities) {
+        magnitudes.push_back(static_cast<int>(vec.magnitude()));
+    }
+    auto magnitudeBounds = getMinMaxAmount(magnitudes);
+
+    binaryDataToWrite = {
+        static_cast<uint8_t>((magnitudeBounds.second >> 4) & 0xFF),
+        static_cast<uint8_t>(magnitudeBounds.second & 0xF)
+    };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 12);
+
+    // GoalBlockers
+    std::vector<int> xVals, zVals;
+    for (const auto& [first, second] : data.goalBlockers) {
+        xVals.push_back(static_cast<int>(first.X));
+        xVals.push_back(static_cast<int>(second.X));
+        zVals.push_back(static_cast<int>(first.Z));
+        zVals.push_back(static_cast<int>(second.Z));
+    }
+    auto boundaryX = getMinMaxAmount(xVals);
+    auto boundaryZ = getMinMaxAmount(zVals);
+
+    binaryDataToWrite = {
+        static_cast<uint8_t>((boundaryX.first >> 4) & 0xFF),
+        static_cast<uint8_t>(boundaryX.first & 0xF)
+    };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
+
+    binaryDataToWrite = {
+        static_cast<uint8_t>((boundaryZ.first >> 4) & 0xFF),
+        static_cast<uint8_t>(boundaryZ.first & 0xF)
+    };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
+
+    // Bits needed
+    size_t numBitsForBoost = boundaryBoosts.first != boundaryBoosts.second ? CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first) : 0;
+    size_t numBitsForVelocity = boundaryVelocities.first != boundaryVelocities.second ? CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first) : 0;
+    size_t numBitsForXBlocker = boundaryX.first != boundaryX.second ? CalculateRequiredBits(boundaryX.second - boundaryX.first) : 0;
+    size_t numBitsForZBlocker = boundaryZ.first != boundaryZ.second ? CalculateRequiredBits(boundaryZ.second - boundaryZ.first) : 0;
+
+    binaryDataToWrite = { static_cast<uint8_t>(numBitsForBoost & 0xFF) };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 3);
+
+    binaryDataToWrite = { static_cast<uint8_t>(numBitsForVelocity & 0xFF) };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
+
+    binaryDataToWrite = { static_cast<uint8_t>(numBitsForXBlocker & 0xFF) };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
+
+    binaryDataToWrite = { static_cast<uint8_t>(numBitsForZBlocker & 0xFF) };
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
+
+    // Name
+    for (char c : data.name) {
+        byte = writeBits(byte, bitIndexInByte, bitstream, { static_cast<uint8_t>(c) }, 7);
+    }
+
+    // Compress values
+    if (numBitsForBoost > 0)
+        byte = CompressIntegers(data.boostAmounts, boundaryBoosts.first, boundaryBoosts.second, bitstream, bitIndexInByte, byte, "boosts");
+
+    if (numBitsForVelocity > 0)
+        byte = CompressIntegers(data.startingVelocity, boundaryVelocities.first, boundaryVelocities.second, bitstream, bitIndexInByte, byte, "velocity");
+
+    byte = CompressVectors(data.extendedStartingVelocities, magnitudeBounds.second, bitstream, bitIndexInByte, byte, "extended starting velocity");
+
+    if (numBitsForXBlocker > 0)
+        byte = CompressIntegers(xVals, boundaryX.first, boundaryX.second, bitstream, bitIndexInByte, byte, "goalblocker X");
+
+    if (numBitsForZBlocker > 0)
+        byte = CompressIntegers(zVals, boundaryZ.first, boundaryZ.second, bitstream, bitIndexInByte, byte, "goalblocker Z");
+
+    byte = CompressBits(data.freezeCar, bitstream, bitIndexInByte, byte, false);
+    byte = CompressBits(data.hasStartingJump, bitstream, bitIndexInByte, byte, true);
+
+    // Encode
+    return base64_encode(bitstream.data(), static_cast<int>(bitstream.size()));
+}

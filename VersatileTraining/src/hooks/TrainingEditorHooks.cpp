@@ -92,8 +92,6 @@ void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::stri
 
     VersatileTraining::getTrainingData(cw, params, eventName);
     
-
-    shotReplicationManager.currentShotRecording = currentShotState.recording;
     shotReplicationManager.canSpawnBot = true;
     LOG("setting can spawn bot to true");
     
@@ -250,10 +248,10 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     bool found = false;
     for (auto& [key, value] : trainingData) {
         if (value.name == name) {
-            if (currentTrainingData.name != value.name) {
-                currentTrainingData = value;
-            }
-            LOG("num shots in found training pack: {}", currentTrainingData.numShots);
+            
+            currentTrainingData = value;
+          
+            LOG("num shots in found training pack: {}", currentTrainingData.shots.size());
             if (totalRounds < currentTrainingData.numShots) {
                 LOG("resizing because num shots in training pack is less than the saved version");
                 currentTrainingData.shots.resize(totalRounds);

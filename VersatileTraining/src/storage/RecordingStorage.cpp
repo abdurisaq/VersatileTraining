@@ -34,41 +34,48 @@ void RecordingStorage::saveAllRecordings(const std::unordered_map<std::string, C
 
 void RecordingStorage::savePackRecordings(const std::string& packId, const CustomTrainingData& data,
     const std::filesystem::path& packFolder) {
-    // Create a metadata file with pack info
+    // metadata
     std::ofstream metaFile(packFolder / "meta.json");
     metaFile << "{\"id\":\"" << packId << "\",\"name\":\"" << data.name
         << "\",\"shots\":" << data.shots.size() << "}\n";
     metaFile.close();
 
+    
+    std::filesystem::path recordingsFile = packFolder / "shots.rec";
+    std::ofstream outFile(recordingsFile);
 
+    if (!outFile) {
+        LOG("Failed to create recordings file for pack {}", packId);
+        return;
+    }
 
-    //LOG("Name: {}", data.name);
-    //LOG("in saving pack recordings");
-    //LOG("Num Shots: {}", data.numShots);
-    //for (int i = 0; i < data.numShots; i++) {
-    //    LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, data.shots[i].boostAmount, data.shots[i].startingVelocity, static_cast<int>(data.shots[i].freezeCar), static_cast<int>(data.shots[i].hasJump));
-    //    LOG("has recording? {}", data.shots[i].recording.inputs.size() > 0 ? "true" : "false");
-    //}
+    // start's file with numshots
+    outFile << data.shots.size() << "\n";
 
-    // Save each shot's recording
+    
+    int validShotCount = 0;
     for (size_t i = 0; i < data.shots.size(); i++) {
         const ShotRecording& recording = data.shots[i].recording;
 
-        // Skip empty recordings
+        
         if (recording.carBody == 0) {
-            LOG("recording is empty, skipping shot {} in pack {}", i, packId);
+            LOG("Recording is empty, skipping shot {} in pack {}", i, packId);
+            
+            outFile << "EMPTY\n";
             continue;
         }
 
         std::vector<uint8_t> compressed = compressShotRecording(recording);
-        LOG("compressed data size: {}", compressed.size());
-        // Save as base64 encoded file for easier handling
-        std::string base64Data = base64_encode(compressed.data(), compressed.size());
+        LOG("Compressed data size for shot {}: {} bytes", i, compressed.size());
 
-        std::ofstream outFile(getRecordingPath(packFolder, i));
-        outFile << base64Data;
-        outFile.close();
+        
+        std::string base64Data = base64_encode(compressed.data(), compressed.size());
+        outFile << base64Data << "\n";
+        validShotCount++;
     }
+
+    outFile.close();
+    LOG("Saved {} valid recordings for pack {}", validShotCount, packId);
 }
 
 void RecordingStorage::loadAllRecordings(std::unordered_map<std::string, CustomTrainingData>& trainingData,
@@ -97,34 +104,56 @@ void RecordingStorage::loadAllRecordings(std::unordered_map<std::string, CustomT
 
 void RecordingStorage::loadPackRecordings(const std::string& packId, CustomTrainingData& data,
     const std::filesystem::path& packFolder) {
+
+    std::filesystem::path recordingsFile = packFolder / "shots.rec";
+
+    if (!std::filesystem::exists(recordingsFile)) {
+        LOG("No recordings file found for pack {}", packId);
+        return;
+    }
+
+    std::ifstream inFile(recordingsFile);
+    if (!inFile) {
+        LOG("Failed to open recordings file for pack {}", packId);
+        return;
+    }
+
     
-    for (size_t i = 0; i < data.shots.size(); i++) {
-        std::filesystem::path recordingPath = getRecordingPath(packFolder, i);
+    std::string countLine;
+    std::getline(inFile, countLine);
+    int totalShots = std::stoi(countLine);
 
-    if (std::filesystem::exists(recordingPath)) {
-        // Read the file
-        std::ifstream inFile(recordingPath);
-        std::string base64Data((std::istreambuf_iterator<char>(inFile)),
-            std::istreambuf_iterator<char>());
-        inFile.close();
+    if (data.shots.size() < totalShots) {
+        LOG("Expanding shots array from {} to {}", data.shots.size(), totalShots);
+        data.shots.resize(totalShots);
+    }
 
-        std::vector<uint8_t> compressed = base64_decode_bytearr(base64Data);
+    // Read each shot
+    std::string line;
+    size_t shotIndex = 0;
+
+    while (std::getline(inFile, line) && shotIndex < totalShots) {
+        if (line == "EMPTY") {
+            LOG("Shot {} marked as empty", shotIndex);
+            shotIndex++;
+            continue;
+        }
+
+        std::vector<uint8_t> compressed = base64_decode_bytearr(line);
 
         if (!compressed.empty()) {
             ShotRecording recording = decompressShotRecording(compressed);
+            data.shots[shotIndex].recording = recording;
 
-            data.shots[i].recording = recording;
             LOG("Loaded recording for pack {} shot {} with {} inputs",
-                packId, i, recording.inputs.size());
-            LOG("initial state: location: {} {} {}, rotation: {} {} {}, velocity: {} {} {}",
-                    				recording.initialState.location.X, recording.initialState.location.Y, recording.initialState.location.Z,
-                    				recording.initialState.rotation.Pitch, recording.initialState.rotation.Yaw, recording.initialState.rotation.Roll,
-                    				recording.initialState.velocity.X, recording.initialState.velocity.Y, recording.initialState.velocity.Z);
+                packId, shotIndex, recording.inputs.size());
         }
-    }
-    }
-}
 
+        shotIndex++;
+    }
+
+    inFile.close();
+}
 std::vector<uint8_t> RecordingStorage::compressShotRecording(const ShotRecording& recording) {
     // header | carbody | input count | gamepad settings | location | rotation | velocity | compressed data
     std::vector<uint8_t> header;

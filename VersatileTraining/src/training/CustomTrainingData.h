@@ -111,6 +111,7 @@ struct CustomTrainingDataflattened {
 		hasStartingJump.clear();
 		extendedStartingVelocities.clear();
 	}
+	
 	CustomTrainingData inflate();
 };
 
@@ -147,6 +148,8 @@ struct CustomTrainingData {
 		shots.clear();
 	}
 	CustomTrainingDataflattened deflate();
+
+	std::string compressAndEncodeTrainingData();
 };
 
 

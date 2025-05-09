@@ -36,6 +36,13 @@ void VersatileTraining::onLoad()
 		shiftToNegative(value);
 	}
 
+	serverRunning = true;
+	
+	auto trainingDataPtr = std::make_shared<std::unordered_map<std::string, CustomTrainingData>>(trainingData);
+
+	// Start the server thread with the shared data
+	serverThread = std::thread(&VersatileTraining::runServer, this, &serverRunning, gameWrapper->GetUniqueID().str(), trainingDataPtr, myDataFolder);
+
 	//		
 	//	}, "button pressed", PERMISSION_ALL
 	//	);
@@ -108,6 +115,15 @@ void VersatileTraining::onUnload() {
 	storageManager.saveCompressedTrainingDataWithRecordings(trainingData, myDataFolder);
 	//storageManager.saveCompressedTrainingData(trainingData, storageManager.saveTrainingFilePath);
 	CleanUp();
+
+	serverRunning = false;
+	if (serverThread.joinable()) {
+		serverThread.join();
+		LOG("Server thread joined.");
+	}
+	else {
+		LOG("Server thread not joinable.");
+	}
 }
 
 void VersatileTraining::CleanUp() {

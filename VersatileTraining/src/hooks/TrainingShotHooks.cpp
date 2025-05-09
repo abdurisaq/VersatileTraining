@@ -133,8 +133,11 @@ void VersatileTraining::handleDuplicateRound(TrainingEditorWrapper cw) {
 
 void VersatileTraining::handleStartPlayTest() {
     
+    if (isInTrainingEditor()) {
+        LOG("changing shot state ");
+        currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
 
-    currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
+    }
     playTestStarted = true;
     //trainingData[currentTrainingData.name] = currentTrainingData; //suspect line, dont know if it should be here
 }

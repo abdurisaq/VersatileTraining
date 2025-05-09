@@ -137,6 +137,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\input\ShotReplicationManager.cpp" />
+    <ClCompile Include="src\localServer\Server.cpp" />
     <ClCompile Include="src\storage\Compressing.cpp" />
     <ClCompile Include="src\storage\Decoding.cpp" />
     <ClCompile Include="src\storage\RecordingStorage.cpp" />

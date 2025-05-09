@@ -57,3 +57,12 @@
 #include "src/storage/RecordingStorage.h"
 #include "src/storage/StorageManager.h"
 
+
+//server stuff
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <iostream>
+#include <thread>
+#include <mutex>

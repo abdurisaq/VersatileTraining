@@ -20,6 +20,8 @@ public:
 	std::filesystem::path saveReplayStateFilePath;
 
 
+	
+
 
 	void saveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
 	std::unordered_map<std::string, CustomTrainingData> loadCompressedTrainingData(const std::filesystem::path& fileName);
