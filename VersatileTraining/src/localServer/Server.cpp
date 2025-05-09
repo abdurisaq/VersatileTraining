@@ -142,7 +142,7 @@ void handleClientConnection(
     const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr,
     const std::filesystem::path& dataFolder) {
 
-    char buffer[8192] = { 0 };
+    char buffer[327680] = { 0 };
     int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
     if (bytesReceived > 0) {
@@ -260,6 +260,7 @@ std::string createJsonResponse(int statusCode, const std::string& content, bool 
         response += "Access-Control-Allow-Origin: *\r\n";
         response += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
         response += "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
+        response += "Access-Control-Max-Age: 86400\r\n";
         response += "Content-Length: " + std::to_string(content.length()) + "\r\n";
         response += "\r\n";
     }
@@ -270,12 +271,13 @@ std::string createJsonResponse(int statusCode, const std::string& content, bool 
 }
 
 std::string handleOptionsRequest() {
-    return "HTTP/1.1 200 OK\r\n"
-        "Access-Control-Allow-Origin: *\r\n"
-        "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-        "Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
-        "Content-Length: 0\r\n"
-        "\r\n";
+    std::string response = "HTTP/1.1 204 No Content\r\n";
+    response += "Access-Control-Allow-Origin: *\r\n";
+    response += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+    response += "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
+    response += "Access-Control-Max-Age: 86400\r\n";
+    response += "\r\n";
+    return response;
 }
 
 std::string handleStatusRequest(const std::string& authToken) {
@@ -302,6 +304,8 @@ std::string handleStatusRequest(const std::string& authToken) {
 }
 
 std::string handleLoadPackRequest(const std::string& authToken, const std::string& body) {
+    LOG("auth token received: {}", authToken);
+    LOG("expected token: {}", AUTH_TOKEN);
     if (authToken != AUTH_TOKEN) {
         return createJsonResponse(401,
             "{\n"
