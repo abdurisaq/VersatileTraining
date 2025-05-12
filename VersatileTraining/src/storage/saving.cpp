@@ -9,6 +9,9 @@ constexpr size_t VELOCITY_MIN_BITS = 12;
 constexpr size_t GOAL_X_MIN_BITS = 11;
 constexpr size_t GOAL_Z_MIN_BITS = 10;
 constexpr size_t NUM_FLOAT_BITS = 16;
+
+constexpr size_t TRAINING_CODE_FLAG_BITS = 1; 
+constexpr size_t TRAINING_CODE_CHARS = 19;
 inline static size_t CalculateRequiredBits(int range) {
     return (size_t)std::ceil(std::log2(range));
 }
@@ -232,17 +235,35 @@ uint8_t writeBits(uint8_t byte, size_t& bitIndex, std::vector<uint8_t>& bitstrea
 
 }
 
-void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName) {
-    std::filesystem::create_directories(fileName.parent_path());
-    std::ofstream outFile(fileName, std::ios::binary);
-
+void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& trainingPacksFolder) {
+    std::filesystem::create_directories(trainingPacksFolder);
     
     for (std::pair<std::string,CustomTrainingData> entry : trainingData) {
         //const CustomTrainingData& data = entry.second;
          const CustomTrainingDataflattened& data = entry.second.deflate();
          
+         std::string folderName = !data.code.empty() ? data.code : data.name;
+        
+        
+        for (char& c : folderName) {
+            if (c == '<' || c == '>' || c == ':' || c == '"' || c == '/' || 
+                c == '\\' || c == '|' || c == '?' || c == '*') {
+                c = '_'; 
+            }
+        }
+        
+        std::filesystem::path packFolder = trainingPacksFolder / folderName;
+        std::filesystem::create_directories(packFolder);
+        
+        std::filesystem::path packFile = packFolder / "trainingpack.txt";
+        
+        std::ofstream outFile(packFile, std::ios::binary);
+        if (!outFile.is_open()) {
+            LOG("Error: Failed to open file for writing: {}", packFile.string());
+            continue;
+        }
   
-        // update starting velocities, get rid of negatives by shifting the values up 2000
+        
         
        
         // Header: nameLength  | numShots | minBoost | minVelocity | boostbitAmount | velocitybitAmount | name
@@ -251,6 +272,23 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         uint8_t byte = 0;
         size_t bitIndexInByte = 0;
         std::vector<uint8_t> binaryDataToWrite;
+
+        bool hasCode = !data.code.empty() && data.code.length() == TRAINING_CODE_CHARS;
+        binaryDataToWrite.push_back(hasCode ? 1 : 0);
+        LOG("Writing code flag: {}", hasCode ? "has code" : "no code");
+        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, TRAINING_CODE_FLAG_BITS);
+
+        if (hasCode) {
+            for (char c : data.code) {
+                binaryDataToWrite.clear();
+                binaryDataToWrite.push_back(static_cast<uint8_t>(c));
+                byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 8); 
+            }
+            LOG("Wrote training code: {}", data.code);
+        }
+
+
+        binaryDataToWrite.clear();
         binaryDataToWrite.push_back(nameLength & 0xFF);  
         LOG("writing name length : {} to file", nameLength & 0xFF);
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NAME_LEN_BITS);//max 30 character name
@@ -432,24 +470,48 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         
         outFile.write(base64Encoded.c_str(), base64Encoded.size());
 
-        
-        outFile.write("\n", 1);  // just for cleanliness
+        outFile.close();
+        // outFile.write("\n", 1);  // just for cleanliness
     }
 
-    outFile.close();
+    
 }
-std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompressedTrainingData(const std::filesystem::path& fileName) {
-    LOG("loading from file");
-    std::ifstream inFile(fileName, std::ios::binary);
-    if (!inFile.is_open()) {
-        LOG("Error: Failed to open file for reading: ");
-        return {};
-    }
+std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompressedTrainingData(const std::filesystem::path& trainingPacksFolder) {
 
-    std::string line;
     std::unordered_map<std::string, CustomTrainingData> trainingDataMap;
 
-    while (std::getline(inFile, line)) {
+    LOG("loading from file");
+    if (!std::filesystem::exists(trainingPacksFolder)) {
+        LOG("Training packs folder does not exist: {}", trainingPacksFolder.string());
+        return trainingDataMap;
+    }
+    if (!std::filesystem::is_directory(trainingPacksFolder)) {
+        LOG("Training packs path is not a directory: {}", trainingPacksFolder.string());
+        return trainingDataMap;
+    }
+    
+    for (const auto & entry : std::filesystem::directory_iterator(trainingPacksFolder)) {
+        if (!entry.is_directory()) {
+            continue;
+        }
+        
+        std::filesystem::path packFolder = entry.path();
+        std::filesystem::path packFile = packFolder / "trainingpack.txt";
+        
+        if (!std::filesystem::exists(packFile)) {
+            LOG("No trainingpack.txt found in folder: {}", packFolder.string());
+            continue;
+        }
+        std::ifstream inFile(packFile, std::ios::binary);
+        if (!inFile.is_open()) {
+            LOG("Error: Failed to open file for reading: {}", packFile.string());
+            continue;
+        }
+        
+        std::string line;
+        std::getline(inFile, line); 
+        inFile.close();
+        
         if (line.empty()) continue;
 
         std::vector<uint8_t> bitstream = base64_decode_bytearr(line);
@@ -459,6 +521,19 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         }
 
         size_t bitIndex = 0;
+        bool hasCode = ReadBits(bitstream, bitIndex, TRAINING_CODE_FLAG_BITS) != 0;
+        LOG("Read code flag: {}", hasCode ? "has code" : "no code");
+
+        std::string code;
+        if (hasCode) {
+            
+            code.resize(TRAINING_CODE_CHARS);
+            for (size_t i = 0; i < TRAINING_CODE_CHARS; ++i) {
+                code[i] = static_cast<char>(ReadBits(bitstream, bitIndex, 8));
+            }
+            LOG("Read training code: {}", code);
+        }
+
 
         size_t nameLength = ReadBits(bitstream, bitIndex, NAME_LEN_BITS);
         if (nameLength == 0) {
@@ -506,6 +581,11 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
 
         CustomTrainingDataflattened trainingData;
         trainingData.initCustomTrainingData((int)numShots, name);
+
+        if (hasCode) {
+            trainingData.code = code;
+            LOG("setting training data with name : {} and code : {}", name, code);
+        }
 
         if (numBitsForBoost == 0) {
             std::fill(trainingData.boostAmounts.begin(), trainingData.boostAmounts.end(), minBoost);
@@ -588,7 +668,12 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
 		}
 
         LOG("loading training pack with name : {}", name);
-        trainingDataMap[name] = trainingData.inflate();
+        if (!code.empty()) {
+            trainingDataMap[code] = trainingData.inflate();
+        }
+        else {
+            trainingDataMap[name] = trainingData.inflate();
+        }
     }
 
     if (trainingDataMap.empty()) {
@@ -605,110 +690,206 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
 std::string CustomTrainingData::compressAndEncodeTrainingData() {
     const CustomTrainingDataflattened& data = this->deflate();
 
+
+
+
+    // Header: nameLength  | numShots | minBoost | minVelocity | boostbitAmount | velocitybitAmount | name
     size_t nameLength = data.name.size();
     std::vector<uint8_t> bitstream;
     uint8_t byte = 0;
     size_t bitIndexInByte = 0;
     std::vector<uint8_t> binaryDataToWrite;
 
-    // Write name length
-    binaryDataToWrite.push_back(nameLength & 0xFF);
-    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NAME_LEN_BITS);
+    bool hasCode = !data.code.empty() && data.code.length() == TRAINING_CODE_CHARS;
+    binaryDataToWrite.push_back(hasCode ? 1 : 0);
+    LOG("Writing code flag: {}", hasCode ? "has code" : "no code");
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, TRAINING_CODE_FLAG_BITS);
 
-    // Write numShots
-    binaryDataToWrite = { static_cast<uint8_t>(data.numShots & 0xFF) };
+    if (hasCode) {
+        for (char c : data.code) {
+            binaryDataToWrite.clear();
+            binaryDataToWrite.push_back(static_cast<uint8_t>(c));
+            byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 8);
+        }
+        LOG("Wrote training code: {}", data.code);
+    }
+
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back(nameLength & 0xFF);
+    LOG("writing name length : {} to file", nameLength & 0xFF);
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NAME_LEN_BITS);//max 30 character name
+    //bitstream.push_back((nameLength >> 8) & 0xFF);  
+    //bitstream.push_back(nameLength & 0xFF);         
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back(data.numShots & 0xFF);
+    LOG("writing num shots : {} to file", data.numShots & 0xFF);
     byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NUM_SHOTS_BITS);
 
-    // Min/max boost & velocity
-    auto boundaryBoosts = getMinMaxAmount(data.boostAmounts);
-    auto boundaryVelocities = getMinMaxAmount(data.startingVelocity);
 
-    binaryDataToWrite = { static_cast<uint8_t>(boundaryBoosts.first & 0xFF) };
+
+
+    std::pair<int, int> boundaryBoosts = getMinMaxAmount(data.boostAmounts);
+    std::pair<int, int> boundaryVelocities = getMinMaxAmount(data.startingVelocity);
+
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back(boundaryBoosts.first & 0xFF);
+    LOG("writing min boost : {} to file", boundaryBoosts.first & 0xFF);
     byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, BOOST_MIN_BITS);
 
-    binaryDataToWrite = {
-        static_cast<uint8_t>((boundaryVelocities.first >> 4) & 0xFF),
-        static_cast<uint8_t>(boundaryVelocities.first & 0xF)
-    };
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back((boundaryVelocities.first >> 4) & 0xFF);
+    binaryDataToWrite.push_back((boundaryVelocities.first) & 0xF);
+    LOG("min velocity {}", boundaryVelocities.first);
+    LOG("writing min velocity : {} to file", (boundaryVelocities.first >> 4) & 0xFF);
+    LOG("writing min velocity : {} to file", ((boundaryVelocities.first) & 0xF));
     byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
-    // Magnitudes
+
     std::vector<int> magnitudes;
     for (const auto& vec : data.extendedStartingVelocities) {
-        magnitudes.push_back(static_cast<int>(vec.magnitude()));
+        int magnitude = static_cast<int>(vec.magnitude());
+        LOG("extended starting velocity magnitude: {}", magnitude);
+        LOG("float velocity magnitude: {}", vec.magnitude());
+        LOG("velocity: {} {} {}", vec.X, vec.Y, vec.Z);
+        magnitudes.push_back(magnitude);
     }
-    auto magnitudeBounds = getMinMaxAmount(magnitudes);
+    std::pair<int, int> magnitudeBounds = getMinMaxAmount(magnitudes);
 
-    binaryDataToWrite = {
-        static_cast<uint8_t>((magnitudeBounds.second >> 4) & 0xFF),
-        static_cast<uint8_t>(magnitudeBounds.second & 0xF)
-    };
-    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 12);
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back((magnitudeBounds.second >> 4) & 0xFF);            // Top 8 bits (bits 12 to 5)
+    binaryDataToWrite.push_back((magnitudeBounds.second & 0xF));            // Lower 5 bits (bits 4 to 0), shifted into high bits of next byte
 
-    // GoalBlockers
-    std::vector<int> xVals, zVals;
+    LOG("writing 12-bit value: {}", magnitudeBounds.second);
+    LOG("byte 1: {:#010b}", binaryDataToWrite[0]);
+    LOG("byte 2: {:#010b}", binaryDataToWrite[1]);
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 12); // 13 bits for the magnitude
+
+    std::vector<int> xVals;
+    std::vector<int> zVals;
+
+    xVals.reserve(data.goalBlockers.size() * 2);
+    zVals.reserve(data.goalBlockers.size() * 2);
+
     for (const auto& [first, second] : data.goalBlockers) {
         xVals.push_back(static_cast<int>(first.X));
         xVals.push_back(static_cast<int>(second.X));
         zVals.push_back(static_cast<int>(first.Z));
         zVals.push_back(static_cast<int>(second.Z));
     }
-    auto boundaryX = getMinMaxAmount(xVals);
-    auto boundaryZ = getMinMaxAmount(zVals);
+    std::pair<int, int> boundaryX = getMinMaxAmount(xVals);
 
-    binaryDataToWrite = {
-        static_cast<uint8_t>((boundaryX.first >> 4) & 0xFF),
-        static_cast<uint8_t>(boundaryX.first & 0xF)
-    };
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back((boundaryX.first >> 4) & 0xFF);
+    binaryDataToWrite.push_back((boundaryX.first) & 0xF);
+    LOG("min goalblocker X: {}", boundaryX.first);
+    LOG("writing min goal blocker X : {} to file", (boundaryX.first >> 4) & 0xFF);
+    LOG("writing min goal blocker X : {} to file", ((boundaryX.first) & 0xF));
     byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
-    binaryDataToWrite = {
-        static_cast<uint8_t>((boundaryZ.first >> 4) & 0xFF),
-        static_cast<uint8_t>(boundaryZ.first & 0xF)
-    };
+    std::pair<int, int> boundaryZ = getMinMaxAmount(zVals);
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back((boundaryZ.first >> 4) & 0xFF);
+    binaryDataToWrite.push_back((boundaryZ.first) & 0xF);
+    LOG("min goalblocker Z: {}", boundaryZ.first);
+    LOG("writing min goal blocker Z : {} to file", (boundaryZ.first >> 4) & 0xFF);
+    LOG("writing min goal blocker Z : {} to file", ((boundaryZ.first) & 0xF));
     byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
-    // Bits needed
-    size_t numBitsForBoost = boundaryBoosts.first != boundaryBoosts.second ? CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first) : 0;
-    size_t numBitsForVelocity = boundaryVelocities.first != boundaryVelocities.second ? CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first) : 0;
-    size_t numBitsForXBlocker = boundaryX.first != boundaryX.second ? CalculateRequiredBits(boundaryX.second - boundaryX.first) : 0;
-    size_t numBitsForZBlocker = boundaryZ.first != boundaryZ.second ? CalculateRequiredBits(boundaryZ.second - boundaryZ.first) : 0;
+    //size_t numBitsForBoost = CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first);
+    //size_t numBitsForVelocity = CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first);
 
-    binaryDataToWrite = { static_cast<uint8_t>(numBitsForBoost & 0xFF) };
-    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 3);
-
-    binaryDataToWrite = { static_cast<uint8_t>(numBitsForVelocity & 0xFF) };
-    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
-
-    binaryDataToWrite = { static_cast<uint8_t>(numBitsForXBlocker & 0xFF) };
-    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
-
-    binaryDataToWrite = { static_cast<uint8_t>(numBitsForZBlocker & 0xFF) };
-    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
-
-    // Name
-    for (char c : data.name) {
-        byte = writeBits(byte, bitIndexInByte, bitstream, { static_cast<uint8_t>(c) }, 7);
+    size_t numBitsForBoost = 0;
+    if (boundaryBoosts.first != boundaryBoosts.second) {
+        numBitsForBoost = CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first);
     }
 
-    // Compress values
-    if (numBitsForBoost > 0)
+
+    size_t numBitsForVelocity = 0;
+    if (boundaryVelocities.first != boundaryVelocities.second) {
+        numBitsForVelocity = CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first);
+    }
+
+
+
+
+
+    size_t numBitsForXBlocker = 0;
+    if (boundaryX.first != boundaryX.second) {
+        numBitsForXBlocker = CalculateRequiredBits(boundaryX.second - boundaryX.first);
+    }
+    size_t numBitsForZBlocker = 0;
+    if (boundaryZ.first != boundaryZ.second) {
+        numBitsForZBlocker = CalculateRequiredBits(boundaryZ.second - boundaryZ.first);
+    }
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back(numBitsForBoost & 0xFF);
+    LOG("writing num bits for boost : {} to file", numBitsForBoost & 0xFF);
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 3);
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back(numBitsForVelocity & 0xFF);
+
+    LOG("writing num bits for velocity : {} to file", numBitsForVelocity & 0xFF);
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
+
+
+
+
+
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back(numBitsForXBlocker & 0xFF);
+    LOG("writing num bits for goal blocker X : {} to file.  minimum {}, max {}", numBitsForXBlocker & 0xFF, boundaryX.first, boundaryX.second);
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
+
+    binaryDataToWrite.clear();
+    binaryDataToWrite.push_back(numBitsForZBlocker & 0xFF);
+    LOG("writing num bits for goal blocker Z : {} to file. minimum {}, max {}", numBitsForZBlocker & 0xFF, boundaryZ.first, boundaryZ.second);
+    byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
+
+    LOG("num bits for boost : {}", numBitsForBoost);
+    LOG("num bits for velocity : {}", numBitsForVelocity);
+    LOG("num bits for goal blocker X : {}", numBitsForXBlocker);
+    LOG("num bits for goal blocker Z : {}", numBitsForZBlocker);
+
+    for (char c : data.name) {
+        std::vector<uint8_t> charBits = { static_cast<uint8_t>(c) };
+        byte = writeBits(byte, bitIndexInByte, bitstream, charBits, 7);
+    }
+
+    // Compress 
+    if (numBitsForBoost > 0) {
         byte = CompressIntegers(data.boostAmounts, boundaryBoosts.first, boundaryBoosts.second, bitstream, bitIndexInByte, byte, "boosts");
-
-    if (numBitsForVelocity > 0)
+    }
+    if (numBitsForVelocity > 0) {
         byte = CompressIntegers(data.startingVelocity, boundaryVelocities.first, boundaryVelocities.second, bitstream, bitIndexInByte, byte, "velocity");
-
+    }
     byte = CompressVectors(data.extendedStartingVelocities, magnitudeBounds.second, bitstream, bitIndexInByte, byte, "extended starting velocity");
 
-    if (numBitsForXBlocker > 0)
+    for (int val : xVals) {
+        LOG("x vals writing : {}", val);
+    }
+    for (int val : zVals) {
+        LOG("z vals writing: {}", val);
+    }
+    if (numBitsForXBlocker > 0) {
         byte = CompressIntegers(xVals, boundaryX.first, boundaryX.second, bitstream, bitIndexInByte, byte, "goalblocker X");
-
-    if (numBitsForZBlocker > 0)
+    }
+    if (numBitsForZBlocker > 0) {
         byte = CompressIntegers(zVals, boundaryZ.first, boundaryZ.second, bitstream, bitIndexInByte, byte, "goalblocker Z");
+    }
+
 
     byte = CompressBits(data.freezeCar, bitstream, bitIndexInByte, byte, false);
+
     byte = CompressBits(data.hasStartingJump, bitstream, bitIndexInByte, byte, true);
 
-    // Encode
+
     return base64_encode(bitstream.data(), static_cast<int>(bitstream.size()));
 }

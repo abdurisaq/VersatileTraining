@@ -210,7 +210,13 @@
     <ClCompile Include="src\storage\Decoding.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\localServer\Server.cpp">
+    <ClCompile Include="src\networking\Server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\networking\JsonParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\networking\DownloadById.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -354,6 +360,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\storage\RecordingStorage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\networking\JsonParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -29,6 +29,7 @@ void VersatileTraining::setupTrainingShotHooks() {
     gameWrapper->HookEvent(
 		"Function TAGame.GameEvent_TrainingEditor_TA.EndPlayTest",
         [this](std::string eventName) {
+            handleEndPlayTest();
 			playTestStarted = false;
 		});
 
@@ -82,6 +83,14 @@ void VersatileTraining::handleExistingTrainingData(int currentShot, int totalRou
     currentShotState = currentTrainingData.shots[currentShot];
     shotReplicationManager.currentShotRecording = currentShotState.recording;
     LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
+    float epsilon = 0.01f;
+
+    if (abs(currentShotState.goalBlocker.first.X) < epsilon && abs(currentShotState.goalBlocker.first.Z) < epsilon && abs(currentShotState.goalBlocker.second.X) < epsilon && abs(currentShotState.goalBlocker.second.Z) < epsilon) {
+        currentShotState.goalAnchors = { false, false };
+    }
+    else {
+        currentShotState.goalAnchors = { true, true };
+    }
 }
 
 void VersatileTraining::handleNewTrainingData(int currentShot) {
@@ -195,7 +204,16 @@ void VersatileTraining::handleGameEditorActorEditingEnd() {
 
 void VersatileTraining::handleEndPlayTest() {
     isCarRotatable = true;
+
+    LOG("handleEndPlayTest - recording inputs size: {}",
+        shotReplicationManager.currentShotRecording.inputs.size());
+    LOG("handleEndPlayTest - carBody: {}",
+        shotReplicationManager.currentShotRecording.carBody);
+
     currentShotState.recording = shotReplicationManager.currentShotRecording;
+    currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
+    LOG("After assignment - recording inputs size: {}",
+        currentShotState.recording.inputs.size());
 
 }
 

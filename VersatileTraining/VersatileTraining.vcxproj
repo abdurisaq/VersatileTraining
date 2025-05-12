@@ -137,7 +137,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\input\ShotReplicationManager.cpp" />
-    <ClCompile Include="src\localServer\Server.cpp" />
+    <ClCompile Include="src\networking\DownloadById.cpp" />
+    <ClCompile Include="src\networking\JsonParser.cpp" />
+    <ClCompile Include="src\networking\Server.cpp" />
     <ClCompile Include="src\storage\Compressing.cpp" />
     <ClCompile Include="src\storage\Decoding.cpp" />
     <ClCompile Include="src\storage\RecordingStorage.cpp" />
@@ -198,6 +200,7 @@
     <ClInclude Include="external\RenderingTools\RenderingTools.h" />
     <ClInclude Include="src\input\ControllerManager.h" />
     <ClInclude Include="src\input\ShotReplicationManager.h" />
+    <ClInclude Include="src\networking\JsonParser.h" />
     <ClInclude Include="src\storage\RecordingStorage.h" />
     <ClInclude Include="src\storage\StorageManager.h" />
     <ClInclude Include="src\training\CustomTrainingData.h" />

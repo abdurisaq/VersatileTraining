@@ -1,6 +1,7 @@
 // plugin_server.cpp
 #include "pch.h"
 #include "src/core/VersatileTraining.h"
+#include "src/networking/JsonParser.h"
 #pragma comment(lib, "ws2_32.lib")
 
 // Configuration constants
@@ -20,7 +21,9 @@ std::string extractRequestBody(const std::string& request);
 std::string createJsonResponse(int statusCode, const std::string& content, bool includeHeaders = true);
 std::string handleOptionsRequest();
 std::string handleStatusRequest(const std::string& authToken);
-std::string handleLoadPackRequest(const std::string& authToken, const std::string& body);
+std::string handleLoadPackRequest(const std::string& authToken, const std::string& body, std::filesystem::path dataFolder, std::atomic<bool>& hasAction,
+    std::string& pendingAction,
+    std::mutex& pendingActionMutex);
 std::string handleListPacksRequest(const std::string& authToken, const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr);
 std::string handlePackDetailsRequest(const std::string& authToken, const std::string& packId, const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr);
 std::string handlePackRecordingRequest(
@@ -28,10 +31,14 @@ std::string handlePackRecordingRequest(
     const std::string& packId,
     const std::filesystem::path& dataFolder,
     const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr);
-void handleClientConnection(SOCKET clientSocket, const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr, const std::filesystem::path& dataFolder);
+void handleClientConnection(SOCKET clientSocket, const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr, const std::filesystem::path& dataFolder, std::atomic<bool>& hasAction, std::string& pendingAction,
+    std::mutex& pendingActionMutex);
 
 std::string id;
 std::string base64TrainingData;
+
+std::filesystem::path myDataFolder;
+
 
 
 // Server thread function that can be controlled externally
@@ -39,7 +46,10 @@ void VersatileTraining::runServer(
     std::atomic<bool>* isRunning,
     std::string playerId,
     std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>> trainingDataPtr,
-    std::filesystem::path dataFolder) {
+    std::filesystem::path dataFolder,
+    std::atomic<bool>& hasAction,
+    std::string & pendingAction,
+    std::mutex& pendingActionMutex) {
 
     id = playerId;
 
@@ -96,8 +106,9 @@ void VersatileTraining::runServer(
     while (*isRunning) {
         SOCKET clientSocket = accept(listenSocket, NULL, NULL);
 
+        
         if (clientSocket != INVALID_SOCKET) {
-            clientThreads.push_back(std::thread(handleClientConnection, clientSocket, trainingDataPtr, dataFolder));
+            clientThreads.push_back(std::thread(handleClientConnection, clientSocket, trainingDataPtr, dataFolder,std::ref(hasAction), std::ref(pendingAction), std::ref(pendingActionMutex)));
         }
         else {
             if (WSAGetLastError() == WSAEWOULDBLOCK) {
@@ -140,7 +151,9 @@ void VersatileTraining::runServer(
 void handleClientConnection(
     SOCKET clientSocket,
     const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr,
-    const std::filesystem::path& dataFolder) {
+    const std::filesystem::path& dataFolder, std::atomic<bool> &hasAction,
+    std::string& pendingAction,
+    std::mutex& pendingActionMutex) {
 
     char buffer[327680] = { 0 };
     int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
@@ -169,7 +182,7 @@ void handleClientConnection(
         }
         else if (endpoint == "/load-pack" && method == "POST") {
             std::string body = extractRequestBody(request);
-            response = handleLoadPackRequest(authToken, body);
+            response = handleLoadPackRequest(authToken, body,dataFolder,hasAction,pendingAction,pendingActionMutex);
         }
         else if (endpoint == "/list-packs" && method == "GET") {
             response = handleListPacksRequest(authToken, trainingDataPtr);
@@ -303,7 +316,9 @@ std::string handleStatusRequest(const std::string& authToken) {
     }
 }
 
-std::string handleLoadPackRequest(const std::string& authToken, const std::string& body) {
+std::string handleLoadPackRequest(const std::string& authToken, const std::string& body, std::filesystem::path dataFolder, std::atomic<bool>& hasAction,
+    std::string& pendingAction,
+    std::mutex& pendingActionMutex) {
     LOG("auth token received: {}", authToken);
     LOG("expected token: {}", AUTH_TOKEN);
     if (authToken != AUTH_TOKEN) {
@@ -313,9 +328,17 @@ std::string handleLoadPackRequest(const std::string& authToken, const std::strin
             "}");
     }
 
-    // Here you would parse the JSON body and load the pack in-game
-    LOG("Received training pack data: {}", body);
+    PackInfo pack = parsePack(body);
+    
+    packInfoToLocalStorage(pack, dataFolder);
+    {
+        std::lock_guard<std::mutex> lock(pendingActionMutex);
+        pendingAction = pack.code;
+        hasAction.store(true, std::memory_order_release);
+    }
+    pack.print();
 
+    //std::replace(body.begin(), body.end(), '.', '\n'); 
     // Return success response
     return createJsonResponse(200,
         "{\n"
@@ -435,7 +458,9 @@ std::string handlePackRecordingRequest(
         return createJsonResponse(401, "{\n\"error\": \"Unauthorized\"\n}");
     }
 
-    // Check if the training pack exists in memory
+    bool found = false;
+
+
     auto it = trainingDataPtr->find(cleanPackId);
     if (it == trainingDataPtr->end()) {
         LOG("Training pack not found in memory: {}", cleanPackId);
@@ -457,8 +482,8 @@ std::string handlePackRecordingRequest(
     }
 
     // Build path to the recordings file for this pack
-    std::filesystem::path recordingsFolder = dataFolder / "recordings" / sanitizedPackId;
-    std::filesystem::path recordingsFile = recordingsFolder / "shots.rec";
+    std::filesystem::path recordingsFile = dataFolder / "TrainingPacks" / sanitizedPackId / "shots.rec";
+
 
     LOG("Looking for recording file at: {}", recordingsFile.string());
 

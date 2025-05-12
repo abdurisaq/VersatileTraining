@@ -7,23 +7,25 @@ void RecordingStorage::saveAllRecordings(const std::unordered_map<std::string, C
     
 
 
-    
-
-
-    std::filesystem::path recordingsPath = basePath / "recordings";
-    std::filesystem::create_directories(recordingsPath);
+   
+    std::filesystem::create_directories(basePath);
 
     // Process each training pack
     for (const auto & [packId, data] : trainingData) {
         if (packId.empty()) continue;
-        std::string sanitizedId = sanitizeFilename(packId);
-        
+        std::string sanitizedId;
+        if (data.code.empty()) {
+            sanitizedId = sanitizeFilename(packId);
+        }
+        else {
+			sanitizedId = data.code;
+		}
         LOG("Num Shots: {}", data.numShots);
         /*for (int i = 0; i < data.numShots; i++) {
             LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, data.shots[i].boostAmount, data.shots[i].startingVelocity, static_cast<int>(data.shots[i].freezeCar), static_cast<int>(data.shots[i].hasJump));
             LOG("has recording? {}", data.shots[i].recording.inputs.size() > 0 ? "true" : "false");
         }*/
-        std::filesystem::path packFolder = recordingsPath / sanitizedId;
+        std::filesystem::path packFolder = basePath / sanitizedId;
         std::filesystem::create_directories(packFolder);
 
         savePackRecordings(packId, data, packFolder);
@@ -80,20 +82,22 @@ void RecordingStorage::savePackRecordings(const std::string& packId, const Custo
 
 void RecordingStorage::loadAllRecordings(std::unordered_map<std::string, CustomTrainingData>& trainingData,
     const std::filesystem::path& basePath) {
-    std::filesystem::path recordingsPath = basePath / "recordings";
+    
 
-    if (!std::filesystem::exists(recordingsPath)) {
-        LOG("No recordings directory found at {}", recordingsPath.string());
+    if (!std::filesystem::exists(basePath)) {
+        LOG("No recordings directory found at {}", basePath.string());
         return;
     }
 
     //diff folders
-    for (const auto& entry : std::filesystem::directory_iterator(recordingsPath)) {
+    for (const auto& entry : std::filesystem::directory_iterator(basePath)) {
         if (!entry.is_directory()) continue;
 
         std::string packId = entry.path().filename().string();
 
-    
+        LOG("entry.path : {}", entry.path().string());
+
+        
         if (trainingData.find(packId) != trainingData.end()) {
             loadPackRecordings(packId, trainingData[packId], entry.path());
         }

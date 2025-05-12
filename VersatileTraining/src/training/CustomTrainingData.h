@@ -124,7 +124,7 @@ struct CustomTrainingData {
 	int currentEditedShot = 0;
 	std::vector<ShotState> shots;
 	bool customPack = false;
-
+	
 	int boostMax = 101;
 	int boostMin = 0;
 	int maxVelocity = 2000;

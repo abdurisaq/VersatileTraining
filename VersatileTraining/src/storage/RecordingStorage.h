@@ -11,6 +11,7 @@ public:
     void loadAllRecordings(std::unordered_map<std::string, CustomTrainingData>& trainingData,
         const std::filesystem::path& basePath);
 
+    std::string sanitizeFilename(const std::string& input);
 private:
     // helper functions for saving/loading
     void savePackRecordings(const std::string& packId, const CustomTrainingData& data,
@@ -30,7 +31,7 @@ private:
 
     std::vector<uint8_t> compress_data(const std::vector<uint8_t>& data);
 
-    std::string sanitizeFilename(const std::string& input);
+   
 
     std::vector<uint8_t> decompress_data(const std::vector<uint8_t>& compressed);
 

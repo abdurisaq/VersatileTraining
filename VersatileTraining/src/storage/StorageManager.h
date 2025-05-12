@@ -11,11 +11,11 @@
 
 class StorageManager {
 
-
+public:
 	RecordingStorage recordingStorage;
 
 	
-public:
+
 	std::filesystem::path saveTrainingFilePath;
 	std::filesystem::path saveReplayStateFilePath;
 

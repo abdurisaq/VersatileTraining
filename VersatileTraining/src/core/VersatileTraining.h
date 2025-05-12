@@ -50,6 +50,9 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	std::filesystem::path myDataFolder;
 
 
+	std::string pastBinding;
+	std::string bind_key;
+
 	std::unordered_map<std::string, CustomTrainingData> trainingData;
 	std::string editingTrainingCode;
 	bool editMode = false;
@@ -112,7 +115,15 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	void runServer(std::atomic<bool>* isRunning,
 		std::string playerId,
 		std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>> trainingDataPtr,
-		std::filesystem::path dataFolder);
+		std::filesystem::path dataFolder,
+		std::atomic<bool>& hasAction,
+		std::string& pendingAction,
+		std::mutex& pendingActionMutex);
+	void DownloadTrainingPackById(std::string packId);
+	void checkPendingActions();
+	std::atomic<bool> hasAction{ false };
+	std::string pendingAction;
+	std::mutex pendingActionMutex;
 
 
 	void onLoad() override;

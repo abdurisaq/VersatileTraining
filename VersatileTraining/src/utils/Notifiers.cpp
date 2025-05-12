@@ -10,7 +10,7 @@ void VersatileTraining::registerNotifiers() {
 			cvarManager->executeCommand("togglemenu " + GetMenuName());
 		}, "Displays the window for bakkes garage.", PERMISSION_ALL
 	);
-	cvarManager->setBind("C", "open_gallery");
+	//cvarManager->setBind("C", "open_gallery");
 
 	cvarManager->registerNotifier(
 		"lockScene",
@@ -99,7 +99,8 @@ void VersatileTraining::registerNotifiers() {
 
 		for (auto [key, value] : trainingData) {
 			LOG("Name: {}", value.name);
-			LOG("Code: {}", key);
+			LOG("ID: {}", key);
+			LOG("Code: {}", value.code);
 			LOG("Num Shots: {}", value.numShots);
 			for (int i = 0; i < value.numShots; i++) {
 
@@ -159,7 +160,7 @@ void VersatileTraining::registerNotifiers() {
 
 		//currentTrainingData
 		LOG("Name: {}", currentTrainingData.name);
-		LOG("Code: {}", currentPackKey);
+		LOG("Code: {}", currentTrainingData.code);
 		LOG("Num Shots: {}", currentTrainingData.numShots);
 		for (int i = 0; i < currentTrainingData.numShots; i++) {
 			LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, currentTrainingData.shots[i].boostAmount, currentTrainingData.shots[i].startingVelocity, static_cast<int>(currentTrainingData.shots[i].freezeCar), static_cast<int>(currentTrainingData.shots[i].hasJump));
@@ -205,35 +206,21 @@ void VersatileTraining::registerNotifiers() {
 		}, "start recording", PERMISSION_ALL);
 	cvarManager->setBind("N", "startRecording");
 
-	cvarManager->registerNotifier("dumpInputs", [this](std::vector<std::string> args) {
+	cvarManager->registerNotifier("currentShotState", [this](std::vector<std::string> args) {
 		
-		shotReplicationManager.currentShotRecording = currentShotState.recording;
-		if (shotReplicationManager.currentShotRecording.carBody == 0) {
-			LOG("no inputs to dump");
-			return;
-		}
-		struct ControllerInput {
-			float Throttle = .0f;
-			float Steer = .0f;
-			float Pitch = .0f;
-			float Yaw = .0f;
-			float Roll = .0f;
-			float DodgeForward = .0f;
-			float DodgeStrafe = .0f;
-			unsigned long Handbrake : 1;
-			unsigned long Jump : 1;
-			unsigned long ActivateBoost : 1;
-			unsigned long HoldingBoost : 1;
-			unsigned long Jumped : 1;
-		};
-		LOG("input size : {}", shotReplicationManager.currentShotRecording.inputs.size() );
-		for (const auto& input : shotReplicationManager.currentShotRecording.inputs) {
-			LOG("Throttle: {:.7f}, Steer: {:.7f}, Pitch: {:.7f}, Yaw: {:.7f}, Roll: {:.7f}, DodgeForward: {:.7f}, DodgeStrafe: {:.7f}, Handbrake: {}, Jump: {}, ActivateBoost: {}, HoldingBoost: {}, Jumped: {}",
-				input.Throttle, input.Steer, input.Pitch, input.Yaw, input.Roll, input.DodgeForward, input.DodgeStrafe,
-				input.Handbrake ? "true" : "false", input.Jump ? "true" : "false", input.ActivateBoost ? "true" : "false", input.HoldingBoost ? "true" : "false", input.Jumped ? "true" : "false");
-		}
+		LOG("current shot state" );
+		LOG("current editted shot {}",currentTrainingData.currentEditedShot);
+		LOG("boost amount : {} ", currentShotState.boostAmount);
+		LOG("starting velocity : {} ", currentShotState.startingVelocity);
+		LOG("freeze car : {} ", currentShotState.freezeCar);
+		LOG("goal blocker x1 : {}, z1 : {} x2 : {}, z2 : {} ", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
+		LOG("goal anchors first : {}, second : {} ", currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
+		LOG("has jump : {} ", currentShotState.hasJump ? "true" : "false");
+		LOG("has recording ? {}", currentShotState.recording.inputs.size() > 0 ? "true" : "false");
+		LOG("number of inputs : {}", currentShotState.recording.inputs.size());
+
 		}, "dump recorded inputs", PERMISSION_ALL);
-	cvarManager->setBind("I", "dumpInputs");
+	cvarManager->setBind("currentShotState", "dumpInputs");
 
 
 	cvarManager->registerNotifier("printCurrentState", [this](std::vector<std::string> args) {

@@ -3,6 +3,66 @@
 
 
 void VersatileTraining::setupTrainingEditorHooks() {
+    gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GFxData_TrainingMode_TA.HandleAddTrainingData",
+        [this](ActorWrapper caller, void* params, std::string eventName)
+        {
+            struct cRPC_HandleAddTrainingData {
+                unsigned char pad[0x00E8];
+                uintptr_t TrainingData;
+            };
+            struct pHandleAddTrainingData {
+                cRPC_HandleAddTrainingData* RPC;
+            };
+            pHandleAddTrainingData* p = (pHandleAddTrainingData*)params;
+            TrainingEditorSaveDataWrapper data = TrainingEditorSaveDataWrapper(p->RPC->TrainingData);
+            std::string code = data.GetCode().ToString();
+            std::string name = data.GetTM_Name().ToString();
+
+            LOG("Code: {}", code);
+
+            std::string oldKey = "";
+            bool found = false;
+
+            for (auto& [key, value] : trainingData) {
+                if (value.name == name) {
+                    oldKey = key;
+                    value.code = code;
+                    found = true;
+                    LOG("found training pack with name: {}", value.name);
+                    LOG("code: {}", code);
+                    break;
+                }
+            }
+
+            if (found && !code.empty() && oldKey != code) {
+                LOG("Reorganizing pack - old key: {}, new key: {}", oldKey, code);
+                CustomTrainingData packData = trainingData[oldKey];
+                trainingData.erase(oldKey);
+                trainingData[code] = packData;
+                std::filesystem::path packFolder = myDataFolder / "TrainingPacks" / storageManager.recordingStorage.sanitizeFilename(packData.name);
+
+                if (!std::filesystem::exists(packFolder)) {
+                    LOG("Training pack folder not found: {}", packFolder.string());
+                    return false;
+                }
+
+                try {
+                    LOG("Deleting training pack folder: {}", packFolder.string());
+                    std::size_t removedCount = std::filesystem::remove_all(packFolder);
+                    LOG("Removed {} files/directories", removedCount);
+                    return true;
+                }
+                catch (const std::filesystem::filesystem_error& e) {
+                    LOG("Error deleting training pack folder: {}", e.what());
+                    return false;
+                }
+                trainingData[code].code = code;
+                if (currentPackKey == oldKey) {
+                    currentPackKey = code;
+                }
+            }
+        });
+
     gameWrapper->HookEventWithCallerPost<ActorWrapper>(
         "Function TAGame.TrainingEditorMetrics_TA.TrainingEditorEnter",
         [this](ActorWrapper cw, void* params, std::string eventName) {
@@ -23,8 +83,34 @@ void VersatileTraining::setupTrainingEditorHooks() {
             if (shotReplicationManager.startRecording) {
                 currentShotState.recording = shotReplicationManager.currentShotRecording;
                 currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
-                LOG("setting current shot state car body to {}", currentShotState.recording.carBody);
+                if (shotReplicationManager.startRecording && 
+                    !currentTrainingData.name.empty() && 
+                    currentTrainingData.currentEditedShot >= 0) {
+                    
+                    auto it = trainingData.find(currentTrainingData.name);
+                    if (it != trainingData.end()) {
+                        // Then check if the shot index is valid
+                        if (currentTrainingData.currentEditedShot < it->second.shots.size()) {
+                            // Now it's safe to update the recording
+                            currentShotState.recording = shotReplicationManager.currentShotRecording;
+                            it->second.shots[currentTrainingData.currentEditedShot].recording = currentShotState.recording;
+                            LOG("Updated recording for pack '{}', shot {}, with {} inputs", 
+                                currentTrainingData.name, 
+                                currentTrainingData.currentEditedShot,
+                                currentShotState.recording.inputs.size());
+                        } else {
+                            LOG("Shot index {} is out of bounds for pack '{}'", 
+                                currentTrainingData.currentEditedShot, 
+                                currentTrainingData.name);
+                        }
+                    } else {
+                        LOG("Training pack '{}' not found in training data map", 
+                            currentTrainingData.name);
+
+                    }
+                }
             }
+            
             shotReplicationManager.stopRecordingShot();
 
             
@@ -107,6 +193,9 @@ void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::stri
 
 void VersatileTraining::handleTrainingEditorExit() {
     LOG("reset is benig called");
+
+    /*std::filesystem::path trainingDataPath = myDataFolder / "TrainingPacks";
+    storageManager.recordingStorage.loadAllRecordings(trainingData, trainingDataPath);*/
     currentTrainingData.reset();
     playTestStarted = false;
     editingGoalBlocker = false;
@@ -217,7 +306,7 @@ void VersatileTraining::handleStartEditing(ActorWrapper cw) {
 
 void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::string eventName) {
 
-    GfxDataTrainingWrapper gfxData = gameWrapper->GetGfxTrainingData();
+
 
     LOG("getTrainingData called, looking for custom training pack");
     auto tw = ((TrainingEditorWrapper)cw.memory_address);
@@ -240,11 +329,22 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     int currentShot = tw.GetActiveRoundNumber();
     LOG("Training current shot : {}", currentShot);
 
+
+    
+
     snapshotManager.currentReplayState.replayName = name + " Shot: " + std::to_string(currentShot); //training pack name
     snapshotManager.currentReplayState.captureSource = CaptureSource::Training;
 
     std::string code = td.GetCode().ToString();
 
+
+    if (currentTrainingData.name == name) {
+        currentTrainingData.currentEditedShot = currentShot;
+        unlockStartingVelocity = false;
+        LOG("already loaded, skipping searching training data, current shot: {}, total rounds: {}", currentTrainingData.currentEditedShot, totalRounds);
+        handleExistingTrainingData(currentShot, totalRounds);
+        return;
+    }
     bool found = false;
     for (auto& [key, value] : trainingData) {
         if (value.name == name) {
@@ -258,6 +358,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             }
             currentTrainingData.customPack = true;
             currentTrainingData.currentEditedShot = currentShot;
+            LOG("currentTraining data recording size : {}", currentTrainingData.shots[currentShot].recording.inputs.size());
             currentShotState = currentTrainingData.shots[currentShot];
             shotReplicationManager.currentShotRecording = currentShotState.recording;
             LOG("shot replication current shot recording size: {}", shotReplicationManager.currentShotRecording.inputs.size());
@@ -265,6 +366,15 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             LOG("setting active starting velocity to {}", currentShotState.startingVelocity);
             LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
 
+            float epsilon = 0.01f; 
+
+            if (abs(currentShotState.goalBlocker.first.X) < epsilon && abs(currentShotState.goalBlocker.first.Z) < epsilon && abs(currentShotState.goalBlocker.second.X) < epsilon && abs(currentShotState.goalBlocker.second.Z) < epsilon) {
+				currentShotState.goalAnchors = { false, false };
+			}
+            else {
+				currentShotState.goalAnchors = { true, true };
+			}
+           
             if (currentShotState.freezeCar) {
                 LOG("car is frozen");
             }
@@ -285,9 +395,15 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     if (!found) {
         LOG("didn't find this traini pack in training data");
         if (currentTrainingData.name == name) {
-
+            if (currentShotState.boostAmount == 101) {
+                cvarManager->executeCommand("sv_training_limitboost -1");
+            }
+            else {
+                cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
+            }
         }
         else {
+            cvarManager->executeCommand("sv_training_limitboost -1");
             currentTrainingData.initCustomTrainingData(totalRounds, name);
         }
         currentShotState = currentTrainingData.shots[currentShot];
@@ -299,7 +415,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             currentTrainingData.customPack = false;
         }
 
-        cvarManager->executeCommand("sv_training_limitboost -1");
+        
     }
 
 

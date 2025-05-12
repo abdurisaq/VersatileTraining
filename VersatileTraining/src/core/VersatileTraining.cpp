@@ -41,7 +41,8 @@ void VersatileTraining::onLoad()
 	auto trainingDataPtr = std::make_shared<std::unordered_map<std::string, CustomTrainingData>>(trainingData);
 
 	// Start the server thread with the shared data
-	serverThread = std::thread(&VersatileTraining::runServer, this, &serverRunning, gameWrapper->GetUniqueID().str(), trainingDataPtr, myDataFolder);
+
+	serverThread = std::thread(&VersatileTraining::runServer, this, &serverRunning, gameWrapper->GetUniqueID().str(), trainingDataPtr, myDataFolder,std::ref(hasAction), std::ref(pendingAction), std::ref(pendingActionMutex));
 
 	//		
 	//	}, "button pressed", PERMISSION_ALL
@@ -158,7 +159,7 @@ void VersatileTraining::onTick(std::string eventName) {
 			middleMouseReleased = true;
 		}
 	}
-
+	checkPendingActions();
 	if (!(isInTrainingEditor() || isInTrainingPack())) return;
 
 	if(!currentTrainingData.customPack) return;
@@ -202,3 +203,41 @@ void VersatileTraining::onTick(std::string eventName) {
 }
 
 
+
+void VersatileTraining::checkPendingActions() {
+	if (hasAction.load(std::memory_order_acquire)) {
+		std::string action;
+		{
+			std::lock_guard<std::mutex> lock(pendingActionMutex);
+			action = pendingAction;
+			pendingAction.clear();
+			hasAction.store(false, std::memory_order_release);
+		}
+
+		if (action == "RELOAD") {
+			// Reload all training packs
+			LOG("Reloading all training packs from disk");
+			trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
+			
+		}
+		else if (!action.empty()) {
+			LOG("Reloading all training packs from disk");
+			HWND rocketLeagueWindow = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
+			if (rocketLeagueWindow != NULL) {
+					// Show window if minimized
+					if (IsIconic(rocketLeagueWindow)) {
+							ShowWindow(rocketLeagueWindow, SW_RESTORE);
+					}
+					// Bring window to front and focus it
+					SetForegroundWindow(rocketLeagueWindow);
+					LOG("Focused Rocket League window");
+			} else {
+					LOG("Could not find Rocket League window");
+			}
+
+			trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
+			cvarManager->executeCommand("load_training " + action);
+		}
+	}
+
+}

@@ -3,6 +3,17 @@
 
 void VersatileTraining::RenderSettings() {
 	ImGui::Text("Versatile Training Settings");
+    std::string binding = pastBinding;
+
+    ImGui::InputText("##bind_key", &bind_key);
+    ImGui::SameLine();
+    if (ImGui::Button("Set Bind", ImVec2(80, 0))) {
+        cvarManager->removeBind(binding);
+        cvarManager->setBind(bind_key, "open_gallery");
+        pastBinding = bind_key;
+    }
+    
+
 	if (ImGui::Button("Find Controller")) {
 		HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
 		if (!hwnd) {
@@ -76,8 +87,200 @@ void VersatileTraining::RenderSettings() {
 void VersatileTraining::RenderWindow() {
     if (ImGui::BeginTabBar("SnapshotManagerTabs")) {
         
-        if (ImGui::BeginTabItem("Custom Training Pack")) {
-            // Keep your existing code here
+        if (ImGui::BeginTabItem("Custom Training Packs")) { // Renamed tab
+            ImGui::Text("Manage and Load Custom Training Packs");
+            ImGui::Separator();
+
+            // --- Load Pack by Code ---
+            static char packCodeToLoad[64] = ""; // Buffer for input
+            ImGui::InputText("Enter Pack Code", packCodeToLoad, IM_ARRAYSIZE(packCodeToLoad));
+            ImGui::SameLine();
+            if (ImGui::Button("Load Pack by Code")) {
+                if (strlen(packCodeToLoad) > 0) {
+                    LOG("Attempting to load pack with code: {}", packCodeToLoad);
+                    DownloadTrainingPackById(packCodeToLoad);
+                    
+                    return;
+                }
+            }
+            ImGui::Separator();
+
+            // --- Search and Filter Controls ---
+            static char packSearchBuffer[128] = "";
+            static int packSortCriteria = 0; // 0: Name, 1: Code, 2: Num Shots
+            static bool packSortAscending = true;
+
+            ImGui::InputText("Search##PackList", packSearchBuffer, IM_ARRAYSIZE(packSearchBuffer));
+            ImGui::SameLine();
+            if (ImGui::Button("Clear##PackSearch")) { packSearchBuffer[0] = '\0'; }
+
+            ImGui::Text("Sort by:");
+            ImGui::RadioButton("Name##PackSort", &packSortCriteria, 0); ImGui::SameLine();
+            ImGui::RadioButton("Code##PackSort", &packSortCriteria, 1); ImGui::SameLine();
+            ImGui::RadioButton("Num Shots##PackSort", &packSortCriteria, 2);
+
+            ImGui::SameLine();
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 0)); // Reduce button height
+            if (ImGui::Button(packSortAscending ? "Asc ^##PackSortDir" : "Desc v##PackSortDir")) {
+                packSortAscending = !packSortAscending;
+            }
+            ImGui::PopStyleVar();
+            ImGui::Separator();
+
+            // --- Pack List ---
+            ImGui::Text("Available Packs (%zu):", trainingData.size());
+
+            std::vector<std::pair<std::string, const CustomTrainingData*>> filteredPacksVec;
+            for (const auto& pair : trainingData) {
+                filteredPacksVec.push_back({ pair.first, &pair.second });
+            }
+
+            // Apply text filtering (search)
+            if (strlen(packSearchBuffer) > 0) {
+                std::string searchStrLower = packSearchBuffer;
+                std::transform(searchStrLower.begin(), searchStrLower.end(), searchStrLower.begin(), ::tolower);
+                filteredPacksVec.erase(
+                    std::remove_if(filteredPacksVec.begin(), filteredPacksVec.end(),
+                        [&](const auto& pair) {
+                            const CustomTrainingData* pack = pair.second;
+                            std::string packNameLower = pack->name.empty() ? pair.first : pack->name;
+                            std::transform(packNameLower.begin(), packNameLower.end(), packNameLower.begin(), ::tolower);
+                            std::string packCodeLower = pair.first;
+                            std::transform(packCodeLower.begin(), packCodeLower.end(), packCodeLower.begin(), ::tolower);
+
+                            return packNameLower.find(searchStrLower) == std::string::npos &&
+                                packCodeLower.find(searchStrLower) == std::string::npos;
+                        }),
+                    filteredPacksVec.end());
+            }
+
+            // Apply sorting
+            std::sort(filteredPacksVec.begin(), filteredPacksVec.end(),
+                [&](const auto& a, const auto& b) {
+                    const CustomTrainingData* packA = a.second;
+                    const CustomTrainingData* packB = b.second;
+                    bool result = false;
+
+                    switch (packSortCriteria) {
+                    case 0: { // Name
+                        std::string nameA = packA->name.empty() ? a.first : packA->name;
+                        std::string nameB = packB->name.empty() ? b.first : packB->name;
+                        std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
+                        std::transform(nameB.begin(), nameB.end(), nameB.begin(), ::tolower);
+                        result = nameA < nameB;
+                        break;
+                    }
+                    case 1: { // Code
+                        std::string codeA = a.first;
+                        std::string codeB = b.first;
+                        std::transform(codeA.begin(), codeA.end(), codeA.begin(), ::tolower);
+                        std::transform(codeB.begin(), codeB.end(), codeB.begin(), ::tolower);
+                        result = codeA < codeB;
+                        break;
+                    }
+                    case 2: // Num Shots
+                        result = packA->numShots < packB->numShots;
+                        break;
+                    }
+                    return packSortAscending ? result : !result;
+                });
+
+            ImVec2 listRegionSize = ImGui::GetContentRegionAvail();
+            ImGui::BeginChild("CustomPacksScrollArea", ImVec2(listRegionSize.x, max(100.0f, listRegionSize.y)), true);
+
+            if (filteredPacksVec.empty()) {
+                ImGui::Text("No packs match your criteria or no packs loaded.");
+            }
+            else {
+                for (const auto& pair : filteredPacksVec) {
+                    const std::string& packKey = pair.first;
+                 
+                    if (trainingData.find(packKey) == trainingData.end()) continue; 
+                    const CustomTrainingData& packData = trainingData.at(packKey);
+
+
+                    ImGui::PushID(packKey.c_str());
+
+                    std::string headerName = packData.code.empty() ? (packData.name + " (unpublished)") : (packData.name + " (published)");
+                    if (ImGui::CollapsingHeader(headerName.c_str())) {
+                        ImGui::Indent();
+                        if (!packData.code.empty()) {
+                            ImGui::Text("Full Code: %s", packData.code.c_str());
+                        }
+                        ImGui::Text("Number of Shots: %d", packData.numShots);
+                        
+
+                        ImGui::Spacing();
+
+                        if (!packData.code.empty()) {
+                            if (ImGui::Button("Play")) {
+                                std::string cmd = "load_training " + packData.code;
+                                /*cvarManager->executeCommand(cmd);*/
+                                gameWrapper->Execute([this, cmd](GameWrapper* gw) {
+                                    cvarManager->executeCommand(cmd, false);
+                                    });
+                            }
+                        }
+
+                        ImGui::SameLine();
+                        if (ImGui::Button("Delete##Delete")) {
+                            ImGui::OpenPopup("DeleteConfirmPopup"); // Generic ID, but context is per pack due to PushID
+                        }
+                        ImGui::Unindent();
+
+                        if (ImGui::BeginPopupModal("DeleteConfirmPopup", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                            ImGui::Text("Are you sure you want to delete pack: %s?", headerName.c_str());
+                            ImGui::Text("This action cannot be undone from the UI.");
+                            ImGui::Separator();
+                            if (ImGui::Button("Yes, Delete", ImVec2(120, 0))) {
+                                std::filesystem::path packFolder;
+                                if (!packData.code.empty())
+                                {
+                                    packFolder = myDataFolder / "TrainingPacks" / packData.code;
+                                }
+                                else
+                                {
+									packFolder = myDataFolder / "TrainingPacks" / storageManager.recordingStorage.sanitizeFilename(packData.name);
+								}
+                                if (!std::filesystem::exists(packFolder)) {
+                                    LOG("Training pack folder not found: {}", packFolder.string());
+                                    return;
+                                }
+
+                                try {
+                                    LOG("Deleting training pack folder: {}", packFolder.string());
+                                    std::size_t removedCount = std::filesystem::remove_all(packFolder);
+                                    LOG("Removed {} files/directories", removedCount);
+                                
+                                }
+                                catch (const std::filesystem::filesystem_error& e) {
+                                    LOG("Error deleting training pack folder: {}", e.what());
+                                    
+                                }
+                                trainingData.erase(packKey);
+                                if (currentPackKey == packKey) {
+                                    currentTrainingData.reset();
+                                    currentPackKey.clear();
+                                    currentShotState = ShotState();
+                                }
+                                // TODO: Persist deletion to disk:
+                                // storageManager.deletePackFiles(packKey, myDataFolder);
+                                // storageManager.saveCompressedTrainingDataWithRecordings(trainingData, myDataFolder); // Then resave the main index
+                                LOG("Deleted pack: %s", packKey.c_str());
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::EndPopup();
+                        }
+                    }
+                    ImGui::PopID();
+                    ImGui::Separator();
+                }
+            }
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
         //current

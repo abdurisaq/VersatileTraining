@@ -218,8 +218,8 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
     else if (lockScene) {
 
         p->NewLocation = currentShotState.carLocation;
-        currentShotState.boostAmount = savedReplayState.boostAmount;
-        currentShotState.freezeCar = true;
+        /*currentShotState.boostAmount = savedReplayState.boostAmount;
+        currentShotState.freezeCar = true;*/
         return;
     }
 
