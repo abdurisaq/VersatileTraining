@@ -44,7 +44,7 @@ void VersatileTraining::setupInputHandlingHooks() {
 
 
             if (!params) {
-                LOG("params is null");
+              
                 return;
             }
 
@@ -208,6 +208,18 @@ void VersatileTraining::setupInputHandlingHooks() {
         [this](PlayerControllerWrapper cw, void* params, std::string eventName) {
             settingsOpen = false;
 		});
+    gameWrapper->HookEventWithCaller<PlayerControllerWrapper>(
+        "Function ProjectX.GameInfo_X.AddPauser",
+        [this](PlayerControllerWrapper cw, void* params, std::string eventName) {
+            settingsOpen = true;
+        });
+
+    gameWrapper->HookEventWithCaller<PlayerControllerWrapper>(
+        "Function ProjectX.GameInfo_X.RemovePauser",
+        [this](PlayerControllerWrapper cw, void* params, std::string eventName) {
+            settingsOpen = false;
+        });
+
 
 }
 
@@ -216,56 +228,44 @@ void VersatileTraining::handleTrainingEditorActorModified() {
     if (editingVariances) {
         if (!lockRotation) {
 
-
-            /*controllerManager.checkForButtonPress(4);
-            controllerManager.checkForButtonPress(5);*/
-
-            /*if (GetAsyncKeyState('R') & 0x8000) {
-                ApplyLocalPitch(500.0f);
-                LOG("applying localPitch");
-            }
-            if (GetAsyncKeyState('C') & 0x8000) {
-                ApplyLocalPitch(-500.0f);
-                LOG("applying localPitch");
-            }*/
-            if (GetAsyncKeyState('Q') & 0x8000) {
+            if (GetAsyncKeyState(specialKeybinds.rollLeft) & 0x8000) {
                 rotationToApply.Roll -= 75;
             }
-            if (GetAsyncKeyState('E') & 0x8000) {
+            if (GetAsyncKeyState(specialKeybinds.rollRight) & 0x8000) {
                 rotationToApply.Roll += 75;
             }
         }
 
-        if (GetAsyncKeyState('2') & 0x8000) {
+        if (GetAsyncKeyState(specialKeybinds.increaseBoost) & 0x8000) {
             currentShotState.boostAmount++;
             if (currentShotState.boostAmount > currentTrainingData.boostMax) {
                 currentShotState.boostAmount = currentTrainingData.boostMax;
             }
-            LOG("boost increased to {}", currentShotState.boostAmount);
+            
         }
-        if (GetAsyncKeyState('1') & 0x8000) {
+        if (GetAsyncKeyState(specialKeybinds.decreaseBoost) & 0x8000) {
             currentShotState.boostAmount--;
             if (currentShotState.boostAmount < currentTrainingData.boostMin) {
                 currentShotState.boostAmount = currentTrainingData.boostMin;
             }
-            LOG("boost decreased to {}", currentShotState.boostAmount);
+            
         }
         
 
         if (unlockStartingVelocity) {
-            if (GetAsyncKeyState('3') & 0x8000) {
+            if (GetAsyncKeyState(specialKeybinds.decreaseVelocity) & 0x8000) {
                 currentShotState.startingVelocity--;
                 if (currentShotState.startingVelocity < currentTrainingData.minVelocity) {
                     currentShotState.startingVelocity = currentTrainingData.minVelocity;
                 }
-                LOG("starting velocity decreased to {}", currentShotState.startingVelocity);
+                
             }
-            if (GetAsyncKeyState('4') & 0x8000) {
+            if (GetAsyncKeyState(specialKeybinds.increaseVelocity) & 0x8000) {
                 currentShotState.startingVelocity++;
                 if (currentShotState.startingVelocity > currentTrainingData.maxVelocity) {
                     currentShotState.startingVelocity = currentTrainingData.maxVelocity;
                 }
-                LOG("starting velocity increased to {}", currentShotState.startingVelocity);
+                
             }
             currentShotState.extendedStartingVelocity = convertRotationAndMagnitudeToVector(currentShotState.carRotation, currentShotState.startingVelocity);
         }

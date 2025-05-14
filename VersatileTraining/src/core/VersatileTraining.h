@@ -45,7 +45,10 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	ShotState currentShotState;
 
 	StorageManager storageManager;
-	
+	SpecialKeybinds specialKeybinds;
+	std::string getKeyName(int virtualKeyCode);
+	int getVirtualKeyCode(const std::string& keyName);
+	void displaySpecialKeybind(const std::string& label, int& keyCode);
 	
 	std::filesystem::path myDataFolder;
 
@@ -53,10 +56,10 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	std::string pastBinding;
 	std::string bind_key;
 
-	std::unordered_map<std::string, CustomTrainingData> trainingData;
+	std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>> trainingData;
 	std::string editingTrainingCode;
 	bool editMode = false;
-
+	bool justOpenedPack = false;
 	bool editingGoalBlocker = false;
 	bool goalBlockerEligbleToBeEdited = false;
 	bool savedPastCamera = false;
@@ -126,6 +129,19 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	std::mutex pendingActionMutex;
 
 
+	LinearColor goalBlockerOutlineColor = { 0, 255, 0, 230 };  
+	LinearColor goalBlockerGridColor = { 255, 255, 255, 100 }; 
+	int goalBlockerGridLines = 4;
+	float goalBlockerOutlineThickness = 3.0f;
+	float goalBlockerGridThickness = 1.5f;
+
+	// Function declarations
+	void SetDefaultKeybinds();
+	void ClearAllKeybinds();
+	void readCurrentBindings();
+	std::unordered_map<std::string, std::string> currentBindings;
+
+
 	void onLoad() override;
 	void onUnload() override; // Uncomment and implement if you need a unload method
 
@@ -139,10 +155,13 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 
 	Rotator checkForClamping(Vector loc, Rotator rot);
 	Vector getClampChange(Vector loc, Rotator rot);
+	Rotator getCornerRotation(float cornerT, int baseYaw, int basePitch, int baseRoll);
+	Rotator blendPitchRollClampSmooth(int pitch, int roll, int expectedPitch, int expectedRoll, int desiredYaw, float alpha = 1.0f);
+	Rotator applyLocalPitch(Rotator rot, float blendFactor);
 	std::pair<float, float> getAxisBreakDown(Rotator rot, int extra);
 	Vector getStickingVelocity(Rotator rot);
 	bool changeCarSpawnRotation();
-
+	int shortestAngularDiff(int target, int current, int max_val);
 	
 
 	// Data helpers
@@ -158,7 +177,6 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	void shiftToNegative(CustomTrainingData& data);
 
 
-	void ApplyLocalPitch(float pitchInput);
 
 
 

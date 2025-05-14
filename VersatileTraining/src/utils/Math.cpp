@@ -40,6 +40,9 @@ bool ProjectToPlaneY(Vector origin, Vector direction, float yPlane, Vector& outH
 float Dot(const Vector2& a, const Vector2& b) {
 	return a.X * b.X + a.Y * b.Y;
 }
+float DotV(const Vector& a, const Vector& b) {
+    return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+}
 
 void DrawLineClippedByCircle(CanvasWrapper& canvas, const Vector2& a, const Vector2& b, const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D, CameraWrapper cam, RT::Frustum frust) {
 	Vector2 ab = b - a;
@@ -126,3 +129,4 @@ Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude) 
 	return result;
 
 }
+

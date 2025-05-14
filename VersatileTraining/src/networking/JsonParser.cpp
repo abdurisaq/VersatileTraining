@@ -59,7 +59,9 @@ PackInfo parsePack(const std::string& json) {
 }
 
 
-void packInfoToLocalStorage(const PackInfo packInfo,std::filesystem::path dataFolder) {
+void packInfoToLocalStorage(const PackInfo packInfo,std::filesystem::path dataFolder ,std::atomic<bool>& hasAction,
+    std::string& pendingAction,
+    std::mutex& pendingActionMutex) {
 	std::filesystem::path trainingDataPath = dataFolder / "TrainingPacks";
 	std::filesystem::create_directories(trainingDataPath);
     std::filesystem::path packPath = trainingDataPath / (packInfo.code);
@@ -88,7 +90,9 @@ void packInfoToLocalStorage(const PackInfo packInfo,std::filesystem::path dataFo
 
     std::filesystem::path metaDataPath = packPath / "metadata.json";
     std::ofstream metaDataFile(metaDataPath);
-    //{"id":"tester","name":"tester","shots":4}
+    
+
+
     if (metaDataFile.is_open()) {
 		metaDataFile << "{\n";
         metaDataFile << "  \"id\": \"" << packInfo.id;
@@ -103,4 +107,59 @@ void packInfoToLocalStorage(const PackInfo packInfo,std::filesystem::path dataFo
     else {
 		LOG("Failed to open file: {}", metaDataPath.string());
 	}
+
+
+    
+}
+
+
+void packInfoToLocalStorage(const PackInfo packInfo, std::filesystem::path dataFolder) {
+    std::filesystem::path trainingDataPath = dataFolder / "TrainingPacks";
+    std::filesystem::create_directories(trainingDataPath);
+    std::filesystem::path packPath = trainingDataPath / (packInfo.code);
+
+    std::filesystem::create_directories(packPath);
+
+    std::filesystem::path customTrainingDataPath = packPath / "trainingpack.txt";
+
+    std::ofstream file(customTrainingDataPath);
+    if (file.is_open()) {
+        file << packInfo.packMetadataCompressed;
+        file.close();
+    }
+    else {
+        LOG("Failed to open file: {}", customTrainingDataPath.string());
+    }
+    std::filesystem::path recordingDataPath = packPath / "shots.rec";
+    std::ofstream recordingFile(recordingDataPath);
+    if (recordingFile.is_open()) {
+        recordingFile << packInfo.recordingDataCompressed;
+        recordingFile.close();
+    }
+    else {
+        LOG("Failed to open file: {}", recordingDataPath.string());
+    }
+
+    std::filesystem::path metaDataPath = packPath / "metadata.json";
+    std::ofstream metaDataFile(metaDataPath);
+
+
+
+    if (metaDataFile.is_open()) {
+        metaDataFile << "{\n";
+        metaDataFile << "  \"id\": \"" << packInfo.id;
+        metaDataFile << "\",";
+        metaDataFile << "\"name\": \"" << packInfo.name;
+        metaDataFile << "\",";
+        metaDataFile << "\"shots\": " << packInfo.totalShots;
+        metaDataFile << "\n}";
+
+        metaDataFile.close();
+    }
+    else {
+        LOG("Failed to open file: {}", metaDataPath.string());
+    }
+
+
+    
 }

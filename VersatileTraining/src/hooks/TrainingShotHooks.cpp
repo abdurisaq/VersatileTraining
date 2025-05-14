@@ -72,38 +72,39 @@ void VersatileTraining::handleExistingTrainingData(int currentShot, int totalRou
     LOG("already loaded, skipping searching training data");
     LOG("currentShot: {}", currentTrainingData.currentEditedShot);
     LOG("amount of shots in found training data existing: {}", currentTrainingData.shots.size());
+    while (currentTrainingData.shots.size() <= currentShot) {
+        LOG("adding shots to fill");
 
-    /*while (currentShot >= currentTrainingData.shots.size()) {
-        LOG("resizing");
-        currentTrainingData.shots.resize(currentShot + 1);
-        currentTrainingData.numShots = currentShot + 1;
-        LOG("now this many shots in training data: {}", currentTrainingData.numShots);
-    }*/
+        currentTrainingData.addShot();
+    }
 
+    
     currentShotState = currentTrainingData.shots[currentShot];
+    LOG("current recording size {}", currentShotState.recording.inputs.size());
     shotReplicationManager.currentShotRecording = currentShotState.recording;
     LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
     float epsilon = 0.01f;
-
+    
     if (abs(currentShotState.goalBlocker.first.X) < epsilon && abs(currentShotState.goalBlocker.first.Z) < epsilon && abs(currentShotState.goalBlocker.second.X) < epsilon && abs(currentShotState.goalBlocker.second.Z) < epsilon) {
         currentShotState.goalAnchors = { false, false };
     }
     else {
         currentShotState.goalAnchors = { true, true };
     }
+    if (currentShotState.boostAmount == 101) {
+        cvarManager->executeCommand("sv_training_limitboost -1");
+    }
+    else {
+        cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
+    }
+
 }
 
 void VersatileTraining::handleNewTrainingData(int currentShot) {
     LOG("currentShot: {}", currentShot);
     LOG("amount of shots in found training data new : {}", currentTrainingData.shots.size());
 
-    /*while (currentShot >= currentTrainingData.shots.size()) {
-        LOG("resizing");
-        currentTrainingData.shots.resize(currentShot + 1);
-        currentTrainingData.numShots = currentShot + 1;
-        LOG("now this many shots in training data: {}", currentTrainingData.numShots);
-    }*/
-
+   
     currentShotState = currentTrainingData.shots[currentShot];
     LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
 }
@@ -114,21 +115,21 @@ void VersatileTraining::handleCreateRound() {
 
 void VersatileTraining::handleDeleteRound(TrainingEditorWrapper cw) {
     int shotToRemove = cw.GetActiveRoundNumber();
-    if (shotToRemove >= 0 && shotToRemove < currentTrainingData.numShots) {
+    if (shotToRemove >= 0 && shotToRemove < currentTrainingData.shots.size()) {
         LOG("Removing shot: {}", shotToRemove);
 
         currentTrainingData.shots.erase(currentTrainingData.shots.begin() + shotToRemove);
-        currentTrainingData.numShots--;
+   
         int totalRounds = cw.GetTotalRounds();
-        if (totalRounds < currentTrainingData.numShots) {
+        if (totalRounds < currentTrainingData.shots.size()) {
             LOG("resizing");
             currentTrainingData.shots.resize(totalRounds);
             currentTrainingData.numShots = totalRounds;
         }
-        //trainingData[currentTrainingData.name] = currentTrainingData;
+        
     }
     else {
-        LOG("Invalid shot index: {}, numShots = {}", shotToRemove, currentTrainingData.numShots);
+        LOG("Invalid shot index: {}, numShots = {}", shotToRemove, currentTrainingData.shots.size());
     }
 }
 

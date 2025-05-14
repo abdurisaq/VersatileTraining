@@ -1,6 +1,12 @@
 #include "pch.h"
 #include "src/core/versatileTraining.h"
 
+
+void DrawLineClippedWithThickness(CanvasWrapper& canvas, const Vector2& a, const Vector2& b,
+    const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D,
+    CameraWrapper cam, RT::Frustum frust, float thickness);
+
+
 void VersatileTraining::RenderEnhancedGoalBlocker(
     CanvasWrapper& canvas,
     CameraWrapper& camera,
@@ -11,40 +17,36 @@ void VersatileTraining::RenderEnhancedGoalBlocker(
     const Vector& bottomLeft,
     const Vector& bottomRight)
 {
-    // Get ball position for occlusion checking
     Vector ballLocation = ball.GetLocation();
     Vector2 ballScreenPos = canvas.Project(ballLocation);
     float ballRadius = Distance(ballScreenPos, canvas.Project(ballLocation + Vector(92.75f, 0, 0)));
 
-    // Project all points to 2D for rendering
     Vector2 tl2d = canvas.Project(topLeft);
     Vector2 tr2d = canvas.Project(topRight);
     Vector2 bl2d = canvas.Project(bottomLeft);
     Vector2 br2d = canvas.Project(bottomRight);
 
-    // Create gradient effect from top to bottom
-    LinearColor topColor = { 0, 255, 0, 230 };    // Green with slight transparency at top
-    LinearColor bottomColor = { 255, 128, 0, 180 }; // Orange with more transparency at bottom
+    canvas.SetColor(goalBlockerOutlineColor);
 
-    // Draw the edges with improved visual style
-    canvas.SetColor(topColor);
-    DrawLineClippedByCircle(canvas, tl2d, tr2d, ballScreenPos, ballRadius, topLeft, topRight, camera, frustum);
+    RT::Line lineTop(topLeft, topRight, RT::GetVisualDistance(canvas, frustum, camera, topLeft) * 1.5f);
+    lineTop.thickness = goalBlockerOutlineThickness;
+    lineTop.DrawWithinFrustum(canvas, frustum);
 
-    // Gradient for right edge
-    LinearColor rightColor = LerpColor(topColor, bottomColor, 0.33f);
-    canvas.SetColor(rightColor);
-    DrawLineClippedByCircle(canvas, tr2d, br2d, ballScreenPos, ballRadius, topRight, bottomRight, camera, frustum);
+    RT::Line lineRight(topRight, bottomRight, RT::GetVisualDistance(canvas, frustum, camera, topRight) * 1.5f);
+    lineRight.thickness = goalBlockerOutlineThickness;
+    lineRight.DrawWithinFrustum(canvas, frustum);
 
-    // Bottom edge
-    canvas.SetColor(bottomColor);
-    DrawLineClippedByCircle(canvas, br2d, bl2d, ballScreenPos, ballRadius, bottomRight, bottomLeft, camera, frustum);
+    
+    RT::Line lineBottom(bottomRight, bottomLeft, RT::GetVisualDistance(canvas, frustum, camera, bottomRight) * 1.5f);
+    lineBottom.thickness = goalBlockerOutlineThickness;
+    lineBottom.DrawWithinFrustum(canvas, frustum);
 
-    // Gradient for left edge
-    LinearColor leftColor = LerpColor(bottomColor, topColor, 0.33f);
-    canvas.SetColor(leftColor);
-    DrawLineClippedByCircle(canvas, bl2d, tl2d, ballScreenPos, ballRadius, bottomLeft, topLeft, camera, frustum);
+    // Left edge with thickness
+    RT::Line lineLeft(bottomLeft, topLeft, RT::GetVisualDistance(canvas, frustum, camera, bottomLeft) * 1.5f);
+    lineLeft.thickness = goalBlockerOutlineThickness;
+    lineLeft.DrawWithinFrustum(canvas, frustum);
 
-    // Add interior grid pattern to make it more visible
+    
     DrawGoalBlockerGrid(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight);
 }
 
@@ -58,54 +60,34 @@ void VersatileTraining::DrawGoalBlockerGrid(
     const Vector& bottomLeft,
     const Vector& bottomRight)
 {
-    // Get ball data for occlusion
-    Vector ballLocation = ball.GetLocation();
-    Vector2 ballScreenPos = canvas.Project(ballLocation);
-    float ballRadius = Distance(ballScreenPos, canvas.Project(ballLocation + Vector(92.75f, 0, 0)));
+    const int gridLines = goalBlockerGridLines;
 
-    // Number of grid lines
-    const int gridLines = 4;
+ 
+    canvas.SetColor(goalBlockerGridColor);
 
-    // Calculate size of goal blocker
-    float width = Distance(Vector2(topLeft.X, topLeft.Z), Vector2(topRight.X, topRight.Z));
-    float height = Distance(Vector2(topLeft.X, topLeft.Z), Vector2(bottomLeft.X, bottomLeft.Z));
-
-    // Grid lines in X direction (vertical lines)
+    
     for (int i = 1; i < gridLines; i++) {
         float t = static_cast<float>(i) / gridLines;
         Vector topPoint = LerpVector(topLeft, topRight, t);
         Vector bottomPoint = LerpVector(bottomLeft, bottomRight, t);
 
-        // Use a more transparent color for grid lines
-        LinearColor gridColor = { 255, 255, 255, 100 };
-        canvas.SetColor(gridColor);
-
-        Vector2 topPoint2D = canvas.Project(topPoint);
-        Vector2 bottomPoint2D = canvas.Project(bottomPoint);
-
-        DrawLineClippedByCircle(canvas, topPoint2D, bottomPoint2D, ballScreenPos, ballRadius,
-            topPoint, bottomPoint, camera, frustum);
+        RT::Line gridLine(topPoint, bottomPoint, RT::GetVisualDistance(canvas, frustum, camera, topPoint) * 1.5f);
+        gridLine.thickness = goalBlockerGridThickness;
+        gridLine.DrawWithinFrustum(canvas, frustum);
     }
 
-    // Grid lines in Z direction (horizontal lines)
     for (int i = 1; i < gridLines; i++) {
         float t = static_cast<float>(i) / gridLines;
         Vector leftPoint = LerpVector(topLeft, bottomLeft, t);
         Vector rightPoint = LerpVector(topRight, bottomRight, t);
 
-        // Use a more transparent color for grid lines
-        LinearColor gridColor = { 255, 255, 255, 100 };
-        canvas.SetColor(gridColor);
-
-        Vector2 leftPoint2D = canvas.Project(leftPoint);
-        Vector2 rightPoint2D = canvas.Project(rightPoint);
-
-        DrawLineClippedByCircle(canvas, leftPoint2D, rightPoint2D, ballScreenPos, ballRadius,
-            leftPoint, rightPoint, camera, frustum);
+        RT::Line gridLine(leftPoint, rightPoint, RT::GetVisualDistance(canvas, frustum, camera, leftPoint) * 1.5f);
+        gridLine.thickness = goalBlockerGridThickness;
+        gridLine.DrawWithinFrustum(canvas, frustum);
     }
 }
 
-// Helper function to linearly interpolate between vectors
+
 Vector VersatileTraining::LerpVector(const Vector& a, const Vector& b, float t) {
     return Vector(
         a.X + (b.X - a.X) * t,
@@ -114,7 +96,6 @@ Vector VersatileTraining::LerpVector(const Vector& a, const Vector& b, float t) 
     );
 }
 
-// Helper function to interpolate between colors
 LinearColor VersatileTraining::LerpColor(const LinearColor& a, const LinearColor& b, float t) {
     return LinearColor(
         a.R + (b.R - a.R) * t,

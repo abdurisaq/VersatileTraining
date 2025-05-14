@@ -5,7 +5,7 @@ CustomTrainingDataflattened CustomTrainingData::deflate() {
 	CustomTrainingDataflattened flatData;
 	flatData.code = code;
 	flatData.name = name;
-	flatData.numShots = numShots;
+	flatData.numShots = shots.size();
 	flatData.currentEditedShot = currentEditedShot;
 
 	for (const auto& shot : shots) {

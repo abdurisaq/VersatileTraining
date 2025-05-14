@@ -171,7 +171,9 @@ void handleClientConnection(
         // Log request information
         {
             std::lock_guard<std::mutex> lock(g_mutex);
-            LOG("Received {} request for {}", method, endpoint);
+            if (endpoint != "/status") {
+                LOG("Received {} request for {}", method, endpoint);
+            }
         }
 
         if (method == "OPTIONS") {
@@ -183,6 +185,8 @@ void handleClientConnection(
         else if (endpoint == "/load-pack" && method == "POST") {
             std::string body = extractRequestBody(request);
             response = handleLoadPackRequest(authToken, body,dataFolder,hasAction,pendingAction,pendingActionMutex);
+
+
         }
         else if (endpoint == "/list-packs" && method == "GET") {
             response = handleListPacksRequest(authToken, trainingDataPtr);
@@ -279,7 +283,6 @@ std::string createJsonResponse(int statusCode, const std::string& content, bool 
     }
     response += content;
 
-    LOG("Sending response: {}", response);
     return response;
 }
 
@@ -297,8 +300,7 @@ std::string handleStatusRequest(const std::string& authToken) {
     std::string playerId = loadPlayerId();
 
     if (authToken == AUTH_TOKEN) {
-        // Return full status with player ID
-        LOG("Found auth token, returning player ID: {}", playerId);
+        
         return createJsonResponse(200,
             "{\n"
             "  \"status\": \"plugin_active\",\n"
@@ -330,16 +332,16 @@ std::string handleLoadPackRequest(const std::string& authToken, const std::strin
 
     PackInfo pack = parsePack(body);
     
-    packInfoToLocalStorage(pack, dataFolder);
+    packInfoToLocalStorage(pack, dataFolder, hasAction, pendingAction,pendingActionMutex);
+    
+    pack.print();
+
+
     {
         std::lock_guard<std::mutex> lock(pendingActionMutex);
         pendingAction = pack.code;
         hasAction.store(true, std::memory_order_release);
     }
-    pack.print();
-
-    //std::replace(body.begin(), body.end(), '.', '\n'); 
-    // Return success response
     return createJsonResponse(200,
         "{\n"
         "  \"status\": \"success\",\n"
@@ -446,7 +448,6 @@ std::string handlePackRecordingRequest(
     const std::filesystem::path& dataFolder,
     const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr) {
 
-    // Remove any leading slash from packId
     std::string cleanPackId = packId;
     if (!cleanPackId.empty() && (cleanPackId[0] == '/' || cleanPackId[0] == '\\')) {
         cleanPackId = cleanPackId.substr(1);
@@ -454,26 +455,65 @@ std::string handlePackRecordingRequest(
 
     LOG("Handling pack recording request for pack: {}", cleanPackId);
 
+    LOG("Searching for pack with code: {} in a map with {} entries", cleanPackId, trainingDataPtr->size());
+    for (const auto& [key, value] : *trainingDataPtr) {
+        LOG("Available pack: key={}, code={}, name={}", key, value.code, value.name);
+    }
+
     if (authToken != AUTH_TOKEN) {
         return createJsonResponse(401, "{\n\"error\": \"Unauthorized\"\n}");
     }
 
     bool found = false;
+    const CustomTrainingData* foundPack = nullptr;
+    std::string foundKey;
+    
+    //this probably is overkill, remove later
+    for (const auto& [key, value] : *trainingDataPtr) {
+        // Normalize string
+        std::string normalizedCleanPackId = cleanPackId;
+        std::string normalizedCode = value.code;
 
+        std::transform(normalizedCleanPackId.begin(), normalizedCleanPackId.end(),
+            normalizedCleanPackId.begin(), ::tolower);
+        std::transform(normalizedCode.begin(), normalizedCode.end(),
+            normalizedCode.begin(), ::tolower);
 
-    auto it = trainingDataPtr->find(cleanPackId);
-    if (it == trainingDataPtr->end()) {
+        normalizedCleanPackId.erase(0, normalizedCleanPackId.find_first_not_of(" \t\r\n"));
+        normalizedCleanPackId.erase(normalizedCleanPackId.find_last_not_of(" \t\r\n") + 1);
+        normalizedCode.erase(0, normalizedCode.find_first_not_of(" \t\r\n"));
+        normalizedCode.erase(normalizedCode.find_last_not_of(" \t\r\n") + 1);
+
+        if (normalizedCleanPackId == normalizedCode) {
+            foundPack = &value;
+            foundKey = key;
+            found = true;
+            LOG("Found training pack with code: {}", cleanPackId);
+            break;
+        }
+
+        std::string normalizedKey = key;
+        std::transform(normalizedKey.begin(), normalizedKey.end(),
+            normalizedKey.begin(), ::tolower);
+        normalizedKey.erase(0, normalizedKey.find_first_not_of(" \t\r\n"));
+        normalizedKey.erase(normalizedKey.find_last_not_of(" \t\r\n") + 1);
+
+        if (normalizedCleanPackId == normalizedKey) {
+            foundPack = &value;
+            foundKey = key;
+            found = true;
+            LOG("Found training pack with key: {}", cleanPackId);
+            break;
+        }
+    }
+    
+    if (!found || !foundPack) {
         LOG("Training pack not found in memory: {}", cleanPackId);
         return createJsonResponse(404, "{\n\"error\": \"Training pack not found\"\n}");
     }
 
-    // Get the training data encoded
-    CustomTrainingData& trainingData = it->second;
-    std::string encodedTrainingData = trainingData.compressAndEncodeTrainingData();
-
-    LOG("Compressed and encoded training data size: {} bytes", encodedTrainingData.length());
-
-    // Sanitize packId to prevent path traversal
+    CustomTrainingData& trainingData = trainingDataPtr->at(foundKey);
+    
     std::string sanitizedPackId = cleanPackId;
     for (auto& c : sanitizedPackId) {
         if (c == '/' || c == '\\' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|') {
@@ -481,14 +521,35 @@ std::string handlePackRecordingRequest(
         }
     }
 
-    // Build path to the recordings file for this pack
-    std::filesystem::path recordingsFile = dataFolder / "TrainingPacks" / sanitizedPackId / "shots.rec";
+    std::filesystem::path packFolder = dataFolder / "TrainingPacks" / sanitizedPackId;
+    std::filesystem::path trainingDataFile = packFolder / "trainingpack.txt";
+    std::filesystem::path recordingsFile = packFolder / "shots.rec";
 
-
-    LOG("Looking for recording file at: {}", recordingsFile.string());
-
-    // Get the shot recordings if they exist
+    std::string encodedTrainingData;
     std::string shotRecordings;
+ 
+
+    if (std::filesystem::exists(trainingDataFile)) {
+        std::ifstream file(trainingDataFile, std::ios::binary | std::ios::ate);
+        if (file) {
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+            
+            encodedTrainingData.resize(size);
+            if (file.read(&encodedTrainingData[0], size)) {
+                LOG("Successfully read training data, size: {} bytes", size);
+            } else {
+                LOG("Failed to read training data file");
+                return createJsonResponse(500, "{\n\"error\": \"Failed to read training data\"\n}");
+            }
+            file.close();
+        }
+    } else {
+        LOG("Training data file not found: {}", trainingDataFile.string());
+        return createJsonResponse(404, "{\n\"error\": \"Training pack data not found\"\n}");
+    }
+    
+  
     if (std::filesystem::exists(recordingsFile)) {
         std::ifstream file(recordingsFile, std::ios::binary | std::ios::ate);
         if (file) {
@@ -498,27 +559,21 @@ std::string handlePackRecordingRequest(
             shotRecordings.resize(size);
             if (file.read(&shotRecordings[0], size)) {
                 LOG("Successfully read shot recordings, size: {} bytes", size);
-                //removing new line characters to not mess with json output
                 for (size_t i = 0; i < shotRecordings.length(); i++) {
                     if (shotRecordings[i] == '\n') {
-                        shotRecordings[i] = '.'; //replaceing new line with a dot, which isn't a valid base64 character so know the seperator
+                        shotRecordings[i] = '.';
                     }
                 }
-
-                LOG("Sanitized recording data size: {} bytes", shotRecordings.length());
-            }
-            else {
+            } else {
                 LOG("Failed to read recording file");
                 shotRecordings = "";
             }
             file.close();
         }
-    }
-    else {
+    } else {
         LOG("Recording file not found (this might be normal for packs without recordings)");
     }
-
-    // Create JSON response with both training data and shot recordings
+    
     std::ostringstream json;
     json << "{\n"
         << "  \"packId\": \"" << cleanPackId << "\",\n"

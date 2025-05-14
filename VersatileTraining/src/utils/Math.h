@@ -9,6 +9,7 @@ bool ProjectToPlaneY(Vector origin, Vector direction, float yPlane, Vector& outH
 
 float Dot(const Vector2& a, const Vector2& b);
 
+float DotV(const Vector& a, const Vector& b);
 void DrawLineClippedByCircle(CanvasWrapper& canvas, const Vector2& a, const Vector2& b, const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D, CameraWrapper cam, RT::Frustum frust);
 
 float Distance(Vector2 a, Vector2 b);
@@ -17,3 +18,16 @@ bool inRectangle(const std::pair<Vector, Vector>& goalBlockerPos, const Vector& 
 
 
 Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude);
+
+
+void DrawOccludedLine(
+    GameWrapper* gw,
+    CanvasWrapper& canvas,
+    RT::Frustum& frustum,
+    const Vector& start3D,
+    const Vector& end3D,
+    const Vector& ballLocation,
+    const Vector& carLocation,
+    float ballRadius,
+    float carRadius,
+    float thickness);

@@ -66,7 +66,6 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
         appliedJumpState = true;
     }
     
-    
     if (freezeForShot) {
         handleFreezeCar(car, loc, rot);
     }
@@ -146,6 +145,7 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
     if (!savedReplayState.carLocationSet) {
         p->NewLocation = savedReplayState.carLocation;
         currentShotState.carLocation = savedReplayState.carLocation;
+        if (savedReplayState.boostAmount == 100 && savedReplayState.captureSource == CaptureSource::Training) savedReplayState.boostAmount = 101;
         currentShotState.boostAmount = savedReplayState.boostAmount;
         currentShotState.freezeCar = true;
         savedReplayState.carLocationSet = true;
@@ -230,8 +230,9 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
 
 
 void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
-    if (!isInTrainingEditor())return;
-    
+    if (!isInTrainingEditor()) return;
+
+    // Set initial rotation if not already set
     if (!savedReplayState.carRotationSet) {
         cw.SetRotation(savedReplayState.carRotation);
         currentShotState.carRotation = savedReplayState.carRotation;
@@ -242,82 +243,140 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
     Vector loc = cw.GetLocation();
     Rotator rot = cw.GetRotation();
 
+    // Handle scene locking (prevents any rotation changes)
     if (lockScene) {
         cw.SetRotation(currentShotState.carRotation);
         checkForClamping(loc, rot);
-		lockRotation = true;
-		return;
+        lockRotation = true;
+        return;
     }
 
-    
-    
-
+    // Update current shot state
     currentShotState.carRotation = rot;
     currentShotState.carLocation = loc;
 
+    // Handle velocity direction locking
     if (unlockStartingVelocity) {
-        currentShotState.extendedStartingVelocity = convertRotationAndMagnitudeToVector(currentShotState.carRotation, currentShotState.startingVelocity);
+        currentShotState.extendedStartingVelocity = convertRotationAndMagnitudeToVector(
+            currentShotState.carRotation, currentShotState.startingVelocity);
     }
+
+    // Get constants for corner transitions
+    const float zMin = 150;
+    const float upperRampSize = 450;
+    const float zMax = 2044 - upperRampSize;
+
+    // Handle ramp/corner transitions using t value
+    if ((loc.Z < zMin || loc.Z > zMax) && t > 0.0f && !lockRotation) {
+        // We're in a ramp area with transition factor t
+        bool isHighPitch = std::abs(rot.Pitch) > 8192; // Significant pitch
+
+        if (isHighPitch) {
+            // First apply local pitch to handle rotation representation
+            Rotator adjustedRot = applyLocalPitch(rot, t * 0.7f);
+
+            if (isCeiling) {
+                // For ceiling transition
+                Rotator targetRot = { rot.Pitch, rot.Yaw, 32768 }; // Target upside-down
+
+                // Blend between current rotation and ceiling rotation
+                Rotator finalRot = blendPitchRollClampSmooth(
+                    adjustedRot.Pitch,
+                    adjustedRot.Roll,
+                    rot.Pitch, // Preserve pitch
+                    targetRot.Roll,
+                    rot.Yaw,
+                    t  // Use transition factor
+                );
+
+                cw.SetRotation(finalRot);
+                currentRotation = finalRot;
+                return;
+            }
+            else {
+                // For floor transition
+                Rotator targetRot = { rot.Pitch, rot.Yaw, 0 }; // Target normal roll
+
+                // Blend between current rotation and floor rotation
+                Rotator finalRot = blendPitchRollClampSmooth(
+                    adjustedRot.Pitch,
+                    adjustedRot.Roll,
+                    rot.Pitch, // Preserve pitch
+                    targetRot.Roll,
+                    rot.Yaw,
+                    t  // Use transition factor
+                );
+
+                cw.SetRotation(finalRot);
+                currentRotation = finalRot;
+                return;
+            }
+        }
+    }
+
+    // Handle editing variances with rotation unlocked
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
             LOG("Server not found");
             return;
         }
-        
-        
 
-        //LOG("rotating car");
+        // Apply pending rotation changes
         if (rotationToApply.Pitch == 0) {
             rot.Pitch = currentRotation.Pitch;
         }
         else {
-
             rot.Pitch = rotationToApply.Pitch;
         }
 
         rot.Roll += rotationToApply.Roll;
-        rotationToApply = { 0,0,0 };
+        rotationToApply = { 0, 0, 0 };
         cw.SetRotation(rot);
         currentRotation = rot;
         currentLocation = loc;
 
-        Rotator rot1 = checkForClamping(loc, rot);
+        // Apply clamping for walls/ceiling/floor
+        Rotator clampedRot = checkForClamping(loc, rot);
+
+        // Apply local rotation if set
         if (localRotation.Roll != 0 && localRotation.Pitch != 0 && localRotation.Yaw != 0) {
             cw.SetRotation(localRotation);
-            localRotation = { 0,0,0 };
+            localRotation = { 0, 0, 0 };
             currentRotation = localRotation;
         }
-
-        if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
-
-            //LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
-            cw.SetRotation({ rot1.Pitch,rot1.Yaw,rot1.Roll });
+        
+        else if (clampedRot.Yaw != 0 && clampedRot.Pitch != 0 && clampedRot.Roll != 0) {
+            cw.SetRotation(clampedRot);
+            currentRotation = clampedRot;
         }
-
     }
+    
     else if (editingVariances) {
-
-        Rotator rot1 = checkForClamping(loc, rot);
-        if (rot1.Yaw != 0 && rot.Pitch != 0 && rot.Roll != 0) {
-
-            //LOG("applying clamped roatation to car: {}, {}, {}", rot1.Pitch, rot1.Yaw, rot1.Roll);
-            cw.SetRotation({ rot1.Pitch,rot1.Yaw,rot1.Roll });
+        Rotator clampedRot = checkForClamping(loc, rot);
+        if (clampedRot.Yaw != 0 && clampedRot.Pitch != 0 && clampedRot.Roll != 0) {
+            cw.SetRotation(clampedRot);
+            currentRotation = clampedRot;
         }
     }
 }
 
 void VersatileTraining::handleGetRotateActorCameraOffset(ActorWrapper cw) {
-    if (!isInTrainingEditor())return;
+    if (!isInTrainingEditor()) return;
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
             LOG("Server not found");
             return;
         }
 
-        if (clampVal != 5) {
-            //LOG("rotating car based on camera");
-            Rotator rot = gameWrapper->GetCamera().GetRotation();
-            rotationToApply.Pitch = rot.Pitch;
+        
+        if (clampVal != 5) {  // Not on ceiling
+            
+            bool isOnRamp = (t > 0.001f) && (t < 0.99f);
+     
+            if (!((clampVal != 0) && isOnRamp)) {
+                Rotator rot = gameWrapper->GetCamera().GetRotation();
+                rotationToApply.Pitch = rot.Pitch;
+            }
         }
     }
 }

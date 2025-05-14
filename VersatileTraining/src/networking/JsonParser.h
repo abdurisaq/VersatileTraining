@@ -37,4 +37,7 @@ std::vector<std::string> extractArray(const std::string& str, const std::string&
 PackInfo parsePack(const std::string& json);
 
 
+void packInfoToLocalStorage(const PackInfo packInfo, std::filesystem::path dataFolder, std::atomic<bool>& hasAction,
+    std::string& pendingAction,
+    std::mutex& pendingActionMutex );
 void packInfoToLocalStorage(const PackInfo packInfo, std::filesystem::path dataFolder);

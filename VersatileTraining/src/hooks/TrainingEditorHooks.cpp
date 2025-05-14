@@ -23,7 +23,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
             std::string oldKey = "";
             bool found = false;
 
-            for (auto& [key, value] : trainingData) {
+            for (auto& [key, value] : *trainingData) {
                 if (value.name == name) {
                     oldKey = key;
                     value.code = code;
@@ -36,9 +36,9 @@ void VersatileTraining::setupTrainingEditorHooks() {
 
             if (found && !code.empty() && oldKey != code) {
                 LOG("Reorganizing pack - old key: {}, new key: {}", oldKey, code);
-                CustomTrainingData packData = trainingData[oldKey];
-                trainingData.erase(oldKey);
-                trainingData[code] = packData;
+                CustomTrainingData packData = (*trainingData)[oldKey];
+                trainingData->erase(oldKey);
+                (*trainingData)[code] = packData;
                 std::filesystem::path packFolder = myDataFolder / "TrainingPacks" / storageManager.recordingStorage.sanitizeFilename(packData.name);
 
                 if (!std::filesystem::exists(packFolder)) {
@@ -56,7 +56,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
                     LOG("Error deleting training pack folder: {}", e.what());
                     return false;
                 }
-                trainingData[code].code = code;
+                (*trainingData)[code].code = code;
                 if (currentPackKey == oldKey) {
                     currentPackKey = code;
                 }
@@ -87,8 +87,8 @@ void VersatileTraining::setupTrainingEditorHooks() {
                     !currentTrainingData.name.empty() && 
                     currentTrainingData.currentEditedShot >= 0) {
                     
-                    auto it = trainingData.find(currentTrainingData.name);
-                    if (it != trainingData.end()) {
+                    auto it = trainingData->find(currentTrainingData.name);
+                    if (it != trainingData->end()) {
                         // Then check if the shot index is valid
                         if (currentTrainingData.currentEditedShot < it->second.shots.size()) {
                             // Now it's safe to update the recording
@@ -157,6 +157,12 @@ void VersatileTraining::setupTrainingEditorHooks() {
         [this](ActorWrapper cw, void* params, std::string eventName) {
             handleStartEditing(cw);
         });
+
+    //Function TAGame.GameEvent_TrainingEditor_TA.OnInit
+    gameWrapper->HookEvent("Function TAGame.GameEvent_TrainingEditor_TA.OnInit",
+        [this](std::string eventName) {
+			justOpenedPack = true;
+		});
 }
 
 
@@ -165,11 +171,8 @@ void VersatileTraining::setupTrainingEditorHooks() {
 void VersatileTraining::handleTrainingEditorEnter() {
     LOG("Training editor enter");
     currentTrainingData.currentEditedShot = -1;
-    //trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);
-    /*trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
-    for (auto& [key, value] : trainingData) {
-        shiftToNegative(value);
-    }*/
+    justOpenedPack = true;
+    
 
 }
 
@@ -182,6 +185,7 @@ void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::stri
     LOG("setting can spawn bot to true");
     
     freezeForShot = currentShotState.freezeCar;
+    LOG("setting freeze to shot to {} ", freezeForShot ? "true" : "false");
     frozeZVal = !currentShotState.freezeCar;
     lockRotation = true;
     appliedStartingVelocity = false;
@@ -206,43 +210,66 @@ void VersatileTraining::handleTrainingEditorExit() {
 
 void VersatileTraining::handleTrainingSave() {
     if (currentTrainingData.currentEditedShot != -1) {
-  
-        currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
+        
 
-        // Validate currentPackKey - don't allow empty keys
-        if (currentPackKey.empty()) {
-            if (!currentTrainingData.name.empty()) {
-                currentPackKey = currentTrainingData.name;
-                LOG("Empty package key detected, using name instead: {}", currentPackKey);
-                LOG("size of training data: {}", trainingData.size() + 1); 
-                LOG("currentTrainigData size: {}", currentTrainingData.shots.size());
-            }
-            else {
-                currentPackKey = "unnamed_pack_" + std::to_string(time(nullptr));
-                LOG("Empty package key with empty name, using generated key: {}", currentPackKey);
-            }
-        }
+        LOG("amount of shots: {}", currentTrainingData.shots.size());
+
         if (currentTrainingData.shots.empty()) {
-            LOG("training data is empty, not saving anything" );
+            
+            LOG("Training data has no shots, not saving anything");
             return;
-            //nothing to save, and dont overwrite the previous
         }
-        // Now save with valid key
-        trainingData[currentPackKey] = currentTrainingData;
 
-        LOG("saving num shots: {}", currentTrainingData.numShots);
+        // Ensure currentShotState is consistent with currentTrainingData
+        if (currentTrainingData.currentEditedShot < currentTrainingData.shots.size()) {
+            currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
+        }
 
-        for (auto& [key, value] : trainingData) {
+        handleStopEditing();
+
+        // Use code-based lookup first if available
+        std::string searchKey = "";
+        if (!currentTrainingData.code.empty()) {
+            searchKey = currentTrainingData.code;
+        }
+        else {
+            searchKey = currentTrainingData.name;
+        }
+
+        // Check if we already have this pack with a different key
+        bool found = false;
+        for (auto& [key, value] : *trainingData) {
+            if ((value.code == currentTrainingData.code && !currentTrainingData.code.empty()) ||
+                (value.name == currentTrainingData.name)) {
+                // Found existing entry, update it and use its key
+                LOG("Found existing pack with key: {}, updating", key);
+                value = currentTrainingData;
+                found = true;
+                break;
+            }
+        }
+
+        // If not found, add as new entry
+        if (!found) {
+            LOG("Adding new pack with key: {}", searchKey);
+            (*trainingData)[searchKey] = currentTrainingData;
+        }
+
+        LOG("saving num shots: {}", currentTrainingData.shots.size());
+
+        // Rest of save process
+        for (auto& [key, value] : *trainingData) {
             shiftToPositive(value);
         }
-        //storageManager.saveCompressedTrainingData(trainingData, storageManager.saveTrainingFilePath);
-        storageManager.saveCompressedTrainingDataWithRecordings(trainingData, myDataFolder);
-        //trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);
-        //trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
+        storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
 
-        for (auto& [key, value] : trainingData) {
+        
+        *trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
+        for (auto& [key, value] : *trainingData) {
             shiftToNegative(value);
         }
+
+        
     }
 }
 
@@ -251,56 +278,10 @@ void VersatileTraining::handleStartEditing(ActorWrapper cw) {
     isCarRotatable = true;
     goalBlockerEligbleToBeEdited = true;
 
-    if (!cw) {
-        LOG("Caller is invalid");
-        return;
-    }
-
-    TrainingEditorWrapper tw(cw.memory_address);
-    if (tw.IsNull()) {
-        LOG("Failed to get TrainingEditorWrapper");
-        return;
-    }
-
-    GameEditorSaveDataWrapper data = tw.GetTrainingData();
-    TrainingEditorSaveDataWrapper td = data.GetTrainingData();
-
-    std::string name = td.GetTM_Name().ToString();
-    int currentShot = tw.GetActiveRoundNumber();
-    int totalRounds = tw.GetTotalRounds();
-
-    LOG("Training pack name: {}", name);
-    LOG("Training current shot: {}", currentShot);
-    LOG("Training num rounds: {}", totalRounds);
-
-    if (currentTrainingData.name == name) {
-        currentTrainingData.currentEditedShot = currentShot;
-        unlockStartingVelocity = false;
-        LOG("already loaded, skipping searching training data, current shot: {}, total rounds: {}", currentTrainingData.currentEditedShot, totalRounds);
-        handleExistingTrainingData(currentShot, totalRounds);
-        return;
-    }
-
-    bool found = false;
-    for (auto& [key, value] : trainingData) {
-        if (value.name == name) {
-            currentTrainingData = value;
-            LOG("Training pack found in trainingData");
-            found = true;
-            currentPackKey = key;
-            break;
-        }
-    }
-
-    if (!found) {
-        LOG("Training pack not found in trainingData");
-        currentTrainingData.initCustomTrainingData(totalRounds, name);
-        auto [it, inserted] = trainingData.insert_or_assign(name, currentTrainingData);
-        currentPackKey = name;
-    }
+    handleLoadRound(cw, nullptr, "");
 
     unlockStartingVelocity = false;
-    handleNewTrainingData(currentShot);
+    
 }
 
 
@@ -338,23 +319,22 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     std::string code = td.GetCode().ToString();
 
 
-    if (currentTrainingData.name == name) {
-        currentTrainingData.currentEditedShot = currentShot;
-        unlockStartingVelocity = false;
-        LOG("already loaded, skipping searching training data, current shot: {}, total rounds: {}", currentTrainingData.currentEditedShot, totalRounds);
-        handleExistingTrainingData(currentShot, totalRounds);
-        return;
-    }
+    
     bool found = false;
-    for (auto& [key, value] : trainingData) {
+    for (auto& [key, value] : *trainingData) {
         if (value.name == name) {
             
-            currentTrainingData = value;
-          
+            if (justOpenedPack) {
+                currentTrainingData = value;
+                justOpenedPack = false;
+            }
             LOG("num shots in found training pack: {}", currentTrainingData.shots.size());
             if (totalRounds < currentTrainingData.numShots) {
                 LOG("resizing because num shots in training pack is less than the saved version");
                 currentTrainingData.shots.resize(totalRounds);
+            }
+            if (currentTrainingData.name == name && totalRounds == currentTrainingData.shots.size() && currentTrainingData.code.empty() && !code.empty()) {
+                (*trainingData)[key].code = code;
             }
             currentTrainingData.customPack = true;
             currentTrainingData.currentEditedShot = currentShot;

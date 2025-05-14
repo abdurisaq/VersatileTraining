@@ -18,7 +18,7 @@ void VersatileTraining::registerNotifiers() {
 			lockScene = !lockScene;
 		}, "lock training sequence to current values", PERMISSION_ALL
 	);
-	cvarManager->setBind("V", "lockScene");
+	
 
 	cvarManager->registerNotifier(
 		"findController",
@@ -37,7 +37,7 @@ void VersatileTraining::registerNotifiers() {
 			controllerManager.enumerateControllers();
 		}, "check to see if there's a connected controller", PERMISSION_ALL
 	);
-	cvarManager->setBind("O", "findController");
+	
 	cvarManager->registerNotifier("unlockCar", [this](std::vector<std::string> args) {
 		if (!isInTrainingEditor())return;
 		if (lockRotation) {
@@ -51,7 +51,7 @@ void VersatileTraining::registerNotifiers() {
 
 		}, "unlock car", PERMISSION_ALL);
 
-	cvarManager->setBind("X", "unlockCar");
+	
 	cvarManager->registerNotifier("freezeCar", [this](std::vector<std::string> args) {
 		if (!isInTrainingEditor())return;
 		if (currentShotState.freezeCar) {
@@ -66,7 +66,7 @@ void VersatileTraining::registerNotifiers() {
 
 		}, "freeze car", PERMISSION_ALL);
 
-	cvarManager->setBind("F", "freezeCar");
+	
 
 	cvarManager->registerNotifier("removeJump", [this](std::vector<std::string> args) {
 		if (!isInTrainingEditor())return;
@@ -82,7 +82,7 @@ void VersatileTraining::registerNotifiers() {
 
 		}, "remove car's jump", PERMISSION_ALL);
 
-	cvarManager->setBind("J", "removeJump");
+	
 
 	cvarManager->registerNotifier("lockStartingVelocity", [this](std::vector<std::string> args) {
 		if (!isInTrainingEditor())return;
@@ -92,12 +92,12 @@ void VersatileTraining::registerNotifiers() {
 
 		}, "remove car's jump", PERMISSION_ALL);
 
-	cvarManager->setBind("B", "lockStartingVelocity");
+	
 
 
 	cvarManager->registerNotifier("printDataMap", [this](std::vector<std::string> args) {
 
-		for (auto [key, value] : trainingData) {
+		for (auto [key, value] : *trainingData) {
 			LOG("Name: {}", value.name);
 			LOG("ID: {}", key);
 			LOG("Code: {}", value.code);
@@ -125,22 +125,6 @@ void VersatileTraining::registerNotifiers() {
 				LOG("has recording ? {}", value.shots[i].recording.inputs.size() > 0 ? "true" : "false");
 				LOG("number of inputs : {}", value.shots[i].recording.inputs.size());
 
-				for (int j = 0; j < value.shots[i].recording.inputs.size(); j++) {
-					LOG("input {}: Throttle: {:.7f}, Steer: {:.7f}, Pitch: {:.7f}, Yaw: {:.7f}, Roll: {:.7f}, DodgeForward: {:.7f}, DodgeStrafe: {:.7f}, Handbrake: {}, Jump: {}, ActivateBoost: {}, HoldingBoost: {}, Jumped: {}",
-												j,
-												value.shots[i].recording.inputs[j].Throttle,
-												value.shots[i].recording.inputs[j].Steer,
-												value.shots[i].recording.inputs[j].Pitch,
-												value.shots[i].recording.inputs[j].Yaw,
-												value.shots[i].recording.inputs[j].Roll,
-												value.shots[i].recording.inputs[j].DodgeForward,
-												value.shots[i].recording.inputs[j].DodgeStrafe,
-												value.shots[i].recording.inputs[j].Handbrake ? "true" : "false",
-												value.shots[i].recording.inputs[j].Jump ? "true" : "false",
-												value.shots[i].recording.inputs[j].ActivateBoost ? "true" : "false",
-												value.shots[i].recording.inputs[j].HoldingBoost ? "true" : "false",
-												value.shots[i].recording.inputs[j].Jumped ? "true" : "false");
-				}
 				// Goal anchors state
 				LOG("Shot {}: Goal Anchors: First={}, Second={}",
 					i,
@@ -153,7 +137,7 @@ void VersatileTraining::registerNotifiers() {
 
 		}, "print local data map", PERMISSION_ALL);
 
-	cvarManager->setBind("L", "printDataMap");
+	
 
 	cvarManager->registerNotifier("printCurrentPack", [this](std::vector<std::string> args) {
 		//if (!isInTrainingEditor())return;
@@ -161,15 +145,16 @@ void VersatileTraining::registerNotifiers() {
 		//currentTrainingData
 		LOG("Name: {}", currentTrainingData.name);
 		LOG("Code: {}", currentTrainingData.code);
-		LOG("Num Shots: {}", currentTrainingData.numShots);
-		for (int i = 0; i < currentTrainingData.numShots; i++) {
+		LOG("Num Shots: {}", currentTrainingData.shots.size());
+		LOG("custom pack ? {}", currentTrainingData.customPack ? "true" : "false");
+		for (int i = 0; i < currentTrainingData.shots.size(); i++) {
 			LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, currentTrainingData.shots[i].boostAmount, currentTrainingData.shots[i].startingVelocity, static_cast<int>(currentTrainingData.shots[i].freezeCar), static_cast<int>(currentTrainingData.shots[i].hasJump));
 			LOG("has recording? {}", currentTrainingData.shots[i].recording.inputs.size() > 0 ? "true" : "false");
 		}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
 
 		}, "print local data map", PERMISSION_ALL);
 
-	cvarManager->setBind("P", "printCurrentPack");
+
 
 
 
@@ -189,7 +174,7 @@ void VersatileTraining::registerNotifiers() {
 			LOG("not in a custom pack and picked shot, cant edit goal blocker");
 		}
 		}, "toggling editting goal blocker", PERMISSION_ALL);
-	cvarManager->setBind("G", "editGoalBlocker");
+	
 
 
 	cvarManager->registerNotifier("spawnBot", [this](std::vector<std::string> args) {
@@ -198,13 +183,13 @@ void VersatileTraining::registerNotifiers() {
 		shotReplicationManager.spawnBot(gameWrapper.get());
 
 		}, "spawn bot in custom training", PERMISSION_ALL);
-	cvarManager->setBind("M", "spawnBot");
+
 
 	cvarManager->registerNotifier("startRecording", [this](std::vector<std::string> args) {
 		if (!(isInTrainingEditor() || isInTrainingPack()) && shotReplicationManager.canSpawnBot) return;
 		shotReplicationManager.startRecordingShot(gameWrapper.get());
 		}, "start recording", PERMISSION_ALL);
-	cvarManager->setBind("N", "startRecording");
+	
 
 	cvarManager->registerNotifier("currentShotState", [this](std::vector<std::string> args) {
 		
@@ -220,7 +205,7 @@ void VersatileTraining::registerNotifiers() {
 		LOG("number of inputs : {}", currentShotState.recording.inputs.size());
 
 		}, "dump recorded inputs", PERMISSION_ALL);
-	cvarManager->setBind("currentShotState", "dumpInputs");
+	
 
 
 	cvarManager->registerNotifier("printCurrentState", [this](std::vector<std::string> args) {
@@ -234,12 +219,12 @@ void VersatileTraining::registerNotifiers() {
 
 
 		}, "printing current state", PERMISSION_ALL);
-	cvarManager->setBind("Y", "printCurrentState");
+	
 
 	cvarManager->registerNotifier("saveReplaySnapshot", [this](std::vector<std::string> args) {
 		snapshotManager.takeSnapShot(gameWrapper.get(), focusCarID);
 
 		}, "printing current state", PERMISSION_ALL);
-	cvarManager->setBind("K", "saveReplaySnapshot");
+	
 
 }

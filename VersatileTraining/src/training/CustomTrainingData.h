@@ -33,23 +33,56 @@ struct ShotState {
 			carLocation = other.carLocation;
 			carRotation = other.carRotation;
 
-			// Safe copying of recording
+			// Safe copying
 			try {
-				if (other.recording.inputs.size() > 100000) {
-					// Skip copying suspiciously large input vectors
+				if (&other.recording == nullptr) {
+					recording = ShotRecording();
+				}
+				else if (!other.recording.inputs.data()) { 
+					
 					recording = ShotRecording();
 					recording.carBody = other.recording.carBody;
 					recording.settings = other.recording.settings;
 					recording.initialState = other.recording.initialState;
 					recording.startState = other.recording.startState;
-					// Don't copy inputs
+					
+				}
+				else if (other.recording.inputs.size() > 100000) {
+					
+					recording = ShotRecording();
+					recording.carBody = other.recording.carBody;
+					recording.settings = other.recording.settings;
+					recording.initialState = other.recording.initialState;
+					recording.startState = other.recording.startState;
+					
 				}
 				else {
-					recording = other.recording;
+					
+					ShotRecording newRecording;
+					newRecording.carBody = other.recording.carBody;
+					newRecording.settings = other.recording.settings;
+					newRecording.initialState = other.recording.initialState;
+					newRecording.startState = other.recording.startState;
+
+					try {
+						if (other.recording.inputs.size() > 0) {
+							newRecording.inputs.reserve(other.recording.inputs.size());
+							for (const auto& input : other.recording.inputs) {
+								newRecording.inputs.push_back(input);
+							}
+						}
+					}
+					catch (const std::exception& e) {
+						LOG("Exception copying inputs: {}", e.what());
+						
+					}
+
+					recording = std::move(newRecording);
 				}
 			}
-			catch (const std::exception&) {
-				// If copy fails, create a clean recording
+			catch (const std::exception& e) {
+				
+				LOG("Exception in ShotState assignment: {}", e.what());
 				recording = ShotRecording();
 			}
 		}

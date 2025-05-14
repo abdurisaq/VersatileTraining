@@ -4,7 +4,14 @@
 
 
 
-
+struct SpecialKeybinds {
+	int rollLeft = 'Q';    
+	int rollRight = 'E';   
+	int decreaseBoost = '1'; 
+	int increaseBoost = '2'; 
+	int decreaseVelocity = '3';
+	int increaseVelocity = '4'; 
+};
 
 
 
@@ -36,5 +43,10 @@ public:
 
 	std::unordered_map<std::string, CustomTrainingData> loadCompressedTrainingDataWithRecordings(
 		const std::filesystem::path& dataFolder);
+
+
+	void saveSpecialKeybinds(SpecialKeybinds keybinds, const std::filesystem::path& dataFolder);
+	SpecialKeybinds loadSpecialKeybinds(const std::filesystem::path& dataFolder);
+
 
 };

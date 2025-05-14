@@ -1,98 +1,425 @@
 #include "pch.h"
 #include "src/core/VersatileTraining.h"
 
-void VersatileTraining::RenderSettings() {
-	ImGui::Text("Versatile Training Settings");
-    std::string binding = pastBinding;
+void VersatileTraining::displaySpecialKeybind(const std::string& label, int& keyCode) {
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("%s", label.c_str());
+    ImGui::SameLine(ImGui::GetWindowWidth() * 0.5f);
 
-    ImGui::InputText("##bind_key", &bind_key);
-    ImGui::SameLine();
-    if (ImGui::Button("Set Bind", ImVec2(80, 0))) {
-        cvarManager->removeBind(binding);
-        cvarManager->setBind(bind_key, "open_gallery");
-        pastBinding = bind_key;
+    // Show the current key
+    std::string keyName = getKeyName(keyCode);
+
+    // Create a unique ID for this binding
+    std::string bindId = "##specialbind_" + label;
+
+    // Static maps to track binding state individually per binding
+    static std::unordered_map<std::string, bool> isBindingMap;
+    static std::unordered_map<std::string, int*> currentBindTargetMap;
+    static std::unordered_map<std::string, bool> keysWereReleasedMap;
+
+    // Initialize if not present
+    if (isBindingMap.find(label) == isBindingMap.end()) {
+        isBindingMap[label] = false;
+        currentBindTargetMap[label] = nullptr;
+        keysWereReleasedMap[label] = false;
     }
-    
 
-	if (ImGui::Button("Find Controller")) {
-		HWND hwnd = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
-		if (!hwnd) {
-			LOG("Failed to get Rocket League window handle.");
-			return;
-		}
-		else {
-			LOG("Got Rocket League window handle.");
-		}
+    // Button to start binding
+    std::string buttonText = keyName + bindId;
+    if (ImGui::Button(buttonText.c_str(), ImVec2(80, 0))) {
+        isBindingMap[label] = true;
+        currentBindTargetMap[label] = &keyCode;
+        keysWereReleasedMap[label] = false;
 
-	
-	}
+        // Clear any currently pressed keys
+        for (int i = 0x08; i <= 0xFE; i++) {
+            GetAsyncKeyState(i);
+        }
+    }
 
-	static char trainingCode[20];
-	ImGui::InputText("custom Training code",trainingCode, IM_ARRAYSIZE(trainingCode));
+    // If we're binding this key
+    if (isBindingMap[label] && currentBindTargetMap[label] == &keyCode) {
+        ImGui::SameLine();
+        ImGui::Text("Press any key...");
 
-	
-	ImGui::SliderInt("Boost Amount", &currentShotState.boostAmount, currentTrainingData.boostMin, currentTrainingData.boostMax);
-	ImGui::SliderInt("Starting Velocity", &currentShotState.startingVelocity, currentTrainingData.minVelocity, currentTrainingData.maxVelocity);
-	
-	ImVec2 availableSize = ImGui::GetContentRegionAvail();
-	ImVec2 childSize = ImVec2(availableSize.x, availableSize.y);
+        // First wait for all keys to be released
+        bool anyKeyPressed = false;
+        for (int i = 0x08; i <= 0xFE; i++) {
+            if (GetAsyncKeyState(i) & 0x8000) {
+                anyKeyPressed = true;
+                break;
+            }
+        }
 
-	ImGui::BeginChild("Training Data", childSize,true);
-	for (auto [key, value] : trainingData) {
-		if (!value.name.empty()) {
-		ImGui::Text("Name: %s", value.name.c_str());
-		}
-		ImGui::Text("Code: %s", key.c_str());
-		ImGui::Text("Boost Amount: %d", value.shots[0].boostAmount);
-		ImGui::Text("Starting Velocity: (%d)", value.shots[0].startingVelocity);
-	
-		if (ImGui::Button(("Edit##" + key).c_str())) {
-			
-			editingTrainingCode = key;  
-			editMode = true;           
-		}
-		ImGui::SameLine();
-		if (ImGui::Button(("Delete##" + key).c_str())) {
-			trainingData.erase(key);
-		}
-		ImGui::Separator();
-	}
-	ImGui::EndChild();
+        if (!anyKeyPressed) {
+            keysWereReleasedMap[label] = true;
+        }
+
+        // Only after all keys are released, look for a new key press
+        if (keysWereReleasedMap[label]) {
+            for (int i = 0x08; i <= 0xFE; i++) {
+                if (GetAsyncKeyState(i) & 0x8000) {
+                    *(currentBindTargetMap[label]) = i;
+                    isBindingMap[label] = false;
+                    currentBindTargetMap[label] = nullptr;
+                    keysWereReleasedMap[label] = false;
+                    // Update currentBindings for display
+                    currentBindings[label] = getKeyName(i);
+                    // Save the changes
+                    storageManager.saveSpecialKeybinds(specialKeybinds, myDataFolder);
+                    break;
+                }
+            }
+        }
+
+        // Allow canceling with Escape
+        if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+            isBindingMap[label] = false;
+            currentBindTargetMap[label] = nullptr;
+            keysWereReleasedMap[label] = false;
+        }
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button(("Reset##" + label).c_str(), ImVec2(50, 0))) {
+        // Reset to default value based on the label
+        if (label == "Roll Left") keyCode = 'Q';
+        else if (label == "Roll Right") keyCode = 'E';
+        else if (label == "Decrease Boost") keyCode = '1';
+        else if (label == "Increase Boost") keyCode = '2';
+        else if (label == "Decrease Velocity") keyCode = '3';
+        else if (label == "Increase Velocity") keyCode = '4';
+
+        // Update currentBindings for display
+        currentBindings[label] = getKeyName(keyCode);
+        storageManager.saveSpecialKeybinds(specialKeybinds, myDataFolder);
+    }
+}
 
 
-	if (editMode) {
-		ImGui::OpenPopup("Edit Training Pack");
+void VersatileTraining::RenderSettings() {
+    ImGui::Text("Versatile Training Settings");
 
-		if (ImGui::BeginPopupModal("Edit Training Pack", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-			CustomTrainingData& data = trainingData[editingTrainingCode];
+    ImGui::Spacing();
 
-			ImGui::SliderInt("Boost Amount", &data.shots[0].boostAmount, data.boostMin, data.boostMax);
-			ImGui::SliderInt("Starting Velocity", &data.shots[0].startingVelocity, data.minVelocity, data.maxVelocity);
-		
+    // Custom button style for plugin interface binding
+    ImGui::Text("Open Plugin Interface:");
+    ImGui::SameLine();
 
-			if (ImGui::Button("Save")) {
-				
-				editMode = false;
-			}
+    auto currentBind = currentBindings.find("open_gallery");
+    std::string displayKey = (currentBind != currentBindings.end()) ? currentBind->second : "Unbound";
 
-			ImGui::EndPopup();
+    static bool isBindingInterfaceKey = false;
+    std::string buttonLabel = displayKey + "##InterfaceKey";
+    if (ImGui::Button(buttonLabel.c_str(), ImVec2(80, 0))) {
+        isBindingInterfaceKey = true;
+    }
 
-		}
+    if (isBindingInterfaceKey) {
+        ImGui::SameLine();
+        ImGui::Text("Press any key...");
 
-	}
+        for (int i = 0x08; i <= 0xFE; i++) {
+            if (GetAsyncKeyState(i) & 0x8000) {
+                std::string newBind = getKeyName(i);
+                if (!newBind.empty()) {
+                    cvarManager->removeBind(pastBinding);
+                    cvarManager->setBind(newBind, "open_gallery");
+                    pastBinding = newBind;
+                    currentBindings["open_gallery"] = newBind;
+                    LOG("UI bind set to: {}", newBind);
+                }
+                isBindingInterfaceKey = false;
+                break;
+            }
+        }
 
-	
+        if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+            isBindingInterfaceKey = false;
+        }
+    }
+
+    // Universal keybind display function that uses button approach
+    auto DisplayKeybind = [this](const std::string& label, const std::string& command) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("%s", label.c_str());
+        ImGui::SameLine(ImGui::GetWindowWidth() * 0.5f);
+
+        // Show the current key
+        std::string currentBind = "";
+        auto it = currentBindings.find(command);
+        if (it != currentBindings.end()) {
+            currentBind = it->second;
+        }
+
+        // Create a unique ID for this binding
+        std::string bindId = "##bind_" + command;
+
+        // Static variables to track binding state
+        static bool isBinding = false;
+        static std::string currentBindCommand = "";
+
+        // Button to start binding - Fixed: Create proper buttonLabel
+        std::string buttonLabel = (currentBind.empty() ? "Unbound" : currentBind) + bindId;
+        if (ImGui::Button(buttonLabel.c_str(), ImVec2(80, 0))) {
+            isBinding = true;
+            currentBindCommand = command;
+        }
+
+        // If we're binding this key
+        if (isBinding && currentBindCommand == command) {
+            ImGui::SameLine();
+            ImGui::Text("Press any key...");
+
+            // Check for key presses
+            for (int i = 0x08; i <= 0xFE; i++) { // Check all common keys
+                if (GetAsyncKeyState(i) & 0x8000) { // Key just pressed
+                    // Remove old binding if it exists
+                    if (!currentBind.empty()) {
+                        cvarManager->removeBind(currentBind);
+                        LOG("Removed old bind: {} -> {}", currentBind, command);
+                    }
+
+                    // Set new binding
+                    std::string newBind = getKeyName(i);
+                    if (!newBind.empty()) {
+                        cvarManager->setBind(newBind, command);
+                        currentBindings[command] = newBind;
+                        LOG("Set new bind: {} -> {}", newBind, command);
+                    }
+
+                    isBinding = false;
+                    currentBindCommand = "";
+                    break;
+                }
+            }
+
+            // Allow canceling with Escape
+            if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+                isBinding = false;
+                currentBindCommand = "";
+            }
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button(("Clear##" + command).c_str(), ImVec2(50, 0))) {
+            if (!currentBind.empty()) {
+                cvarManager->removeBind(currentBind);
+                LOG("Removed bind: {} -> {}", currentBind, command);
+                currentBindings.erase(command);
+            }
+        }
+    };
+
+    if (ImGui::BeginTabBar("SettingsTabs")) {
+
+        if (ImGui::BeginTabItem("Car Controls")) {
+            ImGui::Text("Car Movement & States");
+            ImGui::Separator();
+
+            DisplayKeybind("Lock/Unlock Car Rotation", "unlockCar");
+            DisplayKeybind("Freeze/Unfreeze Car", "freezeCar");
+            DisplayKeybind("Enable/Disable Jump", "removeJump");
+            DisplayKeybind("Lock/Unlock Velocity Direction", "lockStartingVelocity");
+
+            ImGui::Spacing();
+            ImGui::Text("Car Velocity & Boost (Hold Keys)");
+            ImGui::Separator();
+
+            displaySpecialKeybind("Decrease Boost", specialKeybinds.decreaseBoost);
+            displaySpecialKeybind("Increase Boost", specialKeybinds.increaseBoost);
+            displaySpecialKeybind("Decrease Velocity", specialKeybinds.decreaseVelocity);
+            displaySpecialKeybind("Increase Velocity", specialKeybinds.increaseVelocity);
+
+            ImGui::Spacing();
+            ImGui::Text("Car Roll Control (Hold Keys)");
+            ImGui::Separator();
+
+            displaySpecialKeybind("Roll Left", specialKeybinds.rollLeft);
+            displaySpecialKeybind("Roll Right", specialKeybinds.rollRight);
+
+            ImGui::Spacing();
+            ImGui::Text("Scene Controls");
+            ImGui::Separator();
+
+            DisplayKeybind("Lock/Unlock Scene", "lockScene");
+
+            ImGui::EndTabItem();
+        }
+
+
+        if (ImGui::BeginTabItem("Playback & Recording")) {
+            ImGui::Text("Shot Recording Controls");
+            ImGui::Separator();
+
+            DisplayKeybind("Start Recording", "startRecording");
+            DisplayKeybind("Spawn Bot for Playback", "spawnBot");
+            DisplayKeybind("Save Replay Snapshot", "saveReplaySnapshot");
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Goal Blockers")) {
+            ImGui::Text("Goal Blocker Controls");
+            ImGui::Separator();
+
+            DisplayKeybind("Toggle Goal Blocker Edit Mode", "editGoalBlocker");
+
+            ImGui::Spacing();
+            ImGui::Text("Goal Blocker Configuration");
+            ImGui::Separator();
+
+            float outlineColorArray[4] = {
+                goalBlockerOutlineColor.R / 255.0f,
+                goalBlockerOutlineColor.G / 255.0f,
+                goalBlockerOutlineColor.B / 255.0f,
+                goalBlockerOutlineColor.A / 255.0f
+            };
+
+            float gridColorArray[4] = {
+                goalBlockerGridColor.R / 255.0f,
+                goalBlockerGridColor.G / 255.0f,
+                goalBlockerGridColor.B / 255.0f,
+                goalBlockerGridColor.A / 255.0f
+            };
+
+            if (ImGui::ColorEdit4("Outline Color", outlineColorArray, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar)) {
+
+                goalBlockerOutlineColor.R = outlineColorArray[0] * 255.0f;
+                goalBlockerOutlineColor.G = outlineColorArray[1] * 255.0f;
+                goalBlockerOutlineColor.B = outlineColorArray[2] * 255.0f;
+                goalBlockerOutlineColor.A = outlineColorArray[3] * 255.0f;
+            }
+
+            if (ImGui::ColorEdit4("Grid Color", gridColorArray, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar)) {
+
+                goalBlockerGridColor.R = gridColorArray[0] * 255.0f;
+                goalBlockerGridColor.G = gridColorArray[1] * 255.0f;
+                goalBlockerGridColor.B = gridColorArray[2] * 255.0f;
+                goalBlockerGridColor.A = gridColorArray[3] * 255.0f;
+            }
+
+
+            ImGui::SliderInt("Grid Lines", &goalBlockerGridLines, 2, 8, "%d");
+            ImGui::SliderFloat("Outline Thickness", &goalBlockerOutlineThickness, 1.0f, 10.0f, "%.1f");
+            ImGui::SliderFloat("Grid Thickness", &goalBlockerGridThickness, 0.5f, 5.0f, "%.1f");
+
+            ImGui::EndTabItem();
+        }
+
+
+        if (ImGui::BeginTabItem("Debug & Dev")) {
+            ImGui::Text("Development Tools");
+            ImGui::Separator();
+
+            DisplayKeybind("Print Current State", "printCurrentState");
+            DisplayKeybind("Print Current Shot State", "currentShotState");
+            DisplayKeybind("Print Current Pack", "printCurrentPack");
+            DisplayKeybind("Print Training Data Map", "printDataMap");
+            DisplayKeybind("Find Controller", "findController");
+
+            ImGui::EndTabItem();
+        }
+
+
+        if (ImGui::BeginTabItem("Help & Presets")) {
+            ImGui::Text("Key Binding Presets");
+            ImGui::Separator();
+
+            if (ImGui::Button("Default Keybinds", ImVec2(150, 0))) {
+                ImGui::OpenPopup("DefaultBindConfirm");
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Clear All Binds", ImVec2(150, 0))) {
+                ImGui::OpenPopup("ClearBindConfirm");
+            }
+
+
+            if (ImGui::BeginPopupModal("DefaultBindConfirm", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Reset all keybinds to default values?");
+                ImGui::Text("This will overwrite your current bindings.");
+                ImGui::Separator();
+
+                if (ImGui::Button("Yes, Reset to Defaults", ImVec2(180, 0))) {
+                    SetDefaultKeybinds();
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            if (ImGui::BeginPopupModal("ClearBindConfirm", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Clear all keybinds?");
+                ImGui::Text("You'll need to set them up again manually.");
+                ImGui::Separator();
+
+                if (ImGui::Button("Yes, Clear All", ImVec2(150, 0))) {
+                    ClearAllKeybinds();
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            ImGui::Spacing();
+            ImGui::Text("Current Bindings Summary");
+            ImGui::Separator();
+
+            ImGui::BeginChild("BindingsList", ImVec2(0, 150), true);
+            ImGui::Columns(2, "BindingsColumns");
+
+            ImGui::Text("Command"); ImGui::NextColumn();
+            ImGui::Text("Key"); ImGui::NextColumn();
+            ImGui::Separator();
+
+            for (const auto& [command, key] : currentBindings) {
+                ImGui::Text("%s", command.c_str()); ImGui::NextColumn();
+                ImGui::Text("%s", key.c_str()); ImGui::NextColumn();
+            }
+
+            ImGui::Columns(1);
+            ImGui::EndChild();
+
+            ImGui::Spacing();
+            ImGui::Text("Quick Help Guide");
+            ImGui::Separator();
+
+            if (ImGui::CollapsingHeader("How to Use Goal Blockers")) {
+                ImGui::TextWrapped("1. Enter training editor and press G to enable goal blocker edit mode");
+                ImGui::TextWrapped("2. Look at the goal and click to place the first anchor point");
+                ImGui::TextWrapped("3. Click again to place the second anchor point");
+                ImGui::TextWrapped("4. Press G again to exit edit mode");
+            }
+
+            if (ImGui::CollapsingHeader("How to Record and Playback")) {
+                ImGui::TextWrapped("1. Setup your shot in the training editor");
+                ImGui::TextWrapped("2. Press N to start recording");
+                ImGui::TextWrapped("3. Take the shot yourself");
+                ImGui::TextWrapped("4. Reset the shot");
+                ImGui::TextWrapped("5. Press M to spawn a bot that will play back your inputs");
+            }
+
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
 }
 
 void VersatileTraining::RenderWindow() {
     if (ImGui::BeginTabBar("SnapshotManagerTabs")) {
         
-        if (ImGui::BeginTabItem("Custom Training Packs")) { // Renamed tab
+        if (ImGui::BeginTabItem("Custom Training Packs")) {
             ImGui::Text("Manage and Load Custom Training Packs");
             ImGui::Separator();
 
-            // --- Load Pack by Code ---
-            static char packCodeToLoad[64] = ""; // Buffer for input
+            static char packCodeToLoad[64] = ""; 
             ImGui::InputText("Enter Pack Code", packCodeToLoad, IM_ARRAYSIZE(packCodeToLoad));
             ImGui::SameLine();
             if (ImGui::Button("Load Pack by Code")) {
@@ -105,7 +432,6 @@ void VersatileTraining::RenderWindow() {
             }
             ImGui::Separator();
 
-            // --- Search and Filter Controls ---
             static char packSearchBuffer[128] = "";
             static int packSortCriteria = 0; // 0: Name, 1: Code, 2: Num Shots
             static bool packSortAscending = true;
@@ -120,22 +446,22 @@ void VersatileTraining::RenderWindow() {
             ImGui::RadioButton("Num Shots##PackSort", &packSortCriteria, 2);
 
             ImGui::SameLine();
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 0)); // Reduce button height
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 0)); 
             if (ImGui::Button(packSortAscending ? "Asc ^##PackSortDir" : "Desc v##PackSortDir")) {
                 packSortAscending = !packSortAscending;
             }
             ImGui::PopStyleVar();
             ImGui::Separator();
 
-            // --- Pack List ---
-            ImGui::Text("Available Packs (%zu):", trainingData.size());
+            
+            ImGui::Text("Available Packs (%zu):", trainingData->size());
 
             std::vector<std::pair<std::string, const CustomTrainingData*>> filteredPacksVec;
-            for (const auto& pair : trainingData) {
+            for (const auto& pair : *trainingData) {
                 filteredPacksVec.push_back({ pair.first, &pair.second });
             }
 
-            // Apply text filtering (search)
+           
             if (strlen(packSearchBuffer) > 0) {
                 std::string searchStrLower = packSearchBuffer;
                 std::transform(searchStrLower.begin(), searchStrLower.end(), searchStrLower.begin(), ::tolower);
@@ -195,8 +521,8 @@ void VersatileTraining::RenderWindow() {
                 for (const auto& pair : filteredPacksVec) {
                     const std::string& packKey = pair.first;
                  
-                    if (trainingData.find(packKey) == trainingData.end()) continue; 
-                    const CustomTrainingData& packData = trainingData.at(packKey);
+                    if (trainingData->find(packKey) == trainingData->end()) continue; 
+                    const CustomTrainingData& packData = trainingData->at(packKey);
 
 
                     ImGui::PushID(packKey.c_str());
@@ -224,7 +550,7 @@ void VersatileTraining::RenderWindow() {
 
                         ImGui::SameLine();
                         if (ImGui::Button("Delete##Delete")) {
-                            ImGui::OpenPopup("DeleteConfirmPopup"); // Generic ID, but context is per pack due to PushID
+                            ImGui::OpenPopup("DeleteConfirmPopup");
                         }
                         ImGui::Unindent();
 
@@ -257,15 +583,13 @@ void VersatileTraining::RenderWindow() {
                                     LOG("Error deleting training pack folder: {}", e.what());
                                     
                                 }
-                                trainingData.erase(packKey);
+                                trainingData->erase(packKey);
                                 if (currentPackKey == packKey) {
                                     currentTrainingData.reset();
                                     currentPackKey.clear();
                                     currentShotState = ShotState();
                                 }
-                                // TODO: Persist deletion to disk:
-                                // storageManager.deletePackFiles(packKey, myDataFolder);
-                                // storageManager.saveCompressedTrainingDataWithRecordings(trainingData, myDataFolder); // Then resave the main index
+                               
                                 LOG("Deleted pack: %s", packKey.c_str());
                                 ImGui::CloseCurrentPopup();
                             }
@@ -286,7 +610,7 @@ void VersatileTraining::RenderWindow() {
         //current
         if (ImGui::BeginTabItem("Current Training Pack")) {
             ImGui::Text("Training Pack: %s", currentTrainingData.name.empty() ? "No pack loaded" : currentTrainingData.name.c_str());
-
+            
             if (currentTrainingData.shots.size() > 0) {
                 ImGui::Text("Total Shots: %d", static_cast<int>(currentTrainingData.shots.size()));
                 ImGui::Separator();
@@ -301,16 +625,13 @@ void VersatileTraining::RenderWindow() {
                     char shotName[64];
                     sprintf(shotName, "Shot %d", static_cast<int>(i + 1));
 
-                    // Check if this is the currently edited shot
                     bool isCurrentEditedShot = (i == currentTrainingData.currentEditedShot);
                     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
 
-                    // Only auto-open the current shot
                     if (!isCurrentEditedShot) {
                         flags = 0;
                     }
 
-                    // Add visual indicator for current shot
                     if (isCurrentEditedShot) {
                         ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 220, 0, 255));
                         sprintf(shotName, "Shot %d (Current)", static_cast<int>(i + 1));
@@ -319,7 +640,6 @@ void VersatileTraining::RenderWindow() {
                     if (ImGui::CollapsingHeader(shotName, flags)) {
                         ShotState& shot = currentTrainingData.shots[i];
 
-                        // Car details
                         ImGui::Text("Car Velocity: (%.1f, %.1f, %.1f)", shot.extendedStartingVelocity.X, shot.extendedStartingVelocity.Y, shot.extendedStartingVelocity.Z);
                         ImGui::Text("Boost Amount: %d", shot.boostAmount);
                         ImGui::Text("Starting Velocity: %d", shot.startingVelocity);
@@ -331,13 +651,6 @@ void VersatileTraining::RenderWindow() {
                             ImGui::Text("Goal Blocker: Active");
                             ImGui::Text("Point 1: (%.1f, %.1f, %.1f)", shot.goalBlocker.first.X, shot.goalBlocker.first.Y, shot.goalBlocker.first.Z);
                             ImGui::Text("Point 2: (%.1f, %.1f, %.1f)", shot.goalBlocker.second.X, shot.goalBlocker.second.Y, shot.goalBlocker.second.Z);
-                        }
-
-                        // Action buttons for shots
-                        if (!isCurrentEditedShot && ImGui::Button("Select This Shot")) {
-                            // Load this shot in the editor (you'll need to implement this function)
-                            // This would typically set currentTrainingData.currentEditedShot = i
-                            // and tell the game to load this shot
                         }
                     }
 
@@ -553,7 +866,7 @@ void VersatileTraining::RenderWindow() {
                         
                         if (ImGui::Button("Save")) {
                             if (strlen(newName) > 0) {
-                                // Since we're using the sorted view, we need to use the original index
+                                // Since were using the sorted view, we need to use the original indx
                                 snapshotManager.replayStates[originalIndex].replayName = newName;
                                 newName[0] = '\0';
                             }
