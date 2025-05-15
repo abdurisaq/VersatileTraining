@@ -53,6 +53,11 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	std::filesystem::path myDataFolder;
 
 
+	char packSearchBuffer[128] = "";
+	int packSortCriteria = 0;
+	bool packSortAscending = true;
+	std::string deletePackKey = "";
+
 	std::string pastBinding;
 	std::string bind_key;
 

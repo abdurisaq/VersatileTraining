@@ -6,43 +6,41 @@ void VersatileTraining::displaySpecialKeybind(const std::string& label, int& key
     ImGui::Text("%s", label.c_str());
     ImGui::SameLine(ImGui::GetWindowWidth() * 0.5f);
 
-    // Show the current key
     std::string keyName = getKeyName(keyCode);
 
-    // Create a unique ID for this binding
+  
     std::string bindId = "##specialbind_" + label;
 
-    // Static maps to track binding state individually per binding
+    
     static std::unordered_map<std::string, bool> isBindingMap;
     static std::unordered_map<std::string, int*> currentBindTargetMap;
     static std::unordered_map<std::string, bool> keysWereReleasedMap;
 
-    // Initialize if not present
     if (isBindingMap.find(label) == isBindingMap.end()) {
         isBindingMap[label] = false;
         currentBindTargetMap[label] = nullptr;
         keysWereReleasedMap[label] = false;
     }
 
-    // Button to start binding
+   
     std::string buttonText = keyName + bindId;
     if (ImGui::Button(buttonText.c_str(), ImVec2(80, 0))) {
         isBindingMap[label] = true;
         currentBindTargetMap[label] = &keyCode;
         keysWereReleasedMap[label] = false;
 
-        // Clear any currently pressed keys
+        
         for (int i = 0x08; i <= 0xFE; i++) {
             GetAsyncKeyState(i);
         }
     }
 
-    // If we're binding this key
+    
     if (isBindingMap[label] && currentBindTargetMap[label] == &keyCode) {
         ImGui::SameLine();
         ImGui::Text("Press any key...");
 
-        // First wait for all keys to be released
+        
         bool anyKeyPressed = false;
         for (int i = 0x08; i <= 0xFE; i++) {
             if (GetAsyncKeyState(i) & 0x8000) {
@@ -55,7 +53,7 @@ void VersatileTraining::displaySpecialKeybind(const std::string& label, int& key
             keysWereReleasedMap[label] = true;
         }
 
-        // Only after all keys are released, look for a new key press
+        
         if (keysWereReleasedMap[label]) {
             for (int i = 0x08; i <= 0xFE; i++) {
                 if (GetAsyncKeyState(i) & 0x8000) {
@@ -63,16 +61,15 @@ void VersatileTraining::displaySpecialKeybind(const std::string& label, int& key
                     isBindingMap[label] = false;
                     currentBindTargetMap[label] = nullptr;
                     keysWereReleasedMap[label] = false;
-                    // Update currentBindings for display
+                    
                     currentBindings[label] = getKeyName(i);
-                    // Save the changes
+                    
                     storageManager.saveSpecialKeybinds(specialKeybinds, myDataFolder);
                     break;
                 }
             }
         }
 
-        // Allow canceling with Escape
         if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
             isBindingMap[label] = false;
             currentBindTargetMap[label] = nullptr;
@@ -82,7 +79,7 @@ void VersatileTraining::displaySpecialKeybind(const std::string& label, int& key
 
     ImGui::SameLine();
     if (ImGui::Button(("Reset##" + label).c_str(), ImVec2(50, 0))) {
-        // Reset to default value based on the label
+       
         if (label == "Roll Left") keyCode = 'Q';
         else if (label == "Roll Right") keyCode = 'E';
         else if (label == "Decrease Boost") keyCode = '1';
@@ -90,7 +87,7 @@ void VersatileTraining::displaySpecialKeybind(const std::string& label, int& key
         else if (label == "Decrease Velocity") keyCode = '3';
         else if (label == "Increase Velocity") keyCode = '4';
 
-        // Update currentBindings for display
+        
         currentBindings[label] = getKeyName(keyCode);
         storageManager.saveSpecialKeybinds(specialKeybinds, myDataFolder);
     }
@@ -102,7 +99,7 @@ void VersatileTraining::RenderSettings() {
 
     ImGui::Spacing();
 
-    // Custom button style for plugin interface binding
+    
     ImGui::Text("Open Plugin Interface:");
     ImGui::SameLine();
 
@@ -139,48 +136,46 @@ void VersatileTraining::RenderSettings() {
         }
     }
 
-    // Universal keybind display function that uses button approach
+    
     auto DisplayKeybind = [this](const std::string& label, const std::string& command) {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("%s", label.c_str());
         ImGui::SameLine(ImGui::GetWindowWidth() * 0.5f);
 
-        // Show the current key
+        
         std::string currentBind = "";
         auto it = currentBindings.find(command);
         if (it != currentBindings.end()) {
             currentBind = it->second;
         }
 
-        // Create a unique ID for this binding
         std::string bindId = "##bind_" + command;
 
-        // Static variables to track binding state
+        
         static bool isBinding = false;
         static std::string currentBindCommand = "";
 
-        // Button to start binding - Fixed: Create proper buttonLabel
         std::string buttonLabel = (currentBind.empty() ? "Unbound" : currentBind) + bindId;
         if (ImGui::Button(buttonLabel.c_str(), ImVec2(80, 0))) {
             isBinding = true;
             currentBindCommand = command;
         }
 
-        // If we're binding this key
+        
         if (isBinding && currentBindCommand == command) {
             ImGui::SameLine();
             ImGui::Text("Press any key...");
 
-            // Check for key presses
-            for (int i = 0x08; i <= 0xFE; i++) { // Check all common keys
-                if (GetAsyncKeyState(i) & 0x8000) { // Key just pressed
-                    // Remove old binding if it exists
+            
+            for (int i = 0x08; i <= 0xFE; i++) { 
+                if (GetAsyncKeyState(i) & 0x8000) {
+                    
                     if (!currentBind.empty()) {
                         cvarManager->removeBind(currentBind);
                         LOG("Removed old bind: {} -> {}", currentBind, command);
                     }
 
-                    // Set new binding
+                    
                     std::string newBind = getKeyName(i);
                     if (!newBind.empty()) {
                         cvarManager->setBind(newBind, command);
@@ -194,7 +189,7 @@ void VersatileTraining::RenderSettings() {
                 }
             }
 
-            // Allow canceling with Escape
+            
             if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
                 isBinding = false;
                 currentBindCommand = "";
@@ -290,7 +285,7 @@ void VersatileTraining::RenderSettings() {
                         }
                         };
 
-                    // Settings based on the image:
+                    
                     RenderOverrideSettingInputInt("Boost Limit (-1 unlimited)", currentSettings.overrideBoostLimit, currentSettings.boostLimit);
                     RenderOverrideSettingRangeInt("Player Start Velocity", currentSettings.overridePlayerStartVelocity, currentSettings.playerStartVelocity, 0, 2300, "(%d, %d) uu/s");
                     RenderOverrideSettingRangeFloat("Ball Speed Variance %%", currentSettings.overrideBallSpeedVariancePct, currentSettings.ballSpeedVariancePct, -100.0f, 100.0f, "(%.1f, %.1f)%%");
@@ -320,11 +315,11 @@ void VersatileTraining::RenderSettings() {
 
                 ImGui::Separator();
                 ImGui::Text("Packs with Custom Overrides:");
-                float listHeight = ImGui::GetTextLineHeightWithSpacing() * 7; // Show ~7 items
+                float listHeight = ImGui::GetTextLineHeightWithSpacing() * 7; 
                 ImGui::BeginChild("OverrideList", ImVec2(0, listHeight), true);
                 std::string codeToSelectOnClick;
                 for (auto const& [code, settings] : storageManager.packOverrideSettings) {
-                    if (settings.HasAnyOverride()) { // Only list packs that actually have an override set
+                    if (settings.HasAnyOverride()) { 
                         if (ImGui::Selectable(code.c_str(), storageManager.currentEditingOverridePackCode == code)) {
                             codeToSelectOnClick = code;
                         }
@@ -334,7 +329,7 @@ void VersatileTraining::RenderSettings() {
                     strncpy(currentPackCodeInput, codeToSelectOnClick.c_str(), sizeof(currentPackCodeInput) - 1);
                     currentPackCodeInput[sizeof(currentPackCodeInput) - 1] = '\0';
                     storageManager.currentEditingOverridePackCode = codeToSelectOnClick;
-                    // Ensure entry exists (should already, but good practice)
+                    
                     if (storageManager.packOverrideSettings.find(storageManager.currentEditingOverridePackCode) == storageManager.packOverrideSettings.end()) {
                         storageManager.packOverrideSettings[storageManager.currentEditingOverridePackCode] = PackOverrideSettings();
                     }
@@ -543,22 +538,40 @@ void VersatileTraining::RenderSettings() {
     }
 }
 
+
 void VersatileTraining::RenderWindow() {
+    
+    ImGuiStyle& style = ImGui::GetStyle();
+    float origItemSpacing = style.ItemSpacing.y;
+    float origFramePadding = style.FramePadding.y;
+
+    
+    style.ItemSpacing.y = 8.0f;
+    style.FramePadding.y = 6.0f;
+
+    
     if (determiningCodeSync) {
         ImGui::SetWindowSize(ImVec2(0, 0));
         ImGui::OpenPopup("Confirm Code Sync");
     }
+
     
     ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-    ImVec2 popupSize = ImVec2(600, 600); 
-    ImGui::SetNextWindowPos(ImVec2(displaySize.x * 0.5f - popupSize.x * 0.5f, displaySize.y * 0.5f - 150)); 
+    ImVec2 popupSize = ImVec2(600, 600);
+    ImGui::SetNextWindowPos(ImVec2(displaySize.x * 0.5f - popupSize.x * 0.5f, displaySize.y * 0.5f - 150));
     ImGui::SetNextWindowSize(popupSize, ImGuiCond_Appearing);
 
+    
     if (ImGui::BeginPopupModal("Confirm Code Sync", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+        
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]); 
         ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.1f, 1.0f), "Training Pack Code Mismatch Detected!");
+        ImGui::PopFont();
+
         ImGui::Separator();
         ImGui::Spacing();
 
+        
         ImGui::TextWrapped("The training pack '%s' appears to be published online, but its code ('%s') is not stored locally with the pack.",
             (trainingData && trainingData->count(pendingKey) ? trainingData->at(pendingKey).name.c_str() : "Unknown Pack"),
             pendingCode.c_str());
@@ -568,14 +581,17 @@ void VersatileTraining::RenderWindow() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        float buttonWidth = 120.0f;
-        float windowWidth = ImGui::GetWindowSize().x; 
+        
+        float buttonWidth = 150.0f;
+        float windowWidth = ImGui::GetWindowSize().x;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
         float totalButtonWidth = buttonWidth * 2 + spacing;
 
         ImGui::SetCursorPosX((windowWidth - totalButtonWidth) * 0.5f);
-        if (ImGui::Button("Yes, Sync Code", ImVec2(buttonWidth, 0))) {
-
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+        if (ImGui::Button("Yes, Sync Code", ImVec2(buttonWidth, 30))) {
+            
             (*trainingData)[pendingKey].code = pendingCode;
             CustomTrainingData packData = (*trainingData)[pendingKey];
             trainingData->erase(pendingKey);
@@ -586,17 +602,15 @@ void VersatileTraining::RenderWindow() {
 
             if (!std::filesystem::exists(packFolder)) {
                 LOG("Training pack folder not found: {}", packFolder.string());
-                
-            } else {
+            }
+            else {
                 try {
                     LOG("Deleting training pack folder: {}", packFolder.string());
                     std::size_t removedCount = std::filesystem::remove_all(packFolder);
                     LOG("Removed {} files/directories", removedCount);
-                    
                 }
                 catch (const std::filesystem::filesystem_error& e) {
                     LOG("Error deleting training pack folder: {}", e.what());
-                    
                 }
             }
             for (auto& [key, value] : *trainingData) {
@@ -604,13 +618,11 @@ void VersatileTraining::RenderWindow() {
             }
             storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
 
-
             *trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
             for (auto& [key, value] : *trainingData) {
                 shiftToNegative(value);
             }
 
-            
             pendingKey.clear();
             pendingCode.clear();
             determiningCodeSync = false;
@@ -621,289 +633,520 @@ void VersatileTraining::RenderWindow() {
                 cvarManager->executeCommand(cmd, false);
                 });
         }
+        ImGui::PopStyleColor(2);
 
         ImGui::SameLine();
-                if (ImGui::Button("No, Later", ImVec2(buttonWidth, 0))) {
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.3f, 0.3f, 1.0f));
+        if (ImGui::Button("No, Later", ImVec2(buttonWidth, 30))) {
             pendingKey.clear();
             pendingCode.clear();
             determiningCodeSync = false;
             ImGui::CloseCurrentPopup();
-            
+
             gameWrapper->Execute([this](GameWrapper* gw) {
                 std::string cmd = "togglemenu " + GetMenuName();
                 cvarManager->executeCommand(cmd, false);
                 });
         }
+        ImGui::PopStyleColor(2);
+
         ImGui::Spacing();
         ImGui::EndPopup();
-        
     }
+
+    
     if (determiningCodeSync) {
-        return; 
+        
+        style.ItemSpacing.y = origItemSpacing;
+        style.FramePadding.y = origFramePadding;
+        return;
     }
-    if (ImGui::BeginTabBar("SnapshotManagerTabs")) {
+
+    
+    if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_FittingPolicyResizeDown)) {
         
         if (ImGui::BeginTabItem("Custom Training Packs")) {
-            ImGui::Text("Manage and Load Custom Training Packs");
-            ImGui::Separator();
-
-            static char packCodeToLoad[64] = ""; 
-            ImGui::InputText("Enter Pack Code", packCodeToLoad, IM_ARRAYSIZE(packCodeToLoad));
-            ImGui::SameLine();
-            if (ImGui::Button("Load Pack by Code")) {
-                if (strlen(packCodeToLoad) > 0) {
-                    LOG("Attempting to load pack with code: {}", packCodeToLoad);
-                    DownloadTrainingPackById(packCodeToLoad);
-                    
-                    return;
-                }
-            }
-            ImGui::Separator();
-
-            static char packSearchBuffer[128] = "";
-            static int packSortCriteria = 0; 
-            static bool packSortAscending = true;
-
-            ImGui::InputText("Search##PackList", packSearchBuffer, IM_ARRAYSIZE(packSearchBuffer));
-            ImGui::SameLine();
-            if (ImGui::Button("Clear##PackSearch")) { packSearchBuffer[0] = '\0'; }
-
-            ImGui::Text("Sort by:");
-            ImGui::RadioButton("Name##PackSort", &packSortCriteria, 0); ImGui::SameLine();
-            ImGui::RadioButton("Code##PackSort", &packSortCriteria, 1); ImGui::SameLine();
-            ImGui::RadioButton("Num Shots##PackSort", &packSortCriteria, 2);
-
-            ImGui::SameLine();
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 0)); 
-            if (ImGui::Button(packSortAscending ? "Asc ^##PackSortDir" : "Desc v##PackSortDir")) {
-                packSortAscending = !packSortAscending;
-            }
-            ImGui::PopStyleVar();
-            ImGui::Separator();
+            ImGui::Spacing();
 
             
-            ImGui::Text("Available Packs (%zu):", trainingData->size());
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 8));
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
 
-            std::vector<std::pair<std::string, const CustomTrainingData*>> filteredPacksVec;
-            for (const auto& pair : *trainingData) {
-                filteredPacksVec.push_back({ pair.first, &pair.second });
+            {
+                ImGui::BeginGroup();
+
+                
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 130); 
+                static char packCodeToLoad[64] = "";
+                ImGui::InputTextWithHint("##PackCodeInput", "Enter Training Pack Code", packCodeToLoad, IM_ARRAYSIZE(packCodeToLoad));
+                ImGui::SameLine();
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.4f, 0.8f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.9f, 1.0f));
+                if (ImGui::Button("Load Pack", ImVec2(120, 0))) {
+                    if (strlen(packCodeToLoad) > 0) {
+                        LOG("Attempting to load pack with code: {}", packCodeToLoad);
+                        DownloadTrainingPackById(packCodeToLoad);
+                        return;
+                    }
+                }
+                ImGui::PopStyleColor(2);
+
+                ImGui::EndGroup();
             }
+
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            
+            {
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));
+
+                
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted("Filter:");
+                ImGui::SameLine();
+
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.45f);
+                ImGui::InputTextWithHint("##SearchPacks", "Search by name or code...", packSearchBuffer, IM_ARRAYSIZE(packSearchBuffer));
+
+                ImGui::SameLine();
+                if (ImGui::Button("X##ClearSearch", ImVec2(24, 0))) {
+                    packSearchBuffer[0] = '\0';
+                }
+
+                ImGui::SameLine(0, 20);
+
+                
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted("Sort:");
+                ImGui::SameLine();
+
+                ImGui::SetNextItemWidth(120);
+                const char* sortOptions[] = { "Name", "Code", "Shots" };
+                ImGui::Combo("##SortBy", &packSortCriteria, sortOptions, IM_ARRAYSIZE(sortOptions));
+
+                ImGui::SameLine();
+                if (ImGui::Button(packSortAscending ? "^##SortDir" : "v##SortDir", ImVec2(24, 0))) {
+                    packSortAscending = !packSortAscending;
+                }
+
+                ImGui::PopStyleVar();
+            }
+
+            ImGui::Spacing();
 
            
-            if (strlen(packSearchBuffer) > 0) {
-                std::string searchStrLower = packSearchBuffer;
-                std::transform(searchStrLower.begin(), searchStrLower.end(), searchStrLower.begin(), ::tolower);
-                filteredPacksVec.erase(
-                    std::remove_if(filteredPacksVec.begin(), filteredPacksVec.end(),
-                        [&](const auto& pair) {
-                            const CustomTrainingData* pack = pair.second;
-                            std::string packNameLower = pack->name.empty() ? pair.first : pack->name;
-                            std::transform(packNameLower.begin(), packNameLower.end(), packNameLower.begin(), ::tolower);
-                            std::string packCodeLower = pair.first;
-                            std::transform(packCodeLower.begin(), packCodeLower.end(), packCodeLower.begin(), ::tolower);
+            ImGui::BeginGroup();
+            {
+                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Available Packs (%zu)", trainingData->size());
+                ImGui::SameLine(ImGui::GetWindowWidth() - 40);
+                if (ImGui::Button("?##HelpPacks", ImVec2(24, 0))) {
+                    ImGui::OpenPopup("TrainingPacksHelp");
+                }
 
-                            return packNameLower.find(searchStrLower) == std::string::npos &&
-                                packCodeLower.find(searchStrLower) == std::string::npos;
-                        }),
-                    filteredPacksVec.end());
+                if (ImGui::BeginPopup("TrainingPacksHelp")) {
+                    ImGui::TextUnformatted("Training Pack Information");
+                    ImGui::Separator();
+                    ImGui::TextWrapped("• Published packs have a code and can be played directly");
+                    ImGui::TextWrapped("• Unpublished packs need to be loaded in-game to acquire a code");
+                    ImGui::TextWrapped("• Click on a pack to expand its details");
+                    ImGui::TextWrapped("• Use the search box to filter by name or code");
+                    ImGui::EndPopup();
+                }
+            }
+            ImGui::EndGroup();
+
+            ImGui::Spacing();
+
+            
+            ImVec2 listRegionSize = ImGui::GetContentRegionAvail();
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.15f, 0.5f));
+            ImGui::BeginChild("PacksScrollArea", listRegionSize, true);
+
+            
+            std::vector<std::pair<std::string, const CustomTrainingData*>> filteredPacksVec;
+
+            
+            for (const auto& [key, value] : *trainingData) {
+                if (strlen(packSearchBuffer) > 0) {
+                    std::string lowerName = value.name;
+                    std::string lowerCode = value.code;
+                    std::string lowerSearch = packSearchBuffer;
+
+                    
+                    std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+                    std::transform(lowerCode.begin(), lowerCode.end(), lowerCode.begin(), ::tolower);
+                    std::transform(lowerSearch.begin(), lowerSearch.end(), lowerSearch.begin(), ::tolower);
+
+                    if (lowerName.find(lowerSearch) == std::string::npos &&
+                        lowerCode.find(lowerSearch) == std::string::npos) {
+                        continue;
+                    }
+                }
+
+                filteredPacksVec.push_back({ key, &value });
             }
 
             
+            int sortCriteria = packSortCriteria;
+            bool sortAscending = packSortAscending;
+
             std::sort(filteredPacksVec.begin(), filteredPacksVec.end(),
-                [&](const auto& a, const auto& b) {
-                    const CustomTrainingData* packA = a.second;
-                    const CustomTrainingData* packB = b.second;
+                [sortCriteria, sortAscending](const auto& a, const auto& b) {
                     bool result = false;
 
-                    switch (packSortCriteria) {
-                    case 0: { 
-                        std::string nameA = packA->name.empty() ? a.first : packA->name;
-                        std::string nameB = packB->name.empty() ? b.first : packB->name;
-                        std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
-                        std::transform(nameB.begin(), nameB.end(), nameB.begin(), ::tolower);
-                        result = nameA < nameB;
+                    switch (sortCriteria) {
+                    case 0: // Name
+                        result = a.second->name < b.second->name;
                         break;
-                    }
-                    case 1: { 
-                        std::string codeA = a.first;
-                        std::string codeB = b.first;
-                        std::transform(codeA.begin(), codeA.end(), codeA.begin(), ::tolower);
-                        std::transform(codeB.begin(), codeB.end(), codeB.begin(), ::tolower);
-                        result = codeA < codeB;
+                    case 1: // Code
+                        result = a.second->code < b.second->code;
                         break;
-                    }
-                    case 2: 
-                        result = packA->numShots < packB->numShots;
+                    case 2: // Shots
+                        result = a.second->numShots < b.second->numShots;
                         break;
+                    default:
+                        result = a.first < b.first;
                     }
-                    return packSortAscending ? result : !result;
+
+                    return sortAscending ? result : !result;
                 });
 
-            ImVec2 listRegionSize = ImGui::GetContentRegionAvail();
-            ImGui::BeginChild("CustomPacksScrollArea", ImVec2(listRegionSize.x, max(100.0f, listRegionSize.y)), true);
-
+            
             if (filteredPacksVec.empty()) {
-                ImGui::Text("No packs match your criteria or no packs loaded.");
+                ImGui::Spacing();
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No packs match your criteria or no packs loaded.");
+                ImGui::PopFont();
             }
             else {
                 for (const auto& pair : filteredPacksVec) {
                     const std::string& packKey = pair.first;
-                 
-                    if (trainingData->find(packKey) == trainingData->end()) continue; 
-                    const CustomTrainingData& packData = trainingData->at(packKey);
+                    const CustomTrainingData& packData = *pair.second;
 
-
+                    
                     ImGui::PushID(packKey.c_str());
 
-                    std::string headerNamePart = packData.name;
-                    bool isUnpublished = packData.code.empty();
-                    std::string headerSuffix = isUnpublished ? " (unpublished)" : " (published)";
                     
-                    ImGui::TextUnformatted(headerNamePart.c_str()); 
-                    ImGui::SameLine(0.0f, 0.0f); 
-                    ImGui::TextUnformatted(headerSuffix.c_str());
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.9f));
+                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.25f, 0.25f, 0.25f, 0.9f));
 
+                    bool isUnpublished = packData.code.empty();
+                    std::string statusIcon = isUnpublished ? "! " : "+ ";
+                    std::string displayName = statusIcon + packData.name;
+
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 8));
+                    bool isOpen = ImGui::CollapsingHeader(displayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+                    ImGui::PopStyleVar();
+
+                    ImGui::PopStyleColor(3);
+
+                    
+                    ImGui::SameLine(ImGui::GetWindowWidth() - 110);
                     if (isUnpublished) {
-                        ImGui::SameLine();
-                        ImGui::TextDisabled("(?)");
+                        ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.1f, 1.0f), "(unpublished)");
                         if (ImGui::IsItemHovered()) {
                             ImGui::BeginTooltip();
                             ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-                            ImGui::TextUnformatted("Is this actually a published training pack? If so, just load up the training pack once again in the game and you will be prompted to sync the training pack code.");
+                            ImGui::TextWrapped("This pack needs to be loaded in-game to sync with a published code");
                             ImGui::PopTextWrapPos();
                             ImGui::EndTooltip();
                         }
                     }
-                    
-                    std::string collapsingHeaderLabel = "##CollapsingHeader_" + packKey;
-                    if (ImGui::CollapsingHeader(collapsingHeaderLabel.c_str())) {
-                        ImGui::Indent();
-                        if (!packData.code.empty()) {
-                            ImGui::Text("Full Code: %s", packData.code.c_str());
-                        }
-                        ImGui::Text("Number of Shots: %d", packData.numShots);
-                        
+                    else {
+                        ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "(published)");
+                    }
 
+                    
+                    if (isOpen) {
+                        ImGui::Indent(10.0f);
                         ImGui::Spacing();
 
+                        
+                        ImGui::Columns(2, "PackInfoColumns", false);
+                        ImGui::SetColumnWidth(0, 200);
+
+                       
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Code:");
+                        ImGui::NextColumn();
                         if (!packData.code.empty()) {
-                            if (ImGui::Button("Play")) {
+                            ImGui::TextUnformatted(packData.code.c_str());
+                        }
+                        else {
+                            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Not Available");
+                        }
+                        ImGui::NextColumn();
+
+                        
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Shots:");
+                        ImGui::NextColumn();
+                        ImGui::Text("%d", packData.numShots);
+                        ImGui::NextColumn();
+
+                        ImGui::Columns(1);
+                        ImGui::Spacing();
+
+                        
+                        ImGui::Separator();
+                        ImGui::Spacing();
+
+                        float buttonWidth = 120.0f;
+                        float availWidth = ImGui::GetContentRegionAvail().x;
+                        float totalButtonWidth = buttonWidth * 2 + ImGui::GetStyle().ItemSpacing.x;
+                        ImGui::SetCursorPosX((availWidth - totalButtonWidth) * 0.5f + ImGui::GetCursorPosX());
+
+                        
+                        if (!packData.code.empty()) {
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                            if (ImGui::Button("Play Pack", ImVec2(buttonWidth, 30))) {
                                 std::string cmd = "load_training " + packData.code;
-                                
                                 gameWrapper->Execute([this, cmd](GameWrapper* gw) {
                                     cvarManager->executeCommand(cmd, false);
                                     });
                             }
+                            ImGui::PopStyleColor(2);
+                        }
+                        else {
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.7f));
+                            ImGui::Button("Play Pack", ImVec2(buttonWidth, 30));
+                            ImGui::PopStyleColor();
+                            if (ImGui::IsItemHovered()) {
+                                ImGui::SetTooltip("Code required to play");
+                            }
                         }
 
                         ImGui::SameLine();
-                        if (ImGui::Button("Delete##Delete")) {
+
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
+                        if (ImGui::Button("Delete Pack", ImVec2(buttonWidth, 30))) {
+                            deletePackKey = packKey;
                             ImGui::OpenPopup("DeleteConfirmPopup");
                         }
-                        ImGui::Unindent();
+                        ImGui::PopStyleColor(2);
 
-                        if (ImGui::BeginPopupModal("DeleteConfirmPopup", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                            ImGui::Text("Are you sure you want to delete pack: %s?", (packData.name + headerSuffix).c_str());
-                            ImGui::Text("This action cannot be undone from the UI.");
-                            ImGui::Separator();
-                            if (ImGui::Button("Yes, Delete", ImVec2(120, 0))) {
-                                std::filesystem::path packFolder;
-                                if (!packData.code.empty())
-                                {
-                                    packFolder = myDataFolder / "TrainingPacks" / packData.code;
-                                }
-                                else
-                                {
-                                    packFolder = myDataFolder / "TrainingPacks" / storageManager.recordingStorage.sanitizeFilename(packData.name);
-                                }
-                                if (!std::filesystem::exists(packFolder)) {
-                                    LOG("Training pack folder not found: {}", packFolder.string());
-                                    
-                                } else {
-                                    try {
-                                        LOG("Deleting training pack folder: {}", packFolder.string());
-                                        std::size_t removedCount = std::filesystem::remove_all(packFolder);
-                                        LOG("Removed {} files/directories", removedCount);
-                                    
-                                    }
-                                    catch (const std::filesystem::filesystem_error& e) {
-                                        LOG("Error deleting training pack folder: {}", e.what());
-                                        
-                                    }
-                                }
-                                trainingData->erase(packKey);
-                                if (currentPackKey == packKey) {
-                                    currentTrainingData.reset();
-                                    currentPackKey.clear();
-                                    currentShotState = ShotState();
-                                }
-                               
-                                LOG("Deleted pack: %s", packKey.c_str());
-                                ImGui::CloseCurrentPopup();
-                            }
-                            ImGui::SameLine();
-                            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                                ImGui::CloseCurrentPopup();
-                            }
-                            ImGui::EndPopup();
-                        }
+                        ImGui::Spacing();
+                        ImGui::Unindent(10.0f);
                     }
+
                     ImGui::PopID();
                     ImGui::Separator();
                 }
             }
-            ImGui::EndChild();
-            ImGui::EndTabItem();
-        }
-        
-        if (ImGui::BeginTabItem("Current Training Pack")) {
-            ImGui::Text("Training Pack: %s", currentTrainingData.name.empty() ? "No pack loaded" : currentTrainingData.name.c_str());
+
             
-            if (currentTrainingData.shots.size() > 0) {
-                ImGui::Text("Total Shots: %d", static_cast<int>(currentTrainingData.shots.size()));
+            if (ImGui::BeginPopupModal("DeleteConfirmPopup", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+                ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "Confirm Pack Deletion");
+                ImGui::PopFont();
                 ImGui::Separator();
 
-                ImVec2 availableSize = ImGui::GetContentRegionAvail();
-                ImVec2 childSize = ImVec2(availableSize.x, availableSize.y);
-                ImGui::BeginChild("ShotsScrollArea", childSize, true);
+                ImGui::TextWrapped("Are you sure you want to delete this pack?");
+                if (!deletePackKey.empty() && trainingData->count(deletePackKey) > 0) {
+                    ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Pack: %s", trainingData->at(deletePackKey).name.c_str());
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
+                if (ImGui::Button("Delete Pack", ImVec2(120, 30))) {
+                    if (!deletePackKey.empty() && trainingData->count(deletePackKey) > 0) {
+                        
+                        LOG("Deleting training pack: {}", trainingData->at(deletePackKey).name);
+
+                        std::filesystem::path packFolder = myDataFolder / "TrainingPacks";
+                        std::string packIdentifier = trainingData->at(deletePackKey).code.empty() ?
+                            trainingData->at(deletePackKey).name : trainingData->at(deletePackKey).code;
+
+                        std::filesystem::path specificPackFolder = packFolder / packIdentifier;
+
+                        if (std::filesystem::exists(specificPackFolder)) {
+                            try {
+                                std::filesystem::remove_all(specificPackFolder);
+                            }
+                            catch (const std::filesystem::filesystem_error& e) {
+                                LOG("Error deleting folder: {}", e.what());
+                            }
+                        }
+
+                        trainingData->erase(deletePackKey);
+
+                        
+                        for (auto& [key, value] : *trainingData) {
+                            shiftToPositive(value);
+                        }
+                        storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
+                    }
+
+                    deletePackKey = "";
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::PopStyleColor(2);
+
+                ImGui::SameLine();
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
+                if (ImGui::Button("Cancel", ImVec2(120, 30))) {
+                    deletePackKey = "";
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::PopStyleColor(2);
+
+                ImGui::EndPopup();
+            }
+
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+
+            ImGui::EndTabItem();
+        }
+
+        
+        if (ImGui::BeginTabItem("Current Training Pack")) {
+            ImGui::Spacing();
+
+            
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.2f, 0.2f, 0.3f, 0.3f));
+            ImGui::BeginChild("CurrentPackHeader", ImVec2(ImGui::GetContentRegionAvail().x, 60), true);
+
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+            ImGui::TextColored(ImVec4(0.9f, 0.9f, 1.0f, 1.0f), "Current Pack:");
+            ImGui::SameLine();
+            if (currentTrainingData.name.empty()) {
+                ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "No pack loaded");
+            }
+            else {
+                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.8f, 1.0f), "%s", currentTrainingData.name.c_str());
+                ImGui::SameLine(ImGui::GetWindowWidth() - 150);
+                ImGui::TextColored(ImVec4(0.8f, 0.8f, 1.0f, 1.0f), "Shots: %d", static_cast<int>(currentTrainingData.shots.size()));
+            }
+            ImGui::PopFont();
+
+           
+            if (!currentTrainingData.code.empty()) {
+                ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Code: %s", currentTrainingData.code.c_str());
+            }
+
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+
+            
+            if (currentTrainingData.shots.size() > 0) {
+                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Shot Details:");
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImVec2 shotsAreaSize = ImGui::GetContentRegionAvail();
+                ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.15f, 0.5f));
+                ImGui::BeginChild("ShotsScrollArea", shotsAreaSize, true);
 
                 for (size_t i = 0; i < currentTrainingData.shots.size(); ++i) {
                     ImGui::PushID(static_cast<int>(i));
 
-                    char shotName[64];
-                    sprintf(shotName, "Shot %d", static_cast<int>(i + 1));
-
+                    
                     bool isCurrentEditedShot = (i == currentTrainingData.currentEditedShot);
-                    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+                    ImGuiTreeNodeFlags flags = isCurrentEditedShot ? ImGuiTreeNodeFlags_DefaultOpen : 0;
 
-                    if (!isCurrentEditedShot) {
-                        flags = 0;
-                    }
-
+                    std::string shotName = "Shot " + std::to_string(i + 1);
                     if (isCurrentEditedShot) {
-                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 220, 0, 255));
-                        sprintf(shotName, "Shot %d (Current)", static_cast<int>(i + 1));
+                        shotName += " (Current)";
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.1f, 0.9f));
+                        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.4f, 0.2f, 0.9f));
+                    }
+                    else {
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+                        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.9f));
                     }
 
-                    if (ImGui::CollapsingHeader(shotName, flags)) {
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 8));
+                    bool isOpen = ImGui::CollapsingHeader(shotName.c_str(), flags);
+                    ImGui::PopStyleVar();
+                    ImGui::PopStyleColor(2);
+
+                    if (isOpen) {
+                        ImGui::Indent(10.0f);
                         ShotState& shot = currentTrainingData.shots[i];
 
-                        ImGui::Text("Car Velocity: (%.1f, %.1f, %.1f)", shot.extendedStartingVelocity.X, shot.extendedStartingVelocity.Y, shot.extendedStartingVelocity.Z);
-                        ImGui::Text("Boost Amount: %d", shot.boostAmount);
-                        ImGui::Text("Starting Velocity: %d", shot.startingVelocity);
-                        ImGui::Text("Freeze Car: %s", shot.freezeCar ? "Yes" : "No");
+                        ImGui::Columns(2, "ShotDetailsColumns", false);
+                        ImGui::SetColumnWidth(0, 180);
+
+                        
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Car Velocity:");
+                        ImGui::NextColumn();
+                        ImGui::Text("(%.1f, %.1f, %.1f)", shot.extendedStartingVelocity.X,
+                            shot.extendedStartingVelocity.Y,
+                            shot.extendedStartingVelocity.Z);
+                        ImGui::NextColumn();
+
+                        
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Boost Amount:");
+                        ImGui::NextColumn();
+                        ImGui::Text("%d", shot.boostAmount);
+                        ImGui::NextColumn();
+
+                        
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Starting Velocity:");
+                        ImGui::NextColumn();
+                        ImGui::Text("%d", shot.startingVelocity);
+                        ImGui::NextColumn();
+
+                        
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Car Freeze State:");
+                        ImGui::NextColumn();
+                        ImGui::TextColored(shot.freezeCar ? ImVec4(1.0f, 0.5f, 0.0f, 1.0f) : ImVec4(0.0f, 0.8f, 0.2f, 1.0f),
+                            shot.freezeCar ? "Frozen" : "Unfrozen");
+                        ImGui::NextColumn();
+
+                        ImGui::Columns(1);
 
                         
                         if (shot.goalAnchors.first || shot.goalAnchors.second) {
+                            ImGui::Spacing();
                             ImGui::Separator();
-                            ImGui::Text("Goal Blocker: Active");
-                            ImGui::Text("Point 1: (%.1f, %.1f, %.1f)", shot.goalBlocker.first.X, shot.goalBlocker.first.Y, shot.goalBlocker.first.Z);
-                            ImGui::Text("Point 2: (%.1f, %.1f, %.1f)", shot.goalBlocker.second.X, shot.goalBlocker.second.Y, shot.goalBlocker.second.Z);
-                        }
-                    }
 
-                    if (isCurrentEditedShot) {
-                        ImGui::PopStyleColor();
+                            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f), "Goal Blocker Settings:");
+                            ImGui::Spacing();
+
+                            ImGui::Columns(2, "GoalBlockerColumns", false);
+                            ImGui::SetColumnWidth(0, 180);
+
+                            
+                            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Anchor Point 1:");
+                            ImGui::NextColumn();
+                            ImGui::Text("(%.1f, %.1f, %.1f)", shot.goalBlocker.first.X,
+                                shot.goalBlocker.first.Y,
+                                shot.goalBlocker.first.Z);
+                            ImGui::NextColumn();
+
+                           
+                            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Anchor Point 2:");
+                            ImGui::NextColumn();
+                            ImGui::Text("(%.1f, %.1f, %.1f)", shot.goalBlocker.second.X,
+                                shot.goalBlocker.second.Y,
+                                shot.goalBlocker.second.Z);
+                            ImGui::NextColumn();
+
+                            ImGui::Columns(1);
+                        }
+
+                        ImGui::Unindent(10.0f);
                     }
 
                     ImGui::PopID();
@@ -911,111 +1154,150 @@ void VersatileTraining::RenderWindow() {
                 }
 
                 ImGui::EndChild();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleVar();
             }
             else {
-                ImGui::Text("No shots available in this pack.");
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+                ImGui::TextWrapped("No shots available in this pack. Load a training pack to view its details.");
+                ImGui::PopStyleColor();
             }
 
             ImGui::EndTabItem();
         }
 
-       
-
         
         if (ImGui::BeginTabItem("Snapshot Gallery")) {
-            static char searchBuffer[128] = "";
-            static int filterType = 0; 
-            static int sourceFilter = 0; 
-            static bool sortAscending = true; 
+            ImGui::Spacing();
 
             
-            ImGui::Text("Search and Filter:");
-            ImGui::InputText("Search", searchBuffer, IM_ARRAYSIZE(searchBuffer));
+            static char searchBuffer[128] = "";
+            static int filterType = 0;
+            static int sourceFilter = 0;
+            static bool sortAscending = true;
 
+            
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.2f, 0.2f, 0.3f, 0.3f));
+            ImGui::BeginChild("FilterBar", ImVec2(ImGui::GetContentRegionAvail().x, 80), true);
+
+            
+            ImGui::TextUnformatted("Search:");
             ImGui::SameLine();
-            if (ImGui::Button("Clear")) {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
+            ImGui::InputTextWithHint("##SnapshotSearch", "Search snapshots...", searchBuffer, IM_ARRAYSIZE(searchBuffer));
+            ImGui::PopStyleVar();
+            ImGui::SameLine();
+            if (ImGui::Button("Clear", ImVec2(70, 0))) {
                 searchBuffer[0] = '\0';
             }
 
-            ImGui::Text("Filter/Sort by:");
-            ImGui::RadioButton("Name", &filterType, 0); ImGui::SameLine();
-            ImGui::RadioButton("Date", &filterType, 1); ImGui::SameLine();
+            
+            ImGui::Spacing();
+            ImGui::TextUnformatted("Filter/Sort by:");
+            ImGui::SameLine();
+            ImGui::RadioButton("Name", &filterType, 0);
+            ImGui::SameLine(0, 20);
+            ImGui::RadioButton("Date", &filterType, 1);
+            ImGui::SameLine(0, 20);
             ImGui::RadioButton("Source", &filterType, 2);
 
+            ImGui::SameLine(0, 20);
+            ImGui::TextUnformatted("Order:");
             ImGui::SameLine();
-            if (ImGui::Button(sortAscending ? "^" : "v")) {
+            if (ImGui::Button(sortAscending ? "^##GallerySort" : "v##GallerySort", ImVec2(24, 0))) {
                 sortAscending = !sortAscending;
             }
             ImGui::SameLine();
-            ImGui::Text(sortAscending ? "Ascending" : "Descending");
+            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), sortAscending ? "Ascending" : "Descending");
 
             if (filterType == 2) {
+                ImGui::SameLine(0, 50);
+                ImGui::TextUnformatted("Show:");
                 ImGui::SameLine();
-                ImGui::RadioButton("All", &sourceFilter, 0); ImGui::SameLine();
-                ImGui::RadioButton("Training", &sourceFilter, 1); ImGui::SameLine();
+                ImGui::RadioButton("All##SourceFilter", &sourceFilter, 0);
+                ImGui::SameLine();
+                ImGui::RadioButton("Training", &sourceFilter, 1);
+                ImGui::SameLine();
                 ImGui::RadioButton("Replay", &sourceFilter, 2);
             }
 
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+
+            
+            ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Saved Snapshots (%d)", snapshotManager.replayStates.size());
+            ImGui::SameLine(ImGui::GetWindowWidth() - 40);
+            if (ImGui::Button("?##HelpGallery", ImVec2(24, 0))) {
+                ImGui::OpenPopup("GalleryHelp");
+            }
+
+            if (ImGui::BeginPopup("GalleryHelp")) {
+                ImGui::TextUnformatted("Snapshot Gallery Information");
+                ImGui::Separator();
+                ImGui::TextWrapped("• Snapshots capture game state from training or replays");
+                ImGui::TextWrapped("• Use 'Load' to restore a snapshot's game state");
+                ImGui::TextWrapped("• Sort by name, date, or source (training/replay)");
+                ImGui::EndPopup();
+            }
+
             ImGui::Separator();
+            ImGui::Spacing();
+
             
-            
+            ImVec2 galleryAreaSize = ImGui::GetContentRegionAvail();
+            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.15f, 0.5f));
+            ImGui::BeginChild("SnapshotScrollArea", galleryAreaSize, true);
+
+           
             std::vector<std::pair<size_t, ReplayState>> filteredStates;
             for (size_t i = 0; i < snapshotManager.replayStates.size(); ++i) {
-                filteredStates.push_back({i, snapshotManager.replayStates[i]});
+                filteredStates.push_back({ i, snapshotManager.replayStates[i] });
             }
-            
-            
-            std::sort(filteredStates.begin(), filteredStates.end(), 
+
+            std::sort(filteredStates.begin(), filteredStates.end(),
                 [&](const auto& a, const auto& b) {
                     const ReplayState& stateA = a.second;
                     const ReplayState& stateB = b.second;
-                    
+
                     bool result = false;
-                    
-                    if (filterType == 0) {  
+
+                    if (filterType == 0) {  // Name
                         std::string nameA = stateA.replayName.empty() ? "Unnamed Snapshot" : stateA.replayName;
                         std::string nameB = stateB.replayName.empty() ? "Unnamed Snapshot" : stateB.replayName;
-                        
-                        
+
                         std::string lowerA = nameA;
                         std::transform(lowerA.begin(), lowerA.end(), lowerA.begin(), ::tolower);
                         std::string lowerB = nameB;
                         std::transform(lowerB.begin(), lowerB.end(), lowerB.begin(), ::tolower);
-                        
+
                         result = lowerA < lowerB;
                     }
-                    else if (filterType == 1) {  
-                        
-                        
+                    else if (filterType == 1) {  // Date
                         result = stateA.formattedTimeStampOfSaved < stateB.formattedTimeStampOfSaved;
                     }
-                    else if (filterType == 2) {  
+                    else if (filterType == 2) {  // Source
                         if (stateA.captureSource == stateB.captureSource) {
-                            
                             std::string nameA = stateA.replayName.empty() ? "Unnamed Snapshot" : stateA.replayName;
                             std::string nameB = stateB.replayName.empty() ? "Unnamed Snapshot" : stateB.replayName;
                             result = nameA < nameB;
-                        } else {
+                        }
+                        else {
                             result = stateA.captureSource < stateB.captureSource;
                         }
                     }
-                    
-                    
+
                     return sortAscending ? result : !result;
                 });
+
             
-            ImGui::Text("Saved Snapshots (%d)", snapshotManager.replayStates.size());
-            ImGui::Separator();
-
-            ImVec2 availableSize = ImGui::GetContentRegionAvail();
-            ImVec2 childSize = ImVec2(availableSize.x, availableSize.y);
-            ImGui::BeginChild("SnapshotScrollArea", childSize, true);
-
             int displayCount = 0;
 
-            
             for (const auto& [originalIndex, state] : filteredStates) {
-                
                 bool showItem = true;
                 std::string searchStr = searchBuffer;
                 std::string itemName = state.replayName.empty() ? "Unnamed Snapshot" : state.replayName;
@@ -1035,14 +1317,14 @@ void VersatileTraining::RenderWindow() {
                 if (showItem && searchStr.length() > 0) {
                     std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
 
-                    if (filterType == 0) {  
+                    if (filterType == 0) {  // Name search
                         std::string lowerName = itemName;
                         std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
                         if (lowerName.find(searchStr) == std::string::npos) {
                             showItem = false;
                         }
                     }
-                    else if (filterType == 1) {  
+                    else if (filterType == 1) {  // Date search
                         std::string lowerDate = dateStr;
                         std::transform(lowerDate.begin(), lowerDate.end(), lowerDate.begin(), ::tolower);
                         if (lowerDate.find(searchStr) == std::string::npos) {
@@ -1059,89 +1341,212 @@ void VersatileTraining::RenderWindow() {
                 ImGui::PushID(static_cast<int>(originalIndex));
 
                 
-                std::string sourceIndicator = state.captureSource == CaptureSource::Replay ? "[Replay] " : "[Training] ";
-                std::string displayName = sourceIndicator + (state.replayName.empty() ? "Unnamed Snapshot" : state.replayName);
+                ImGui::PushStyleColor(ImGuiCol_Header, state.captureSource == CaptureSource::Replay ?
+                    ImVec4(0.15f, 0.2f, 0.3f, 0.9f) : ImVec4(0.2f, 0.3f, 0.15f, 0.9f));
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, state.captureSource == CaptureSource::Replay ?
+                    ImVec4(0.25f, 0.3f, 0.4f, 0.9f) : ImVec4(0.3f, 0.4f, 0.25f, 0.9f));
 
-                if (ImGui::CollapsingHeader(displayName.c_str())) {
-                    
-                    ImGui::Text("Saved At: %s", state.formattedTimeStampOfSaved.c_str());
+                
+                std::string sourceIcon = state.captureSource == CaptureSource::Replay ? "🎥 " : "🎮 ";
+                std::string displayName = sourceIcon + itemName;
 
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 8));
+                bool isOpen = ImGui::CollapsingHeader(displayName.c_str());
+                ImGui::PopStyleVar();
+
+                ImGui::PopStyleColor(2);
+
+                
+                ImGui::SameLine(ImGui::GetWindowWidth() - 220);
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", dateStr.c_str());
+
+                
+                if (isOpen) {
+                    ImGui::Indent(10.0f);
+                    ImGui::Spacing();
+
+                    // replay specific details
                     if (state.captureSource == CaptureSource::Replay) {
-                        ImGui::Text("Replay Time: %s", state.replayTime.c_str());
-                        ImGui::Text("Time Remaining: %s", state.timeRemainingInGame.c_str());
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Replay Info:");
+                        ImGui::Indent(10.0f);
+                        ImGui::Text("Time: %s", state.replayTime.c_str());
+                        ImGui::Text("Remaining: %s", state.timeRemainingInGame.c_str());
                         ImGui::Text("Player: %s", state.focusPlayerName.c_str());
+                        ImGui::Unindent(10.0f);
+                        ImGui::Spacing();
                     }
-
-                    ImGui::Text("Boost: %d", state.boostAmount);
 
                     
                     if (ImGui::TreeNode("Car Details")) {
-                        ImGui::Text("Location: (%.1f, %.1f, %.1f)", state.carLocation.X, state.carLocation.Y, state.carLocation.Z);
-                        ImGui::Text("Velocity: (%.1f, %.1f, %.1f)", state.carVelocity.X, state.carVelocity.Y, state.carVelocity.Z);
-                        ImGui::Text("Angular Velocity: (%.1f, %.1f, %.1f)", state.carAngularVelocity.X, state.carAngularVelocity.Y, state.carAngularVelocity.Z);
-                        ImGui::Text("Rotation: (Pitch: %d, Yaw: %d, Roll: %d)", state.carRotation.Pitch, state.carRotation.Yaw, state.carRotation.Roll);
+                        ImGui::Columns(2, "CarDetailsColumns", false);
+                        ImGui::SetColumnWidth(0, 180);
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Location:");
+                        ImGui::NextColumn();
+                        ImGui::Text("(%.1f, %.1f, %.1f)", state.carLocation.X, state.carLocation.Y, state.carLocation.Z);
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Velocity:");
+                        ImGui::NextColumn();
+                        ImGui::Text("(%.1f, %.1f, %.1f)", state.carVelocity.X, state.carVelocity.Y, state.carVelocity.Z);
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Angular Velocity:");
+                        ImGui::NextColumn();
+                        ImGui::Text("(%.1f, %.1f, %.1f)", state.carAngularVelocity.X, state.carAngularVelocity.Y, state.carAngularVelocity.Z);
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Rotation:");
+                        ImGui::NextColumn();
+                        ImGui::Text("(Pitch: %d, Yaw: %d, Roll: %d)", state.carRotation.Pitch, state.carRotation.Yaw, state.carRotation.Roll);
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Boost:");
+                        ImGui::NextColumn();
+                        ImGui::Text("%d", state.boostAmount);
+                        ImGui::NextColumn();
+
+                        ImGui::Columns(1);
                         ImGui::TreePop();
                     }
 
                     if (ImGui::TreeNode("Ball Details")) {
-                        ImGui::Text("Location: (%.1f, %.1f, %.1f)", state.ballLocation.X, state.ballLocation.Y, state.ballLocation.Z);
-                        ImGui::Text("Shot Speed: %.1f", state.ballSpeed);
-                        ImGui::Text("Shot Direction: (Pitch: %d, Yaw: %d)", state.ballRotation.Pitch, state.ballRotation.Yaw);
+                        ImGui::Columns(2, "BallDetailsColumns", false);
+                        ImGui::SetColumnWidth(0, 180);
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Location:");
+                        ImGui::NextColumn();
+                        ImGui::Text("(%.1f, %.1f, %.1f)", state.ballLocation.X, state.ballLocation.Y, state.ballLocation.Z);
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Shot Speed:");
+                        ImGui::NextColumn();
+                        ImGui::Text("%.1f", state.ballSpeed);
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Shot Direction:");
+                        ImGui::NextColumn();
+                        ImGui::Text("(Pitch: %d, Yaw: %d)", state.ballRotation.Pitch, state.ballRotation.Yaw);
+                        ImGui::NextColumn();
+
+                        ImGui::Columns(1);
                         ImGui::TreePop();
                     }
 
-                    if (ImGui::Button("Load")) {
+                    
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::Spacing();
+
+                    float buttonWidth = 100.0f;
+                    float spacing = ImGui::GetStyle().ItemSpacing.x;
+                    float totalWidth = buttonWidth * 3 + spacing * 2;
+                    ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalWidth) * 0.5f + ImGui::GetCursorPosX());
+
+                   
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                    if (ImGui::Button("Load", ImVec2(buttonWidth, 30))) {
                         savedReplayState = state;
                         savedReplayState.ballSet = false;
                         savedReplayState.carLocationSet = false;
                         savedReplayState.carRotationSet = false;
                     }
+                    ImGui::PopStyleColor(2);
+
+                    
                     ImGui::SameLine();
-                    if (ImGui::Button("Delete")) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.2f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.3f, 1.0f));
+                    if (ImGui::Button("Rename", ImVec2(buttonWidth, 30))) {
+                        ImGui::OpenPopup("RenameSnapshotPopup");
+                    }
+                    ImGui::PopStyleColor(2);
+
+                   
+                    ImGui::SameLine();
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
+                    if (ImGui::Button("Delete", ImVec2(buttonWidth, 30))) {
                         snapshotManager.replayStates.erase(snapshotManager.replayStates.begin() + originalIndex);
+                        
+                        
+                        ImGui::PopStyleColor(2);
                         ImGui::PopID();
                         continue;
                     }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Rename")) {
-                        ImGui::OpenPopup("Rename Snapshot");
-                    }
+                    ImGui::PopStyleColor(2);
 
-                    
-                    if (ImGui::BeginPopupModal("Rename Snapshot", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                   
+                    if (ImGui::BeginPopupModal("RenameSnapshotPopup", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                        ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Rename Snapshot");
+                        ImGui::Separator();
+
                         static char newName[128] = "";
-                        ImGui::InputText("New Name", newName, IM_ARRAYSIZE(newName));
-                        
-                        if (ImGui::Button("Save")) {
+                        if (ImGui::IsWindowAppearing()) {
+                            strncpy(newName, itemName.c_str(), sizeof(newName) - 1);
+                            newName[sizeof(newName) - 1] = '\0';
+                        }
+
+                        ImGui::Text("Enter new name:");
+                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));
+                        ImGui::InputText("##NewSnapshotName", newName, IM_ARRAYSIZE(newName));
+                        ImGui::PopStyleVar();
+
+                        ImGui::Spacing();
+                        ImGui::Separator();
+                        ImGui::Spacing();
+
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                        if (ImGui::Button("Save", ImVec2(120, 30))) {
                             if (strlen(newName) > 0) {
-                                
-                                snapshotManager.replayStates[originalIndex].replayName = newName;
-                                newName[0] = '\0';
+                                snapshotManager.takeSnapShot(gameWrapper.get(), focusCarID);
                             }
                             ImGui::CloseCurrentPopup();
                         }
+                        ImGui::PopStyleColor(2);
+
                         ImGui::SameLine();
-                        if (ImGui::Button("Cancel")) {
+
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
+                        if (ImGui::Button("Cancel", ImVec2(120, 30))) {
                             newName[0] = '\0';
                             ImGui::CloseCurrentPopup();
                         }
+                        ImGui::PopStyleColor(2);
+
                         ImGui::EndPopup();
                     }
+
+                    ImGui::Unindent(10.0f);
                 }
 
                 ImGui::PopID();
                 ImGui::Separator();
             }
 
+           
+
             if (displayCount == 0) {
-                ImGui::Text("No snapshots match your search criteria.");
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+                ImGui::TextWrapped("No snapshots match your search criteria. Try adjusting your filters or create new snapshots.");
+                ImGui::PopStyleColor();
             }
 
             ImGui::EndChild();
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+
             ImGui::EndTabItem();
         }
 
         ImGui::EndTabBar();
     }
-}
 
+   
+    style.ItemSpacing.y = origItemSpacing;
+    style.FramePadding.y = origFramePadding;
+}
