@@ -213,6 +213,137 @@ void VersatileTraining::RenderSettings() {
 
     if (ImGui::BeginTabBar("SettingsTabs")) {
 
+            if (ImGui::BeginTabItem("Pack Overrides")) {
+                ImGui::TextWrapped("Define custom gameplay overrides for specific training pack codes. These settings will apply to all shots in the specified pack when active.");
+                ImGui::Separator();
+
+                static char currentPackCodeInput[64] = "";
+                if (!storageManager.currentEditingOverridePackCode.empty() && strlen(currentPackCodeInput) == 0) {
+                    strncpy(currentPackCodeInput, storageManager.currentEditingOverridePackCode.c_str(), sizeof(currentPackCodeInput) - 1);
+                    currentPackCodeInput[sizeof(currentPackCodeInput) - 1] = '\0';
+                }
+
+                ImGui::InputText("Training Pack Code", currentPackCodeInput, IM_ARRAYSIZE(currentPackCodeInput));
+                ImGui::SameLine();
+                if (ImGui::Button("Configure##Overrides")) {
+                    if (strlen(currentPackCodeInput) > 0) {
+                        storageManager.currentEditingOverridePackCode = currentPackCodeInput;
+                        if (storageManager.packOverrideSettings.find(storageManager.currentEditingOverridePackCode) == storageManager.packOverrideSettings.end()) {
+                            storageManager.packOverrideSettings[storageManager.currentEditingOverridePackCode] = PackOverrideSettings();
+                        }
+                    }
+                    else {
+                        storageManager.currentEditingOverridePackCode.clear();
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Clear Input##OverridesClear")) {
+                    currentPackCodeInput[0] = '\0';
+                    storageManager.currentEditingOverridePackCode.clear();
+                }
+
+
+                if (!storageManager.currentEditingOverridePackCode.empty()) {
+                    ImGui::Separator();
+                    ImGui::Text("Customizing overrides for: %s", storageManager.currentEditingOverridePackCode.c_str());
+                    ImGui::Spacing();
+
+                    PackOverrideSettings& currentSettings = storageManager.packOverrideSettings[storageManager.currentEditingOverridePackCode];
+
+                    auto RenderOverrideSettingCheckbox = [&](const char* label, bool& overrideFlag) {
+                        ImGui::Checkbox(label, &overrideFlag);
+                        };
+
+                    auto RenderOverrideSettingInt = [&](const char* label, bool& overrideFlag, int& value, int min_val, int max_val, const char* display_format = "%d") {
+                        ImGui::Checkbox(label, &overrideFlag);
+                        if (overrideFlag) {
+                            ImGui::SameLine(); ImGui::PushItemWidth(150);
+                            ImGui::SliderInt((std::string("##") + label).c_str(), &value, min_val, max_val, display_format);
+                            ImGui::PopItemWidth();
+                        }
+                        };
+
+                    auto RenderOverrideSettingInputInt = [&](const char* label, bool& overrideFlag, int& value) {
+                        ImGui::Checkbox(label, &overrideFlag);
+                        if (overrideFlag) {
+                            ImGui::SameLine(); ImGui::PushItemWidth(100);
+                            ImGui::InputInt((std::string("##") + label).c_str(), &value);
+                            ImGui::PopItemWidth();
+                        }
+                        };
+
+                    auto RenderOverrideSettingRangeInt = [&](const char* label, bool& overrideFlag, int values[2], int min_val, int max_val, const char* display_format = "(%d, %d)") {
+                        ImGui::Checkbox(label, &overrideFlag);
+                        if (overrideFlag) {
+                            ImGui::SameLine(); ImGui::PushItemWidth(200);
+                            ImGui::RangeSliderInt((std::string("##") + label).c_str(), &values[0], &values[1], min_val, max_val, display_format);
+                            ImGui::PopItemWidth();
+                        }
+                        };
+
+                    auto RenderOverrideSettingRangeFloat = [&](const char* label, bool& overrideFlag, float values[2], float min_val, float max_val, const char* display_format = "(%.3f, %.3f)") {
+                        ImGui::Checkbox(label, &overrideFlag);
+                        if (overrideFlag) {
+                            ImGui::SameLine(); ImGui::PushItemWidth(200);
+                            ImGui::RangeSliderFloat((std::string("##") + label).c_str(), &values[0], &values[1], min_val, max_val, display_format);
+                            ImGui::PopItemWidth();
+                        }
+                        };
+
+                    // Settings based on the image:
+                    RenderOverrideSettingInputInt("Boost Limit (-1 unlimited)", currentSettings.overrideBoostLimit, currentSettings.boostLimit);
+                    RenderOverrideSettingRangeInt("Player Start Velocity", currentSettings.overridePlayerStartVelocity, currentSettings.playerStartVelocity, 0, 2300, "(%d, %d) uu/s");
+                    RenderOverrideSettingRangeFloat("Ball Speed Variance %%", currentSettings.overrideBallSpeedVariancePct, currentSettings.ballSpeedVariancePct, -100.0f, 100.0f, "(%.1f, %.1f)%%");
+                    RenderOverrideSettingRangeFloat("Trajectory Rotation Variance %%", currentSettings.overrideTrajectoryRotationVariancePct, currentSettings.trajectoryRotationVariancePct, -100.0f, 100.0f, "(%.1f, %.1f)%%");
+                    RenderOverrideSettingRangeFloat("Ball Horiz. Location Variance", currentSettings.overrideBallLocationVarianceXY, currentSettings.ballLocationVarianceXY, -1500.0f, 1500.0f, "(%.0f, %.0f) uu");
+                    RenderOverrideSettingRangeFloat("Ball Height Location Variance", currentSettings.overrideBallLocationVarianceHeight, currentSettings.ballLocationVarianceHeight, -1500.0f, 1500.0f, "(%.0f, %.0f) uu");
+                    RenderOverrideSettingRangeFloat("Ball Spin", currentSettings.overrideBallSpin, currentSettings.ballSpin, -10.0f, 10.0f, "(%.1f, %.1f) rad/s");
+                    RenderOverrideSettingInputInt("Training Time Limit (0 default)", currentSettings.overrideTrainingTimeLimit, currentSettings.trainingTimeLimit);
+                    RenderOverrideSettingRangeFloat("Car Horiz. Location Variance", currentSettings.overrideCarLocationVarianceXY, currentSettings.carLocationVarianceXY, -1000.0f, 1000.0f, "(%.0f, %.0f) uu");
+                    RenderOverrideSettingRangeFloat("Car Rotation Variance %%", currentSettings.overrideCarRotationVariancePct, currentSettings.carRotationVariancePct, -100.0f, 100.0f, "(%.1f, %.1f)%%");
+
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    if (ImGui::Button("Save Overrides##SavePackOverrides")) {
+                        storageManager.packOverrideSettings[storageManager.currentEditingOverridePackCode] = currentSettings;
+                        currentPackCodeInput[0] = '\0';
+                        storageManager.currentEditingOverridePackCode.clear();
+                        
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Clear These Overrides##ClearPackOverrides")) {
+                        currentSettings = PackOverrideSettings();
+                        currentPackCodeInput[0] = '\0';
+                        storageManager.currentEditingOverridePackCode.clear();
+                    }
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Packs with Custom Overrides:");
+                float listHeight = ImGui::GetTextLineHeightWithSpacing() * 7; // Show ~7 items
+                ImGui::BeginChild("OverrideList", ImVec2(0, listHeight), true);
+                std::string codeToSelectOnClick;
+                for (auto const& [code, settings] : storageManager.packOverrideSettings) {
+                    if (settings.HasAnyOverride()) { // Only list packs that actually have an override set
+                        if (ImGui::Selectable(code.c_str(), storageManager.currentEditingOverridePackCode == code)) {
+                            codeToSelectOnClick = code;
+                        }
+                    }
+                }
+                if (!codeToSelectOnClick.empty()) {
+                    strncpy(currentPackCodeInput, codeToSelectOnClick.c_str(), sizeof(currentPackCodeInput) - 1);
+                    currentPackCodeInput[sizeof(currentPackCodeInput) - 1] = '\0';
+                    storageManager.currentEditingOverridePackCode = codeToSelectOnClick;
+                    // Ensure entry exists (should already, but good practice)
+                    if (storageManager.packOverrideSettings.find(storageManager.currentEditingOverridePackCode) == storageManager.packOverrideSettings.end()) {
+                        storageManager.packOverrideSettings[storageManager.currentEditingOverridePackCode] = PackOverrideSettings();
+                    }
+                }
+                ImGui::EndChild();
+
+                ImGui::EndTabItem();
+            }
+            
         if (ImGui::BeginTabItem("Car Controls")) {
             ImGui::Text("Car Movement & States");
             ImGui::Separator();
@@ -413,6 +544,103 @@ void VersatileTraining::RenderSettings() {
 }
 
 void VersatileTraining::RenderWindow() {
+    if (determiningCodeSync) {
+        ImGui::SetWindowSize(ImVec2(0, 0));
+        ImGui::OpenPopup("Confirm Code Sync");
+    }
+    
+    ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+    ImVec2 popupSize = ImVec2(600, 600); 
+    ImGui::SetNextWindowPos(ImVec2(displaySize.x * 0.5f - popupSize.x * 0.5f, displaySize.y * 0.5f - 150)); 
+    ImGui::SetNextWindowSize(popupSize, ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal("Confirm Code Sync", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+        ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.1f, 1.0f), "Training Pack Code Mismatch Detected!");
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped("The training pack '%s' appears to be published online, but its code ('%s') is not stored locally with the pack.",
+            (trainingData && trainingData->count(pendingKey) ? trainingData->at(pendingKey).name.c_str() : "Unknown Pack"),
+            pendingCode.c_str());
+        ImGui::Spacing();
+        ImGui::TextWrapped("Would you like to update the local pack data with this code?");
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        float buttonWidth = 120.0f;
+        float windowWidth = ImGui::GetWindowSize().x; 
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float totalButtonWidth = buttonWidth * 2 + spacing;
+
+        ImGui::SetCursorPosX((windowWidth - totalButtonWidth) * 0.5f);
+        if (ImGui::Button("Yes, Sync Code", ImVec2(buttonWidth, 0))) {
+
+            (*trainingData)[pendingKey].code = pendingCode;
+            CustomTrainingData packData = (*trainingData)[pendingKey];
+            trainingData->erase(pendingKey);
+            (*trainingData)[pendingCode] = packData;
+
+            LOG("deleting training pack folder: {}", packData.name);
+            std::filesystem::path packFolder = myDataFolder / "TrainingPacks" / packData.name;
+
+            if (!std::filesystem::exists(packFolder)) {
+                LOG("Training pack folder not found: {}", packFolder.string());
+                
+            } else {
+                try {
+                    LOG("Deleting training pack folder: {}", packFolder.string());
+                    std::size_t removedCount = std::filesystem::remove_all(packFolder);
+                    LOG("Removed {} files/directories", removedCount);
+                    
+                }
+                catch (const std::filesystem::filesystem_error& e) {
+                    LOG("Error deleting training pack folder: {}", e.what());
+                    
+                }
+            }
+            for (auto& [key, value] : *trainingData) {
+                shiftToPositive(value);
+            }
+            storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
+
+
+            *trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
+            for (auto& [key, value] : *trainingData) {
+                shiftToNegative(value);
+            }
+
+            
+            pendingKey.clear();
+            pendingCode.clear();
+            determiningCodeSync = false;
+
+            ImGui::CloseCurrentPopup();
+            gameWrapper->Execute([this](GameWrapper* gw) {
+                std::string cmd = "togglemenu " + GetMenuName();
+                cvarManager->executeCommand(cmd, false);
+                });
+        }
+
+        ImGui::SameLine();
+                if (ImGui::Button("No, Later", ImVec2(buttonWidth, 0))) {
+            pendingKey.clear();
+            pendingCode.clear();
+            determiningCodeSync = false;
+            ImGui::CloseCurrentPopup();
+            
+            gameWrapper->Execute([this](GameWrapper* gw) {
+                std::string cmd = "togglemenu " + GetMenuName();
+                cvarManager->executeCommand(cmd, false);
+                });
+        }
+        ImGui::Spacing();
+        ImGui::EndPopup();
+        
+    }
+    if (determiningCodeSync) {
+        return; 
+    }
     if (ImGui::BeginTabBar("SnapshotManagerTabs")) {
         
         if (ImGui::BeginTabItem("Custom Training Packs")) {
@@ -433,7 +661,7 @@ void VersatileTraining::RenderWindow() {
             ImGui::Separator();
 
             static char packSearchBuffer[128] = "";
-            static int packSortCriteria = 0; // 0: Name, 1: Code, 2: Num Shots
+            static int packSortCriteria = 0; 
             static bool packSortAscending = true;
 
             ImGui::InputText("Search##PackList", packSearchBuffer, IM_ARRAYSIZE(packSearchBuffer));
@@ -480,7 +708,7 @@ void VersatileTraining::RenderWindow() {
                     filteredPacksVec.end());
             }
 
-            // Apply sorting
+            
             std::sort(filteredPacksVec.begin(), filteredPacksVec.end(),
                 [&](const auto& a, const auto& b) {
                     const CustomTrainingData* packA = a.second;
@@ -488,7 +716,7 @@ void VersatileTraining::RenderWindow() {
                     bool result = false;
 
                     switch (packSortCriteria) {
-                    case 0: { // Name
+                    case 0: { 
                         std::string nameA = packA->name.empty() ? a.first : packA->name;
                         std::string nameB = packB->name.empty() ? b.first : packB->name;
                         std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
@@ -496,7 +724,7 @@ void VersatileTraining::RenderWindow() {
                         result = nameA < nameB;
                         break;
                     }
-                    case 1: { // Code
+                    case 1: { 
                         std::string codeA = a.first;
                         std::string codeB = b.first;
                         std::transform(codeA.begin(), codeA.end(), codeA.begin(), ::tolower);
@@ -504,7 +732,7 @@ void VersatileTraining::RenderWindow() {
                         result = codeA < codeB;
                         break;
                     }
-                    case 2: // Num Shots
+                    case 2: 
                         result = packA->numShots < packB->numShots;
                         break;
                     }
@@ -527,8 +755,28 @@ void VersatileTraining::RenderWindow() {
 
                     ImGui::PushID(packKey.c_str());
 
-                    std::string headerName = packData.code.empty() ? (packData.name + " (unpublished)") : (packData.name + " (published)");
-                    if (ImGui::CollapsingHeader(headerName.c_str())) {
+                    std::string headerNamePart = packData.name;
+                    bool isUnpublished = packData.code.empty();
+                    std::string headerSuffix = isUnpublished ? " (unpublished)" : " (published)";
+                    
+                    ImGui::TextUnformatted(headerNamePart.c_str()); 
+                    ImGui::SameLine(0.0f, 0.0f); 
+                    ImGui::TextUnformatted(headerSuffix.c_str());
+
+                    if (isUnpublished) {
+                        ImGui::SameLine();
+                        ImGui::TextDisabled("(?)");
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::BeginTooltip();
+                            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                            ImGui::TextUnformatted("Is this actually a published training pack? If so, just load up the training pack once again in the game and you will be prompted to sync the training pack code.");
+                            ImGui::PopTextWrapPos();
+                            ImGui::EndTooltip();
+                        }
+                    }
+                    
+                    std::string collapsingHeaderLabel = "##CollapsingHeader_" + packKey;
+                    if (ImGui::CollapsingHeader(collapsingHeaderLabel.c_str())) {
                         ImGui::Indent();
                         if (!packData.code.empty()) {
                             ImGui::Text("Full Code: %s", packData.code.c_str());
@@ -541,7 +789,7 @@ void VersatileTraining::RenderWindow() {
                         if (!packData.code.empty()) {
                             if (ImGui::Button("Play")) {
                                 std::string cmd = "load_training " + packData.code;
-                                /*cvarManager->executeCommand(cmd);*/
+                                
                                 gameWrapper->Execute([this, cmd](GameWrapper* gw) {
                                     cvarManager->executeCommand(cmd, false);
                                     });
@@ -555,7 +803,7 @@ void VersatileTraining::RenderWindow() {
                         ImGui::Unindent();
 
                         if (ImGui::BeginPopupModal("DeleteConfirmPopup", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                            ImGui::Text("Are you sure you want to delete pack: %s?", headerName.c_str());
+                            ImGui::Text("Are you sure you want to delete pack: %s?", (packData.name + headerSuffix).c_str());
                             ImGui::Text("This action cannot be undone from the UI.");
                             ImGui::Separator();
                             if (ImGui::Button("Yes, Delete", ImVec2(120, 0))) {
@@ -566,22 +814,22 @@ void VersatileTraining::RenderWindow() {
                                 }
                                 else
                                 {
-									packFolder = myDataFolder / "TrainingPacks" / storageManager.recordingStorage.sanitizeFilename(packData.name);
-								}
+                                    packFolder = myDataFolder / "TrainingPacks" / storageManager.recordingStorage.sanitizeFilename(packData.name);
+                                }
                                 if (!std::filesystem::exists(packFolder)) {
                                     LOG("Training pack folder not found: {}", packFolder.string());
-                                    return;
-                                }
-
-                                try {
-                                    LOG("Deleting training pack folder: {}", packFolder.string());
-                                    std::size_t removedCount = std::filesystem::remove_all(packFolder);
-                                    LOG("Removed {} files/directories", removedCount);
-                                
-                                }
-                                catch (const std::filesystem::filesystem_error& e) {
-                                    LOG("Error deleting training pack folder: {}", e.what());
                                     
+                                } else {
+                                    try {
+                                        LOG("Deleting training pack folder: {}", packFolder.string());
+                                        std::size_t removedCount = std::filesystem::remove_all(packFolder);
+                                        LOG("Removed {} files/directories", removedCount);
+                                    
+                                    }
+                                    catch (const std::filesystem::filesystem_error& e) {
+                                        LOG("Error deleting training pack folder: {}", e.what());
+                                        
+                                    }
                                 }
                                 trainingData->erase(packKey);
                                 if (currentPackKey == packKey) {
@@ -607,7 +855,7 @@ void VersatileTraining::RenderWindow() {
             ImGui::EndChild();
             ImGui::EndTabItem();
         }
-        //current
+        
         if (ImGui::BeginTabItem("Current Training Pack")) {
             ImGui::Text("Training Pack: %s", currentTrainingData.name.empty() ? "No pack loaded" : currentTrainingData.name.c_str());
             
@@ -645,7 +893,7 @@ void VersatileTraining::RenderWindow() {
                         ImGui::Text("Starting Velocity: %d", shot.startingVelocity);
                         ImGui::Text("Freeze Car: %s", shot.freezeCar ? "Yes" : "No");
 
-                        // Goal blocker if present
+                        
                         if (shot.goalAnchors.first || shot.goalAnchors.second) {
                             ImGui::Separator();
                             ImGui::Text("Goal Blocker: Active");
@@ -673,14 +921,14 @@ void VersatileTraining::RenderWindow() {
 
        
 
-        // Enhanced Snapshot Gallery tab with search, filtering and sorting
+        
         if (ImGui::BeginTabItem("Snapshot Gallery")) {
             static char searchBuffer[128] = "";
-            static int filterType = 0; // 0: Name, 1: Date, 2: Source
-            static int sourceFilter = 0; // 0: All, 1: Training, 2: Replay
-            static bool sortAscending = true; // Toggle for sort direction
+            static int filterType = 0; 
+            static int sourceFilter = 0; 
+            static bool sortAscending = true; 
 
-            // Search and filter controls
+            
             ImGui::Text("Search and Filter:");
             ImGui::InputText("Search", searchBuffer, IM_ARRAYSIZE(searchBuffer));
 
@@ -710,13 +958,13 @@ void VersatileTraining::RenderWindow() {
 
             ImGui::Separator();
             
-            // Create a copy of replay states for sorting
+            
             std::vector<std::pair<size_t, ReplayState>> filteredStates;
             for (size_t i = 0; i < snapshotManager.replayStates.size(); ++i) {
                 filteredStates.push_back({i, snapshotManager.replayStates[i]});
             }
             
-            // Apply sorting based on filter type
+            
             std::sort(filteredStates.begin(), filteredStates.end(), 
                 [&](const auto& a, const auto& b) {
                     const ReplayState& stateA = a.second;
@@ -724,11 +972,11 @@ void VersatileTraining::RenderWindow() {
                     
                     bool result = false;
                     
-                    if (filterType == 0) {  // Sort by name
+                    if (filterType == 0) {  
                         std::string nameA = stateA.replayName.empty() ? "Unnamed Snapshot" : stateA.replayName;
                         std::string nameB = stateB.replayName.empty() ? "Unnamed Snapshot" : stateB.replayName;
                         
-                        // Case-insensitive comparison
+                        
                         std::string lowerA = nameA;
                         std::transform(lowerA.begin(), lowerA.end(), lowerA.begin(), ::tolower);
                         std::string lowerB = nameB;
@@ -736,14 +984,14 @@ void VersatileTraining::RenderWindow() {
                         
                         result = lowerA < lowerB;
                     }
-                    else if (filterType == 1) {  // Sort by date
-                        // Parse timestamp and compare
-                        // This assumes the timestamp format can be compared lexicographically
+                    else if (filterType == 1) {  
+                        
+                        
                         result = stateA.formattedTimeStampOfSaved < stateB.formattedTimeStampOfSaved;
                     }
-                    else if (filterType == 2) {  // Sort by source
+                    else if (filterType == 2) {  
                         if (stateA.captureSource == stateB.captureSource) {
-                            // If sources are the same, sort by name as secondary key
+                            
                             std::string nameA = stateA.replayName.empty() ? "Unnamed Snapshot" : stateA.replayName;
                             std::string nameB = stateB.replayName.empty() ? "Unnamed Snapshot" : stateB.replayName;
                             result = nameA < nameB;
@@ -752,7 +1000,7 @@ void VersatileTraining::RenderWindow() {
                         }
                     }
                     
-                    // Reverse for descending order if needed
+                    
                     return sortAscending ? result : !result;
                 });
             
@@ -765,15 +1013,15 @@ void VersatileTraining::RenderWindow() {
 
             int displayCount = 0;
 
-            // Use the sorted list instead of direct access
+            
             for (const auto& [originalIndex, state] : filteredStates) {
-                // Apply filters
+                
                 bool showItem = true;
                 std::string searchStr = searchBuffer;
                 std::string itemName = state.replayName.empty() ? "Unnamed Snapshot" : state.replayName;
                 std::string dateStr = state.formattedTimeStampOfSaved;
 
-                // Source filter
+                
                 if (filterType == 2 && sourceFilter > 0) {
                     if (sourceFilter == 1 && state.captureSource != CaptureSource::Training) {
                         showItem = false;
@@ -783,18 +1031,18 @@ void VersatileTraining::RenderWindow() {
                     }
                 }
 
-                // Text search
+                
                 if (showItem && searchStr.length() > 0) {
                     std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
 
-                    if (filterType == 0) {  // Name filter
+                    if (filterType == 0) {  
                         std::string lowerName = itemName;
                         std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
                         if (lowerName.find(searchStr) == std::string::npos) {
                             showItem = false;
                         }
                     }
-                    else if (filterType == 1) {  // Date filter
+                    else if (filterType == 1) {  
                         std::string lowerDate = dateStr;
                         std::transform(lowerDate.begin(), lowerDate.end(), lowerDate.begin(), ::tolower);
                         if (lowerDate.find(searchStr) == std::string::npos) {
@@ -810,12 +1058,12 @@ void VersatileTraining::RenderWindow() {
                 displayCount++;
                 ImGui::PushID(static_cast<int>(originalIndex));
 
-                // Add source indicator to the name
+                
                 std::string sourceIndicator = state.captureSource == CaptureSource::Replay ? "[Replay] " : "[Training] ";
                 std::string displayName = sourceIndicator + (state.replayName.empty() ? "Unnamed Snapshot" : state.replayName);
 
                 if (ImGui::CollapsingHeader(displayName.c_str())) {
-                    // Your existing snapshot display code
+                    
                     ImGui::Text("Saved At: %s", state.formattedTimeStampOfSaved.c_str());
 
                     if (state.captureSource == CaptureSource::Replay) {
@@ -826,7 +1074,7 @@ void VersatileTraining::RenderWindow() {
 
                     ImGui::Text("Boost: %d", state.boostAmount);
 
-                    // Keep your existing tree nodes and button code
+                    
                     if (ImGui::TreeNode("Car Details")) {
                         ImGui::Text("Location: (%.1f, %.1f, %.1f)", state.carLocation.X, state.carLocation.Y, state.carLocation.Z);
                         ImGui::Text("Velocity: (%.1f, %.1f, %.1f)", state.carVelocity.X, state.carVelocity.Y, state.carVelocity.Z);
@@ -859,14 +1107,14 @@ void VersatileTraining::RenderWindow() {
                         ImGui::OpenPopup("Rename Snapshot");
                     }
 
-                    // Rename popup
+                    
                     if (ImGui::BeginPopupModal("Rename Snapshot", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
                         static char newName[128] = "";
                         ImGui::InputText("New Name", newName, IM_ARRAYSIZE(newName));
                         
                         if (ImGui::Button("Save")) {
                             if (strlen(newName) > 0) {
-                                // Since were using the sorted view, we need to use the original indx
+                                
                                 snapshotManager.replayStates[originalIndex].replayName = newName;
                                 newName[0] = '\0';
                             }
@@ -896,5 +1144,4 @@ void VersatileTraining::RenderWindow() {
         ImGui::EndTabBar();
     }
 }
-
 

@@ -2,9 +2,7 @@
 #include "src/core/versatileTraining.h"
 
 
-void DrawLineClippedWithThickness(CanvasWrapper& canvas, const Vector2& a, const Vector2& b,
-    const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D,
-    CameraWrapper cam, RT::Frustum frust, float thickness);
+
 
 
 void VersatileTraining::RenderEnhancedGoalBlocker(
@@ -19,7 +17,9 @@ void VersatileTraining::RenderEnhancedGoalBlocker(
 {
     Vector ballLocation = ball.GetLocation();
     Vector2 ballScreenPos = canvas.Project(ballLocation);
-    float ballRadius = Distance(ballScreenPos, canvas.Project(ballLocation + Vector(92.75f, 0, 0)));
+    // Ensure ballRadius is non-negative
+    float ballRadius = max(0.f, Distance(ballScreenPos, canvas.Project(ballLocation + Vector(ball.GetRadius(), 0, 0))));
+
 
     Vector2 tl2d = canvas.Project(topLeft);
     Vector2 tr2d = canvas.Project(topRight);
@@ -28,26 +28,19 @@ void VersatileTraining::RenderEnhancedGoalBlocker(
 
     canvas.SetColor(goalBlockerOutlineColor);
 
-    RT::Line lineTop(topLeft, topRight, RT::GetVisualDistance(canvas, frustum, camera, topLeft) * 1.5f);
-    lineTop.thickness = goalBlockerOutlineThickness;
-    lineTop.DrawWithinFrustum(canvas, frustum);
+    // Top edge
+    DrawLineClippedByCircle(canvas, tl2d, tr2d, ballScreenPos, ballRadius, topLeft, topRight, camera, frustum, goalBlockerOutlineThickness);
 
-    RT::Line lineRight(topRight, bottomRight, RT::GetVisualDistance(canvas, frustum, camera, topRight) * 1.5f);
-    lineRight.thickness = goalBlockerOutlineThickness;
-    lineRight.DrawWithinFrustum(canvas, frustum);
+    // Right edge
+    DrawLineClippedByCircle(canvas, tr2d, br2d, ballScreenPos, ballRadius, topRight, bottomRight, camera, frustum, goalBlockerOutlineThickness);
 
-    
-    RT::Line lineBottom(bottomRight, bottomLeft, RT::GetVisualDistance(canvas, frustum, camera, bottomRight) * 1.5f);
-    lineBottom.thickness = goalBlockerOutlineThickness;
-    lineBottom.DrawWithinFrustum(canvas, frustum);
+    // Bottom edge
+    DrawLineClippedByCircle(canvas, br2d, bl2d, ballScreenPos, ballRadius, bottomRight, bottomLeft, camera, frustum, goalBlockerOutlineThickness);
 
-    // Left edge with thickness
-    RT::Line lineLeft(bottomLeft, topLeft, RT::GetVisualDistance(canvas, frustum, camera, bottomLeft) * 1.5f);
-    lineLeft.thickness = goalBlockerOutlineThickness;
-    lineLeft.DrawWithinFrustum(canvas, frustum);
+    // Left edge
+    DrawLineClippedByCircle(canvas, bl2d, tl2d, ballScreenPos, ballRadius, bottomLeft, topLeft, camera, frustum, goalBlockerOutlineThickness);
 
-    
-    DrawGoalBlockerGrid(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight);
+    DrawGoalBlockerGrid(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight); // Grid will also need this treatment
 }
 
 void VersatileTraining::DrawGoalBlockerGrid(
@@ -61,29 +54,34 @@ void VersatileTraining::DrawGoalBlockerGrid(
     const Vector& bottomRight)
 {
     const int gridLines = goalBlockerGridLines;
+    if (gridLines <= 0) return;
 
- 
+    Vector ballLocation = ball.GetLocation(); // Need ball info for clipping
+    Vector2 ballScreenPos = canvas.Project(ballLocation);
+    float ballRadius =ball.GetRadius(); // max(0.f, Distance(ballScreenPos, canvas.Project(ballLocation + Vector(ball.GetRadius(), 0, 0))))
+
     canvas.SetColor(goalBlockerGridColor);
 
-    
+    // Vertical grid lines
     for (int i = 1; i < gridLines; i++) {
         float t = static_cast<float>(i) / gridLines;
         Vector topPoint = LerpVector(topLeft, topRight, t);
         Vector bottomPoint = LerpVector(bottomLeft, bottomRight, t);
 
-        RT::Line gridLine(topPoint, bottomPoint, RT::GetVisualDistance(canvas, frustum, camera, topPoint) * 1.5f);
-        gridLine.thickness = goalBlockerGridThickness;
-        gridLine.DrawWithinFrustum(canvas, frustum);
+        Vector2 topPoint2D = canvas.Project(topPoint);
+        Vector2 bottomPoint2D = canvas.Project(bottomPoint);
+        DrawLineClippedByCircle(canvas, topPoint2D, bottomPoint2D, ballScreenPos, ballRadius, topPoint, bottomPoint, camera, frustum, goalBlockerGridThickness);
     }
 
+    // Horizontal grid lines
     for (int i = 1; i < gridLines; i++) {
         float t = static_cast<float>(i) / gridLines;
         Vector leftPoint = LerpVector(topLeft, bottomLeft, t);
         Vector rightPoint = LerpVector(topRight, bottomRight, t);
 
-        RT::Line gridLine(leftPoint, rightPoint, RT::GetVisualDistance(canvas, frustum, camera, leftPoint) * 1.5f);
-        gridLine.thickness = goalBlockerGridThickness;
-        gridLine.DrawWithinFrustum(canvas, frustum);
+        Vector2 leftPoint2D = canvas.Project(leftPoint);
+        Vector2 rightPoint2D = canvas.Project(rightPoint);
+        DrawLineClippedByCircle(canvas, leftPoint2D, rightPoint2D, ballScreenPos, ballRadius, leftPoint, rightPoint, camera, frustum, goalBlockerGridThickness);
     }
 }
 

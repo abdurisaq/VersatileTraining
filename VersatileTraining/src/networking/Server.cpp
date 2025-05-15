@@ -369,6 +369,7 @@ std::string handleListPacksRequest(
 
     bool firstPack = true;
     for (const auto& [packId, pack] : *trainingDataPtr) {
+        if (pack.code.empty())continue;
         if (!firstPack) {
             json << ",\n";
         }

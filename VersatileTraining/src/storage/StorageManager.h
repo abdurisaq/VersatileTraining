@@ -27,8 +27,11 @@ public:
 	std::filesystem::path saveReplayStateFilePath;
 
 
-	
+	std::map<std::string, PackOverrideSettings> packOverrideSettings;
+	std::string currentEditingOverridePackCode;
 
+	void savePackOverrideSettings(const std::map<std::string, PackOverrideSettings>& overrideSettings, const std::filesystem::path& filePath);
+	std::map<std::string, PackOverrideSettings> loadPackOverrideSettings(const std::filesystem::path& filePath);
 
 	void saveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
 	std::unordered_map<std::string, CustomTrainingData> loadCompressedTrainingData(const std::filesystem::path& fileName);

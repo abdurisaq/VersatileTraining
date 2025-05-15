@@ -101,7 +101,7 @@ void VersatileTraining::handleStartRound() {
         }
 
 
-        if (currentShotState.extendedStartingVelocity != Vector(0,0,0)) {
+        if (currentShotState.extendedStartingVelocity.X !=0.f || currentShotState.extendedStartingVelocity.Y != 0.f || currentShotState.extendedStartingVelocity.Z != 0.f) {
             LOG("applying saved replay state in start round");
             car.SetVelocity(currentShotState.extendedStartingVelocity);
             car.SetAngularVelocity(currentShotState.extendedStartingAngularVelocity, 0);

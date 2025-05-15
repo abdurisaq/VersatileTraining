@@ -60,6 +60,16 @@ void VersatileTraining::setupTrainingEditorHooks() {
                 if (currentPackKey == oldKey) {
                     currentPackKey = code;
                 }
+                for (auto& [key, value] : *trainingData) {
+                    shiftToPositive(value);
+                }
+                storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
+
+
+                *trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
+                for (auto& [key, value] : *trainingData) {
+                    shiftToNegative(value);
+                }
             }
         });
 
@@ -319,6 +329,21 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     std::string code = td.GetCode().ToString();
 
 
+
+    PackOverrideSettings currentOverrides; 
+    bool foundSpecificOverrides = false;
+
+    if (!code.empty() && storageManager.packOverrideSettings.count(code)) {
+        currentOverrides = storageManager.packOverrideSettings.at(code);
+        foundSpecificOverrides = true;
+        LOG("Applying custom CVar overrides for pack code: {}", code);
+    } else {
+        LOG("No specific pack overrides for code '{}', or code is empty. Applying default CVar values.", code);
+        
+    }
+    currentOverrides.ApplyCVars(cvarManager);
+    if (foundSpecificOverrides) return;
+    
     
     bool found = false;
     for (auto& [key, value] : *trainingData) {
@@ -326,6 +351,15 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             
             if (justOpenedPack) {
                 currentTrainingData = value;
+                if (totalRounds == currentTrainingData.shots.size() && currentTrainingData.code.empty() && !code.empty()) {
+                    LOG("found a potential code for this training pack");
+                    pendingCode = code;
+                    pendingKey = key;
+                    determiningCodeSync = true;
+                    if (!isWindowOpen_) {
+                        cvarManager->executeCommand("togglemenu " + GetMenuName());
+                    }
+                }
                 justOpenedPack = false;
             }
             LOG("num shots in found training pack: {}", currentTrainingData.shots.size());
@@ -333,9 +367,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
                 LOG("resizing because num shots in training pack is less than the saved version");
                 currentTrainingData.shots.resize(totalRounds);
             }
-            if (currentTrainingData.name == name && totalRounds == currentTrainingData.shots.size() && currentTrainingData.code.empty() && !code.empty()) {
-                (*trainingData)[key].code = code;
-            }
+            
             currentTrainingData.customPack = true;
             currentTrainingData.currentEditedShot = currentShot;
             LOG("currentTraining data recording size : {}", currentTrainingData.shots[currentShot].recording.inputs.size());
@@ -374,26 +406,38 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     }
     if (!found) {
         LOG("didn't find this traini pack in training data");
-        if (currentTrainingData.name == name) {
-            if (currentShotState.boostAmount == 101) {
-                cvarManager->executeCommand("sv_training_limitboost -1");
+        
+        if (justOpenedPack) {
+            LOG("just opened pack, initializing new training data");
+            currentTrainingData.initCustomTrainingData(totalRounds, name);
+            cvarManager->executeCommand("sv_training_limitboost -1");
+            justOpenedPack = false;
+
+            if (td.GetCode().ToString().empty()) {
+                currentTrainingData.customPack = true;
+            }
+            else if (isInTrainingEditor()) {
+                currentTrainingData.customPack = true;
             }
             else {
-                cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
+                currentTrainingData.customPack = false;
             }
         }
-        else {
-            cvarManager->executeCommand("sv_training_limitboost -1");
-            currentTrainingData.initCustomTrainingData(totalRounds, name);
-        }
+        
         currentShotState = currentTrainingData.shots[currentShot];
-
-        if (td.GetCode().ToString().empty()) {
-            currentTrainingData.customPack = true;
+        LOG("setting shot state");
+        LOG("boost amount: {}", currentShotState.boostAmount);
+        LOG("starting velocity: {}", currentShotState.startingVelocity);
+        LOG("freeze car: {}", currentShotState.freezeCar ? "true" : "false");
+        LOG("has jump: {}", currentShotState.hasJump ? "true" : "false");
+        if (currentShotState.boostAmount == 101) {
+            cvarManager->executeCommand("sv_training_limitboost -1");
         }
         else {
-            currentTrainingData.customPack = false;
+            cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
         }
+
+        
 
         
     }

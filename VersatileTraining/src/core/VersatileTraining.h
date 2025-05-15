@@ -79,6 +79,11 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool appliedWallClamping = false;
 	bool appliedJumpState = false;
 
+
+	bool determiningCodeSync = false;
+	std::string pendingCode;
+	std::string pendingKey;
+
 	// Rotation and clamping
 	Rotator carRotationUsed = { 0, 0, 0 };
 	Rotator rotationToApply = { 0, 0, 0 };
@@ -167,8 +172,7 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	// Data helpers
 	void CleanUp();
 	int getRandomNumber(int min, int max);
-	/*void SaveCompressedTrainingData(const std::unordered_map<std::string, CustomTrainingData>& trainingData, const std::filesystem::path& fileName);
-	std::unordered_map<std::string, CustomTrainingData> LoadCompressedTrainingData(const std::filesystem::path& fileName);*/
+	
 	void shiftVelocitiesToPositive(std::vector<int>& vec);
 	void shiftVelocitiesToNegative(std::vector<int>& vec);
 
@@ -265,6 +269,28 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 		CameraWrapper& camera,
 		RT::Frustum& frustum,
 		BallWrapper& ball,
+		const Vector& topLeft,
+		const Vector& topRight,
+		const Vector& bottomLeft,
+		const Vector& bottomRight);
+
+	void RenderEnhancedGoalBlocker_WithCarClip(
+		CanvasWrapper& canvas,
+		CameraWrapper& camera,
+		RT::Frustum& frustum,
+		BallWrapper& ball,
+		CarWrapper& car,
+		const Vector& topLeft,
+		const Vector& topRight,
+		const Vector& bottomLeft,
+		const Vector& bottomRight);
+
+	void DrawGoalBlockerGrid_WithCarClip(
+		CanvasWrapper& canvas,
+		CameraWrapper& camera,
+		RT::Frustum& frustum,
+		BallWrapper& ball,
+		CarWrapper& car,
 		const Vector& topLeft,
 		const Vector& topRight,
 		const Vector& bottomLeft,

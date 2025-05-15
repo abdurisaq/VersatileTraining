@@ -1,57 +1,93 @@
 #include "pch.h"
 #include "src/core/VersatileTraining.h"
 void VersatileTraining::Render(CanvasWrapper canvas) {
+
+
+
+
     if (settingsOpen) return;
+
+    
+
     RenderVelocityOfCar(canvas);
 
     if (!(isInTrainingPack() || isInTrainingEditor())) return;
-    LinearColor colors;
-    colors.R = 255;
-    colors.G = 255;
-    colors.B = 0;
-    colors.A = 255;
-    canvas.SetColor(colors);
-    canvas.SetPosition(Vector2F{ 1400.0, 1040.0 });
-    if (lockScene && isInTrainingEditor()&& !playTestStarted) {
-        canvas.DrawString("Scene locked, press V to unlock", 2.0, 2.0, false);
-    }
-    else if (isInTrainingEditor()&& !playTestStarted) {
-        canvas.DrawString("Scene unlocked, press V to lock", 2.0, 2.0, false);
-    }
+
+    std::vector<std::string> statusLines;
+    bool shouldDrawStatusPanel = false;
+
+    auto getBoundKeyOrUnbound = [&](const std::string& command) -> std::string {
+        auto it = currentBindings.find(command);
+        if (it != currentBindings.end() && !it->second.empty()) {
+            return it->second;
+        }
+        return "Unbound";
+    };
 
     if (editingVariances) {
-        canvas.SetPosition(Vector2F{ 0.0, 0.0 });
-        canvas.DrawString("Boost Amount: " + std::to_string(currentShotState.boostAmount), 2.0, 2.0, false);
-        canvas.SetPosition(Vector2F{ 0.0, 20.0 });
-        if (lockRotation) {
-            canvas.DrawString("Car rotation locked, press X to unlock", 2.0, 2.0, false);
+        shouldDrawStatusPanel = true;
+        statusLines.push_back("Boost: " + std::to_string(currentShotState.boostAmount));
+
+        std::string rotKey = getBoundKeyOrUnbound("unlockCar");
+        statusLines.push_back(lockRotation ? "Rotation: Locked (" + rotKey + ")" : "Rotation: Unlocked (" + rotKey + ")");
+
+        std::string freezeKey = getBoundKeyOrUnbound("freezeCar");
+        statusLines.push_back(currentShotState.freezeCar ? "Car: Frozen (" + freezeKey + ")" : "Car: Unfrozen (" + freezeKey + ")");
+
+        std::string jumpKey = getBoundKeyOrUnbound("removeJump");
+        statusLines.push_back(currentShotState.hasJump ? "Jump: Enabled (" + jumpKey + ")" : "Jump: Disabled (" + jumpKey + ")");
+
+        std::string velDirKey = getBoundKeyOrUnbound("lockStartingVelocity");
+        statusLines.push_back(!unlockStartingVelocity ? "Velocity Dir: Locked (" + velDirKey + ")" : "Velocity Dir: Unlocked (" + velDirKey + ")");
+        
+        statusLines.push_back("Velocity Val: " + std::to_string(currentShotState.startingVelocity));
+        
+        if (isInTrainingEditor()) {
+            if (!playTestStarted) {
+                std::string sceneKey = getBoundKeyOrUnbound("lockScene");
+                statusLines.push_back(lockScene ? "Scene: Locked (" + sceneKey + ")" : "Scene: Unlocked (" + sceneKey + ")");
+            } else {
+                statusLines.push_back(lockScene ? "Scene: Locked" : "Scene: Unlocked");
+            }
         }
-        else {
-            canvas.DrawString("Car rotation unlocked, press X to lock", 2.0, 2.0, false);
+    } else if (!editingGoalBlocker && isInTrainingEditor()) { 
+        if (!playTestStarted) {
+            shouldDrawStatusPanel = true;
+            std::string sceneKey = getBoundKeyOrUnbound("lockScene");
+            statusLines.push_back(lockScene ? "Scene: Locked (" + sceneKey + ")" : "Scene: Unlocked (" + sceneKey + ")");
+        } else {
+            shouldDrawStatusPanel = true;
+            statusLines.push_back(lockScene ? "Scene: Locked" : "Scene: Unlocked");
         }
-        canvas.SetPosition(Vector2F{ 0.0, 40.0 });
-        if (currentShotState.freezeCar) {
-            canvas.DrawString("Car frozen, press F to unfreeze", 2.0, 2.0, false);
+    }
+
+    if (shouldDrawStatusPanel && !statusLines.empty()) {
+        Vector2 screenSize = canvas.GetSize();
+        float panelPadding = 10.0f;
+        float lineHeight = 18.0f;
+        float textScale = 1.2f;
+        
+        float panelWidth = 320.0f; 
+
+
+        float panelHeight = (statusLines.size() * lineHeight) + (panelPadding * 2);
+        
+        Vector2F panelPos = {screenSize.X - panelWidth - panelPadding, screenSize.Y - panelHeight - panelPadding};
+
+        LinearColor panelBgColor = {0, 0, 0, 150};
+        canvas.SetColor(panelBgColor);
+        canvas.SetPosition(panelPos);
+        canvas.FillBox(Vector2F{panelWidth, panelHeight});
+
+        LinearColor textColor = {255, 255, 255, 220};
+        canvas.SetColor(textColor);
+        Vector2F textPos = {panelPos.X + panelPadding, panelPos.Y + panelPadding};
+
+        for (const auto& line : statusLines) {
+            canvas.SetPosition(textPos);
+            canvas.DrawString(line, textScale, textScale, false);
+            textPos.Y += lineHeight;
         }
-        else {
-            canvas.DrawString("Car unfrozen, press F to freeze", 2.0, 2.0, false);
-        }
-        canvas.SetPosition(Vector2F{ 0.0, 60.0 });
-        if (currentShotState.hasJump) {
-            canvas.DrawString("Jump available, press J to disable", 2.0, 2.0, false);
-        }
-        else {
-            canvas.DrawString("Jump disabled, press J to enable", 2.0, 2.0, false);
-        }
-        canvas.SetPosition(Vector2F{ 0.0, 80.0 });
-        if (!unlockStartingVelocity) {
-            canvas.DrawString("Starting velocity locked, press B to unlock", 2.0, 2.0, false);
-        }
-        else {
-            canvas.DrawString("Starting velocity unlocked, press B to lock", 2.0, 2.0, false);
-        }
-        canvas.SetPosition(Vector2F{ 0.0, 100.0 });
-        canvas.DrawString("Starting Velocity: " + std::to_string(currentShotState.startingVelocity), 2.0, 2.0, false);
     }
     else if (editingGoalBlocker) {
         CameraWrapper cam = gameWrapper->GetCamera();
@@ -63,14 +99,14 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
         Vector projectedPoint;
         if (ProjectToPlaneY(camLoc, forward, (float)backWall, projectedPoint)) {
-            // Draw projected point as a small cross
+            
             Vector2 screenPoint = canvas.Project(projectedPoint);
             int crossSize = 5;
             canvas.SetColor((char)255, (char)255, (char)255, (char)255);
             canvas.DrawLine(screenPoint - Vector2(crossSize, 0), screenPoint + Vector2(crossSize, 0), 1.0f);
             canvas.DrawLine(screenPoint - Vector2(0, crossSize), screenPoint + Vector2(0, crossSize), 1.0f);
 
-            // Handle mouse input
+            
             if (saveCursorPos) {
                 LOG("current anchors first: {}, second: {}", currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
                 LOG("current anchor firs : X {} Z {}, second : X {} Z {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
@@ -112,7 +148,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
                 rectangleMade = true;
             }
 
-            // If we have both points, draw rectangle on the goal plane
+           
             if (rectangleMade) {
                 Vector topLeft(max(currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.second.X), backWall, max(currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.Z));
                 Vector topRight(min(currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.second.X), backWall, max(currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.Z));
@@ -122,7 +158,11 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
                 // Get ball data for the preview editor
                 ServerWrapper gameState = gameWrapper->GetCurrentGameState();
                 BallWrapper ball = gameState.GetBall();
-                if (!ball.IsNull()) {
+               
+
+
+                 
+                 if (!ball.IsNull()) {
                     Vector2 ballScreenPos = canvas.Project(ball.GetLocation());
                     float ballRadius = Distance(ballScreenPos, canvas.Project(ball.GetLocation() + Vector(92.75f, 0, 0)));
 
@@ -130,7 +170,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
                     RenderEnhancedGoalBlocker(canvas, cam, frust, ball, topLeft, topRight, bottomLeft, bottomRight);
                 }
                 else {
-                    // Fallback if ball is not available - simple rectangle
+                    
                     canvas.SetColor((char)0, (char)255, (char)0, (char)200);
                     RT::Line lineTop(topLeft, topRight, RT::GetVisualDistance(canvas, frust, cam, topLeft) * 1.5f);
                     RT::Line lineRight(topRight, bottomRight, RT::GetVisualDistance(canvas, frust, cam, topRight) * 1.5f);
@@ -171,5 +211,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
     Vector bottomLeft(max(currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.second.X), backWall, min(currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.Z));
     Vector bottomRight(min(currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.second.X), backWall, min(currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.Z));
 
-    RenderEnhancedGoalBlocker(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight);
+
+        RenderEnhancedGoalBlocker(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight);
+    
 }

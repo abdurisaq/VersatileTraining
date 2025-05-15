@@ -4,12 +4,12 @@
 void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
     if (shotReplicationManager.testCalledInStartRound)return;
 	
-	if ((isInTrainingPack() || isInTrainingEditor()) &&(currentShotState.extendedStartingVelocity != Vector(0, 0, 0) || currentShotState.startingVelocity != 0.f)) {
+    if ((isInTrainingPack() || isInTrainingEditor()) && ((currentShotState.extendedStartingVelocity.X != 0.f || currentShotState.extendedStartingVelocity.Y != 0.f || currentShotState.extendedStartingVelocity.Z != 0.f) || currentShotState.startingVelocity != 0.f)) {
 		//in a training pack/editor
 		
         Vector velocity= Vector(0, 0, 0);
         //reverse getting the velocity from the car rotation
-        if (currentShotState.extendedStartingVelocity != Vector(0, 0, 0)) {
+        if (currentShotState.extendedStartingVelocity.X != 0.f || currentShotState.extendedStartingVelocity.Y != 0.f || currentShotState.extendedStartingVelocity.Z != 0.f) {
 
             velocity = currentShotState.extendedStartingVelocity;
         }
@@ -43,7 +43,7 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
         Vector start = currentShotState.carLocation;
 
        
-        if (velocity == Vector(0, 0, 0)) {
+        if (velocity.X == 0.f && velocity.Y == 0.f && velocity.Z == 0.f) {
             return;
         }
         CameraWrapper cam = gameWrapper->GetCamera();

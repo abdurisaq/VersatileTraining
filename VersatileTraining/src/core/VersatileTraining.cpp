@@ -29,7 +29,9 @@ void VersatileTraining::onLoad()
 	storageManager.saveReplayStateFilePath = myDataFolder / "replayStates.txt";
 
 	snapshotManager.replayStates = storageManager.loadReplayStates(storageManager.saveReplayStateFilePath);
-	/*trainingData = storageManager.loadCompressedTrainingData(storageManager.saveTrainingFilePath);*/
+	
+	storageManager.packOverrideSettings = storageManager.loadPackOverrideSettings(myDataFolder);
+
 	readCurrentBindings();
 
 	specialKeybinds = storageManager.loadSpecialKeybinds(myDataFolder);
@@ -96,6 +98,9 @@ void VersatileTraining::onUnload() {
 	storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
 	
 	storageManager.saveSpecialKeybinds(specialKeybinds, myDataFolder);
+
+
+	storageManager.savePackOverrideSettings(storageManager.packOverrideSettings, myDataFolder);
 	CleanUp();
 
 	serverRunning = false;

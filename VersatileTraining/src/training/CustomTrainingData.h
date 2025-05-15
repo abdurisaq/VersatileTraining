@@ -186,3 +186,106 @@ struct CustomTrainingData {
 };
 
 
+
+
+struct PackOverrideSettings {
+	// Flags to indicate if the setting is overridden
+	bool overrideBoostLimit = false;
+	bool overridePlayerStartVelocity = false;
+	bool overrideBallSpeedVariancePct = false;
+	bool overrideTrajectoryRotationVariancePct = false;
+	bool overrideBallLocationVarianceXY = false;
+	bool overrideBallLocationVarianceHeight = false;
+	bool overrideBallSpin = false;
+	bool overrideTrainingTimeLimit = false;
+	bool overrideCarLocationVarianceXY = false;
+	bool overrideCarRotationVariancePct = false;
+
+	// Actual override values
+	int boostLimit = -1;
+	int playerStartVelocity[2] = { 0, 2000 };
+	float ballSpeedVariancePct[2] = { -25.0f, 25.0f };
+	float trajectoryRotationVariancePct[2] = { -25.0f, 25.0f };
+	float ballLocationVarianceXY[2] = { -250.0f, 250.0f };
+	float ballLocationVarianceHeight[2] = { -1000.0f, 1000.0f };
+	float ballSpin[2] = { -6.0f, 6.0f };
+	int trainingTimeLimit = 0;
+	float carLocationVarianceXY[2] = { -500.0f, 500.0f };
+	float carRotationVariancePct[2] = { -50.0f, 50.0f };
+
+	PackOverrideSettings() = default;
+
+	bool HasAnyOverride() const {
+		return overrideBoostLimit || overridePlayerStartVelocity || overrideBallSpeedVariancePct ||
+			overrideTrajectoryRotationVariancePct || overrideBallLocationVarianceXY ||
+			overrideBallLocationVarianceHeight || overrideBallSpin || overrideTrainingTimeLimit ||
+			overrideCarLocationVarianceXY || overrideCarRotationVariancePct;
+	}
+	void ApplyCVars(std::shared_ptr<CVarManagerWrapper> cvarManager, bool logCommands = false) const {
+		// Buffer for command strings
+		char cmdBuffer[128];
+
+		// Enable training overrides if any overrides are active
+		if (HasAnyOverride()) {
+			cvarManager->executeCommand("sv_training_enabled 1", false);
+		}
+		else {
+			cvarManager->executeCommand("sv_training_enabled 0", false);
+		}
+
+		int boostToSet = overrideBoostLimit ? boostLimit : -1;
+		sprintf(cmdBuffer, "sv_training_limitboost %d", boostToSet);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		int velMin = overridePlayerStartVelocity ? playerStartVelocity[0] : 0;
+		int velMax = overridePlayerStartVelocity ? playerStartVelocity[1] : 0;
+		sprintf(cmdBuffer, "sv_training_player_velocity (%d, %d)", velMin, velMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		float speedVarMin = overrideBallSpeedVariancePct ? ballSpeedVariancePct[0] : 0.0f;
+		float speedVarMax = overrideBallSpeedVariancePct ? ballSpeedVariancePct[1] : 0.0f;
+		sprintf(cmdBuffer, "sv_training_var_speed (%.1f, %.1f)", speedVarMin, speedVarMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		float trajRotVarMin = overrideTrajectoryRotationVariancePct ? trajectoryRotationVariancePct[0] : 0.0f;
+		float trajRotVarMax = overrideTrajectoryRotationVariancePct ? trajectoryRotationVariancePct[1] : 0.0f;
+		sprintf(cmdBuffer, "sv_training_var_rot (%.1f, %.1f)", trajRotVarMin, trajRotVarMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		float ballLocXYMin = overrideBallLocationVarianceXY ? ballLocationVarianceXY[0] : 0.0f;
+		float ballLocXYMax = overrideBallLocationVarianceXY ? ballLocationVarianceXY[1] : 0.0f;
+		sprintf(cmdBuffer, "sv_training_var_loc (%.1f, %.1f)", ballLocXYMin, ballLocXYMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		float ballLocZMin = overrideBallLocationVarianceHeight ? ballLocationVarianceHeight[0] : 0.0f;
+		float ballLocZMax = overrideBallLocationVarianceHeight ? ballLocationVarianceHeight[1] : 0.0f;
+		sprintf(cmdBuffer, "sv_training_var_loc_z (%.1f, %.1f)", ballLocZMin, ballLocZMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		float ballSpinMin = overrideBallSpin ? ballSpin[0] : 0.0f;
+		float ballSpinMax = overrideBallSpin ? ballSpin[1] : 0.0f;
+		sprintf(cmdBuffer, "sv_training_var_spin (%.1f, %.1f)", ballSpinMin, ballSpinMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		float carLocXYMin = overrideCarLocationVarianceXY ? carLocationVarianceXY[0] : 0.0f;
+		float carLocXYMax = overrideCarLocationVarianceXY ? carLocationVarianceXY[1] : 0.0f;
+		sprintf(cmdBuffer, "sv_training_var_car_loc (%.1f, %.1f)", carLocXYMin, carLocXYMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+		float carRotVarMin = overrideCarRotationVariancePct ? carRotationVariancePct[0] : 0.0f;
+		float carRotVarMax = overrideCarRotationVariancePct ? carRotationVariancePct[1] : 0.0f;
+		sprintf(cmdBuffer, "sv_training_var_car_rot (%.1f, %.1f)", carRotVarMin, carRotVarMax);
+		cvarManager->executeCommand(cmdBuffer, false);
+		if (logCommands) { LOG("Executed CVar: %s", cmdBuffer); }
+
+	}
+
+};

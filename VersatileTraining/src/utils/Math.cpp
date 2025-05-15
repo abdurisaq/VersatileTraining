@@ -92,6 +92,13 @@ float Distance(Vector2 a, Vector2 b) {
 	float dy = b.Y - a.Y;
 	return sqrt(dx * dx + dy * dy);
 }
+float Distance(Vector a, Vector b) {
+	float dx = b.X - a.X;
+	float dy = b.Y - a.Y;
+	float dz = b.Z - a.Z;
+	return sqrt(dx * dx + dy * dy + dz * dz);
+}
+
 
 bool inRectangle(const std::pair<Vector, Vector>& goalBlockerPos, const Vector& ballLoc) {
 	float minX = min(goalBlockerPos.first.X, goalBlockerPos.second.X);
@@ -129,4 +136,49 @@ Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude) 
 	return result;
 
 }
+
+
+void DrawLineClippedByCircle(CanvasWrapper& canvas, const Vector2& a, const Vector2& b, const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D, CameraWrapper cam, RT::Frustum frust, float thickness) { // Added thickness
+	Vector2 ab = b - a;
+	Vector2 ac = a - circleCenter;
+
+	float A = Dot(ab, ab);
+	float B = 2 * Dot(ac, ab);
+	float C = Dot(ac, ac) - radius * radius;
+
+	float discriminant = B * B - 4 * A * C;
+
+	if (discriminant < 0.0f) {
+		RT::Line full(a3D, b3D, RT::GetVisualDistance(canvas, frust, cam, a3D) * 1.5f);
+		full.thickness = thickness; // Apply thickness
+		full.DrawWithinFrustum(canvas, frust);
+		return;
+	}
+
+	float sqrtDisc = std::sqrt(discriminant);
+	float t1 = (-B - sqrtDisc) / (2 * A);
+	float t2 = (-B + sqrtDisc) / (2 * A);
+
+	t1 = std::clamp(t1, 0.0f, 1.0f);
+	t2 = std::clamp(t2, 0.0f, 1.0f);
+
+	// Ensure t1 <= t2
+	if (t1 > t2) std::swap(t1, t2);
+
+	Vector v3D = b3D - a3D;
+	Vector p1_3D = a3D + v3D * t1;
+	Vector p2_3D = a3D + v3D * t2;
+
+	if (t1 > 0.0f) { // Segment from a3D to p1_3D (first intersection)
+		RT::Line line1(a3D, p1_3D, RT::GetVisualDistance(canvas, frust, cam, a3D) * 1.5f);
+		line1.thickness = thickness; // Apply thickness
+		line1.DrawWithinFrustum(canvas, frust);
+	}
+	if (t2 < 1.0f) { // Segment from p2_3D (second intersection) to b3D
+		RT::Line line2(p2_3D, b3D, RT::GetVisualDistance(canvas, frust, cam, b3D) * 1.5f);
+		line2.thickness = thickness; // Apply thickness
+		line2.DrawWithinFrustum(canvas, frust);
+	}
+}
+
 

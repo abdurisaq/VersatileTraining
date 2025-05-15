@@ -58,7 +58,7 @@ void VersatileTraining::replayHooks() {
                 snapshotManager.currentReplayState.carVelocity = direction * (float)currentShotState.startingVelocity;
 
             }
-            else if (currentShotState.extendedStartingVelocity != Vector(0, 0, 0)) {
+            else if (currentShotState.extendedStartingVelocity.X != 0.f || currentShotState.extendedStartingVelocity.Y != 0.f || currentShotState.extendedStartingVelocity.Z != 0.f) {
 
                 snapshotManager.currentReplayState.carVelocity = currentShotState.extendedStartingVelocity;
             }
@@ -138,7 +138,7 @@ void VersatileTraining::replayHooks() {
         caller->VelocityStartRotation = savedReplayState.ballRotation;
         currentShotState.extendedStartingVelocity = savedReplayState.carVelocity;
         currentShotState.extendedStartingAngularVelocity = savedReplayState.carAngularVelocity;
-        if(caller->StartLocation == savedReplayState.ballLocation){
+        if(caller->StartLocation.X == savedReplayState.ballLocation.X && caller->StartLocation.Y == savedReplayState.ballLocation.Y && caller->StartLocation.Z == savedReplayState.ballLocation.Z){
             savedReplayState.ballSet = true;
         }
         
