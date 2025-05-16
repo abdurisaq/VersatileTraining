@@ -163,8 +163,8 @@ struct CustomTrainingData {
 	
 	int boostMax = 101;
 	int boostMin = 0;
-	int maxVelocity = 2000;
-	int minVelocity = -2000;
+	int maxVelocity = 2300;
+	int minVelocity = -2300;
 	void initCustomTrainingData(int shotAmount, const std::string& packName) {
 		LOG("called initCustomTrainingData");
 		name = packName;

@@ -24,6 +24,12 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
         return "Unbound";
     };
 
+    if (!shotReplicationManager.testCalledInStartRound && isInTrainingPack() && currentTrainingData.customPack) {
+        shouldDrawStatusPanel = true;
+        statusLines.push_back(currentShotState.recording.inputs.empty() ? "No Recording Available" : "Has Recording");
+        statusLines.push_back(currentShotState.hasJump ? "Jump: Enabled" : "Jump: Disabled");
+    }
+
     if (editingVariances) {
         shouldDrawStatusPanel = true;
         statusLines.push_back("Boost: " + std::to_string(currentShotState.boostAmount));
@@ -47,9 +53,11 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
                 if (!playTestStarted) {
                     std::string sceneKey = getBoundKeyOrUnbound("lockScene");
                     statusLines.push_back(lockScene ? "Scene: Locked (" + sceneKey + ")" : "Scene: Unlocked (" + sceneKey + ")");
+                    
                 }
                 else {
                     statusLines.push_back(lockScene ? "Scene: Locked" : "Scene: Unlocked");
+                    
                 }
             }
         }
@@ -58,9 +66,13 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
             shouldDrawStatusPanel = true;
             std::string sceneKey = getBoundKeyOrUnbound("lockScene");
             statusLines.push_back(lockScene ? "Scene: Locked (" + sceneKey + ")" : "Scene: Unlocked (" + sceneKey + ")");
+            
         } else {
             shouldDrawStatusPanel = true;
-            statusLines.push_back(lockScene ? "Scene: Locked" : "Scene: Unlocked");
+            if (!shotReplicationManager.testCalledInStartRound) {
+                statusLines.push_back(currentShotState.hasJump ? "Jump: Enabled" : "Jump: Disabled");
+            }
+            statusLines.push_back(shotReplicationManager.recording ? "Recording: On" : "Recording: Off");
         }
     }
 

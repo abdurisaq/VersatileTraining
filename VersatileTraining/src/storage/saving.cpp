@@ -5,9 +5,8 @@
 constexpr size_t NAME_LEN_BITS = 5;
 constexpr size_t NUM_SHOTS_BITS = 6;
 constexpr size_t BOOST_MIN_BITS = 7;
-constexpr size_t VELOCITY_MIN_BITS = 12;
-constexpr size_t GOAL_X_MIN_BITS = 11;
-constexpr size_t GOAL_Z_MIN_BITS = 10;
+constexpr size_t VELOCITY_MIN_BITS = 13;
+constexpr size_t GOAL_MIN_BITS = 12;
 constexpr size_t NUM_FLOAT_BITS = 16;
 
 constexpr size_t TRAINING_CODE_FLAG_BITS = 1; 
@@ -313,11 +312,11 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, BOOST_MIN_BITS);
 
         binaryDataToWrite.clear();
-        binaryDataToWrite.push_back((boundaryVelocities.first >>4) & 0xFF);
-        binaryDataToWrite.push_back((boundaryVelocities.first) & 0xF);
+        binaryDataToWrite.push_back((boundaryVelocities.first >>5) & 0xFF);
+        binaryDataToWrite.push_back((boundaryVelocities.first) & 0x1F);
         LOG("min velocity {}", boundaryVelocities.first);
-        LOG("writing min velocity : {} to file", (boundaryVelocities.first>>4) & 0xFF);
-        LOG("writing min velocity : {} to file", ((boundaryVelocities.first) & 0xF));
+        LOG("writing min velocity : {} to file", (boundaryVelocities.first>>5) & 0xFF);
+        LOG("writing min velocity : {} to file", ((boundaryVelocities.first) & 0x1F));
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
         
@@ -378,7 +377,7 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         LOG("min goalblocker X: {}", boundaryX.first);
         LOG("writing min goal blocker X : {} to file", (boundaryX.first >> 4) & 0xFF);
         LOG("writing min goal blocker X : {} to file", ((boundaryX.first) & 0xF));
-        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
+        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, GOAL_MIN_BITS);
 
         std::pair<int, int> boundaryZ = getMinMaxAmount(zVals);
 
@@ -388,7 +387,7 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         LOG("min goalblocker Z: {}", boundaryZ.first);
         LOG("writing min goal blocker Z : {} to file", (boundaryZ.first >> 4) & 0xFF);
         LOG("writing min goal blocker Z : {} to file", ((boundaryZ.first) & 0xF));
-        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
+        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, GOAL_MIN_BITS);
 
         //size_t numBitsForBoost = CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first);
         //size_t numBitsForVelocity = CalculateRequiredBits(boundaryVelocities.second - boundaryVelocities.first);
@@ -587,9 +586,9 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         size_t maxMagnitudeAng = ReadBits(bitstream, bitIndex, 8);
         LOG("maxMagnitude Ang : {}", maxMagnitudeAng);
 
-        size_t minGoalBlockX = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
+        size_t minGoalBlockX = ReadBits(bitstream, bitIndex, GOAL_MIN_BITS);
         LOG("min goalblocker X : {}", minGoalBlockX);
-        size_t minGoalBlockZ = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
+        size_t minGoalBlockZ = ReadBits(bitstream, bitIndex, GOAL_MIN_BITS);
         LOG("min goalblocker Z : {}", minGoalBlockZ);
 
         uint8_t packedBits = (uint8_t)ReadBits(bitstream, bitIndex, 7);

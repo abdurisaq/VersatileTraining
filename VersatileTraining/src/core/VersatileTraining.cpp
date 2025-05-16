@@ -31,6 +31,11 @@ void VersatileTraining::onLoad()
 		 try {
 			 if (std::filesystem::create_directories(myDataFolder)) {
 				 LOG("Plugin data folder created: {}", myDataFolder.string());
+				 firstTime = true;
+				 
+				 
+				
+				 
 			 }
 			 else {
 				 
@@ -41,6 +46,9 @@ void VersatileTraining::onLoad()
 			 LOG("FATAL: Error creating plugin data folder {}: {}. Plugin functionality will be severely limited.", myDataFolder.string(), e.what());
 			 return; 
 		 }
+	 }
+	 else {
+		 firstTime = false;
 	 }
 	storageManager.saveTrainingFilePath = myDataFolder / "packs.txt";
 	storageManager.saveReplayStateFilePath = myDataFolder / "replayStates.txt";

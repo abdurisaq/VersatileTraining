@@ -7,10 +7,18 @@ void VersatileTraining::replayHooks() {
         uintptr_t ReturnValue;
     };
 
-    //TAGame.GameObserver_TA.UpdateBallData
-    // TAGame.GameObserver_TA.UpdateCarsData
-    // TAGame.Camera_Replay_TA.GetFocusCar
-    //Function TAGame.ReplayManager_TA.PlayReplay
+    gameWrapper->HookEvent("Function TAGame.MenuSequence_TA.EnterSequence", [this](std::string eventName) {
+        canSpawnWelcomeMessage = true;
+            if (firstTime) {
+                gameWrapper->SetTimeout([this](GameWrapper* gw) {
+                    if (!isWindowOpen_) {
+                        cvarManager->executeCommand("togglemenu " + GetMenuName());
+                    }
+                }, 1.5f);
+            }
+        });
+
+
     gameWrapper->HookEventPost("Function TAGame.Replay_TA.StartPlaybackAtFrame", [this](std::string eventName) {
         isInReplay = true;
         snapshotManager.currentReplayState.captureSource = CaptureSource::Replay;
@@ -117,6 +125,7 @@ void VersatileTraining::replayHooks() {
         caller->VelocityStartSpeed = savedReplayState.ballSpeed;
         caller->VelocityStartRotation = savedReplayState.ballRotation;
         currentShotState.extendedStartingVelocity = savedReplayState.carVelocity;
+        currentShotState.startingVelocity = savedReplayState.carVelocity.magnitude();
         currentShotState.extendedStartingAngularVelocity = savedReplayState.carAngularVelocity;
         if(caller->StartLocation.X == savedReplayState.ballLocation.X && caller->StartLocation.Y == savedReplayState.ballLocation.Y && caller->StartLocation.Z == savedReplayState.ballLocation.Z){
             savedReplayState.ballSet = true;

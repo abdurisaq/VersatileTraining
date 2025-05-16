@@ -48,9 +48,7 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 	frame = 0;
 	ProfileCameraSettings settings = gameWrapper->GetSettings().GetCameraSettings();
 	std::vector<std::pair<std::string, std::string>> bindings = gameWrapper->GetSettings().GetAllPCBindings();
-	for (auto& binding : bindings) {
-		LOG("binding: {} : {}", binding.first, binding.second);
-	}
+	
 	auto car = server.GetGameCar();
 	if (!car) return;
 	Vector carLoc = car.GetLocation();

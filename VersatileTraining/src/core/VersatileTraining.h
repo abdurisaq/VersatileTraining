@@ -51,7 +51,8 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	void displaySpecialKeybind(const std::string& label, int& keyCode);
 	
 	std::filesystem::path myDataFolder;
-
+	bool firstTime = false;
+	bool canSpawnWelcomeMessage = false;
 
 	char packSearchBuffer[128] = "";
 	int packSortCriteria = 0;

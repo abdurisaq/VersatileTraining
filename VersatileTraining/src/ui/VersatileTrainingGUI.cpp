@@ -600,7 +600,85 @@ void VersatileTraining::RenderWindow() {
     style.ItemSpacing.y = 8.0f;
     style.FramePadding.y = 6.0f;
 
+    if (firstTime) {
+        ImGui::SetWindowSize(ImVec2(0, 0));
+        if (canSpawnWelcomeMessage) {
+
+            ImGui::OpenPopup("Welcome to Versatile Training!");
+        }
+        
+    }
+
+    ImVec2 displaySizeWelcome = ImGui::GetIO().DisplaySize;
     
+    ImVec2 welcomePopupSize = ImVec2(max(600.0f, displaySizeWelcome.x * 0.45f), max(550.0f, displaySizeWelcome.y * 0.6f));
+    ImGui::SetNextWindowSize(welcomePopupSize, ImGuiCond_Appearing);
+    ImGui::SetNextWindowPos(ImVec2(displaySizeWelcome.x * 0.5f - welcomePopupSize.x * 0.5f, displaySizeWelcome.y * 0.5f - welcomePopupSize.y * 0.5f), ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal("Welcome to Versatile Training!", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]); 
+        ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.1f, 1.0f), "Welcome to Versatile Training!");
+        ImGui::PopFont();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::TextWrapped("Thanks for installing Versatile Training! Here's a quick guide to get you started:");
+        ImGui::Spacing();
+
+        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Core Features:");
+        ImGui::BulletText("Custom Training Packs: Create, share, and play advanced training scenarios.");
+        ImGui::BulletText("Snapshot System: Save and load game states from replays or training (see 'Snapshot Gallery' tab).");
+        ImGui::BulletText("Goal Blocker: Set up custom goal blockers for precision practice (see 'Goal Blockers' tab in the settings).");
+        ImGui::BulletText("Recording & Playback: Record your attempts and use them for bot playback (see the 'Playback & Recording' tab in the settings).");
+        ImGui::BulletText("Versatile Training Hub: Upload and download training packs from the community (see 'Online Training Pack Hub' in Help).");
+        ImGui::Spacing();
+
+        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Versatile Training Hub:");
+        ImGui::TextWrapped("Discover and share packs with the community at:");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.8f, 1.0f, 1.0f));
+        ImGui::TextUnformatted("https://versatile-training-hub.vercel.app/");
+        ImGui::PopStyleColor();
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Copy Link##Welcome")) {
+            ImGui::SetClipboardText("https://versatile-training-hub.vercel.app/");
+        }
+        ImGui::Spacing();
+
+        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Keybinds:");
+        ImGui::BulletText("Default keybinds are set for common actions.");
+        ImGui::BulletText("View and customize all keybinds in BakkesMod (F2) -> Plugins -> Versatile Training.");
+        ImGui::BulletText("The main plugin window can be opened with the key bound to 'Open Plugin Interface' (Default F3).");
+        ImGui::Spacing();
+
+        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Getting Started:");
+        ImGui::BulletText("Try loading a pack from the 'Custom Training Packs' tab or explore the 'Snapshot Gallery'!");
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        float buttonWidthWelcome = 120.0f;
+        // Center the button
+        float windowContentWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
+        ImGui::SetCursorPosX((windowContentWidth - buttonWidthWelcome) * 0.5f);
+
+        if (ImGui::Button("Got it!", ImVec2(buttonWidthWelcome, 30))) {
+            firstTime = false; 
+            gameWrapper->Execute([this](GameWrapper* gw) {
+                std::string cmd = "togglemenu " + GetMenuName();
+                cvarManager->executeCommand(cmd, false);
+            });
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+    if (firstTime) {
+
+        style.ItemSpacing.y = origItemSpacing;
+        style.FramePadding.y = origFramePadding;
+        return;
+    }
+
+
     if (determiningCodeSync) {
         ImGui::SetWindowSize(ImVec2(0, 0));
         ImGui::OpenPopup("Confirm Code Sync");
@@ -1191,8 +1269,20 @@ void VersatileTraining::RenderWindow() {
                         
                         ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Car Freeze State:");
                         ImGui::NextColumn();
-                        ImGui::TextColored(shot.freezeCar ? ImVec4(1.0f, 0.5f, 0.0f, 1.0f) : ImVec4(0.0f, 0.8f, 0.2f, 1.0f),
+                        ImGui::TextColored(!shot.freezeCar ? ImVec4(1.0f, 0.5f, 0.0f, 1.0f) : ImVec4(0.0f, 0.8f, 0.2f, 1.0f),
                             shot.freezeCar ? "Frozen" : "Unfrozen");
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Jump State:");
+                        ImGui::NextColumn();
+                        ImGui::TextColored(!shot.hasJump ? ImVec4(1.0f, 0.5f, 0.0f, 1.0f) : ImVec4(0.0f, 0.8f, 0.2f, 1.0f),
+                            !shot.hasJump ? "No Jump" : "Has Jump");
+                        ImGui::NextColumn();
+
+                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Has Recording ?");
+                        ImGui::NextColumn();
+                        ImGui::TextColored(!shot.recording.inputs.empty() ? ImVec4(0.0f, 0.8f, 0.2f, 1.0f) : ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+                            !shot.recording.inputs.empty() ? "Yes" : "No");
                         ImGui::NextColumn();
 
                         ImGui::Columns(1);
