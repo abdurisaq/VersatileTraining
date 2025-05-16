@@ -16,11 +16,12 @@ struct ShotState {
 	ShotRecording recording;
 	Vector carLocation = Vector(0,0,0);
 	Rotator carRotation = Rotator(0,0,0);
-	ShotState() : freezeCar(false), hasJump(true), startingVelocity(0), boostAmount(101), goalBlocker({ { 0, 0, 0 }, { 0, 0, 0 } }), goalAnchors({ false, false }), carLocation({ 0,0,0 }), carRotation({0,0,0}), extendedStartingVelocity({ 0,0,0 }),recording(ShotRecording()) {}
-	ShotState(bool freeze, bool jump, int velocity, int boost, std::pair<Vector, Vector> blocker, std::pair<bool, bool> anchors,  Vector startingVelocity,ShotRecording recording)
-		: freezeCar(freeze), hasJump(jump), startingVelocity(velocity), boostAmount(boost), goalBlocker(blocker), goalAnchors(anchors), extendedStartingVelocity(startingVelocity), recording(recording) {}
+	ShotState() : freezeCar(false), hasJump(true), startingVelocity(0), boostAmount(101), goalBlocker({ { 0, 0, 0 }, { 0, 0, 0 } }), goalAnchors({ false, false }), carLocation({ 0,0,0 }), carRotation({0,0,0}), extendedStartingVelocity({ 0,0,0 }),extendedStartingAngularVelocity({0,0,0}), recording(ShotRecording()) {}
+	ShotState(bool freeze, bool jump, int velocity, int boost, std::pair<Vector, Vector> blocker, std::pair<bool, bool> anchors,  Vector startingVelocity, Vector angularVelocity,ShotRecording recording)
+		: freezeCar(freeze), hasJump(jump), startingVelocity(velocity), boostAmount(boost), goalBlocker(blocker), goalAnchors(anchors), extendedStartingVelocity(startingVelocity), extendedStartingAngularVelocity(angularVelocity), recording(recording) {}
 
 	ShotState& operator=(const ShotState& other) {
+		if(&other == nullptr) return *this; 
 		if (this != &other) {
 			freezeCar = other.freezeCar;
 			hasJump = other.hasJump;
@@ -33,7 +34,7 @@ struct ShotState {
 			carLocation = other.carLocation;
 			carRotation = other.carRotation;
 
-			// Safe copying
+			
 			try {
 				if (&other.recording == nullptr) {
 					recording = ShotRecording();
@@ -103,6 +104,7 @@ struct CustomTrainingDataflattened {
 	std::vector<std::pair<bool, bool>>goalAnchors;
 	std::vector<bool> hasStartingJump;
 	std::vector<Vector> extendedStartingVelocities;
+	std::vector<Vector> extendedStartingAngularVelocities;
 	bool customPack = false;
 
 	void initCustomTrainingData(int shotAmount, std::string packName) {
@@ -117,6 +119,7 @@ struct CustomTrainingDataflattened {
 		goalAnchors = std::vector<std::pair<bool, bool>>(shotAmount, { false, false });
 		hasStartingJump = std::vector<bool>(shotAmount, true);
 		extendedStartingVelocities = std::vector<Vector>(shotAmount, { 0,0,0 });
+		extendedStartingAngularVelocities = std::vector<Vector>(shotAmount, { 0,0,0 });
 	}
 	void addShot(int boostAmount = 101, int velocity = 0, bool frozen = false, Vector firstAnchor = { 0,0,0 }, Vector secondAnchor = { 0,0,0 }) {
 		numShots++;

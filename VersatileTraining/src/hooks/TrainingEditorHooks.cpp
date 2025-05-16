@@ -3,6 +3,8 @@
 
 
 void VersatileTraining::setupTrainingEditorHooks() {
+
+
     gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function TAGame.GFxData_TrainingMode_TA.HandleAddTrainingData",
         [this](ActorWrapper caller, void* params, std::string eventName)
         {
@@ -50,7 +52,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
                     LOG("Deleting training pack folder: {}", packFolder.string());
                     std::size_t removedCount = std::filesystem::remove_all(packFolder);
                     LOG("Removed {} files/directories", removedCount);
-                    return true;
+                    
                 }
                 catch (const std::filesystem::filesystem_error& e) {
                     LOG("Error deleting training pack folder: {}", e.what());
@@ -181,6 +183,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
 void VersatileTraining::handleTrainingEditorEnter() {
     LOG("Training editor enter");
     currentTrainingData.currentEditedShot = -1;
+    lockScene = false;
     justOpenedPack = true;
     
 
@@ -423,7 +426,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
                 currentTrainingData.customPack = false;
             }
         }
-        
+        currentTrainingData.currentEditedShot = currentShot;
         currentShotState = currentTrainingData.shots[currentShot];
         LOG("setting shot state");
         LOG("boost amount: {}", currentShotState.boostAmount);

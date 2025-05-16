@@ -68,8 +68,11 @@ void StorageManager::saveReplayStates(const std::vector<ReplayState>& replays, c
 
 std::vector<ReplayState> StorageManager::loadReplayStates(const std::filesystem::path& fileName) {
     std::ifstream inFile(fileName, std::ios::binary);
+    
+    
     if (!inFile) {
-        throw std::runtime_error("Failed to open file for reading");
+        std::vector<ReplayState>empty(0);
+        return empty;
     }
 
     size_t count;

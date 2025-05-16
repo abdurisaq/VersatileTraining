@@ -270,14 +270,15 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 		const Vector& bottomRight);
 
 	void DrawGoalBlockerGrid(
-		CanvasWrapper& canvas,
-		CameraWrapper& camera,
-		RT::Frustum& frustum,
-		BallWrapper& ball,
-		const Vector& topLeft,
-		const Vector& topRight,
-		const Vector& bottomLeft,
-		const Vector& bottomRight);
+        CanvasWrapper& canvas,
+        CameraWrapper& camera,
+        RT::Frustum& frustum,
+        BallWrapper& ball,
+        CarWrapper& car, // Added car parameter
+        const Vector& topLeft,
+        const Vector& topRight,
+        const Vector& bottomLeft,
+        const Vector& bottomRight);
 
 	void RenderEnhancedGoalBlocker_WithCarClip(
 		CanvasWrapper& canvas,
@@ -304,7 +305,45 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	Vector LerpVector(const Vector& a, const Vector& b, float t);
 	LinearColor LerpColor(const LinearColor& a, const LinearColor& b, float t);
 
+
+	//gui
+
+	std::string lastCopiedPackCode;
+	float packCodeCopyFlashTimer = 0.0f;
+
+	char allSnapshotsSearchBuffer[128];
+    int allSnapshotsFilterType;
+    int allSnapshotsSourceFilter;
+    bool allSnapshotsSortAscending;
+	bool requestOpenAddSnapshotsPopup = false;
+    bool requestOpenRenameGroupPopup = false;
+    
+    std::vector<SnapshotGroup> snapshotGroups;
+    
+    char newGroupNameInput[128];        
+     char renameGroupNameInput[128];      
+     std::string groupToRenameUid;        
+     std::string groupToAddToUid;         
+     std::vector<bool> snapshotSelectionForAdding; 
+     char groupSearchBuffer[128];        
+     char snapshotSearchInAddPopupBuffer[128]; 
+
+    void UpdateGroupIndicesAfterSnapshotDeletion(size_t deletedOriginalIndex);
+
+
+    //Rendering Functions 
+
+    void RenderSnapshotDetailsInGroup(SnapshotGroup& group, size_t snapshotManagerIndex, size_t displayIndexInGroupList);
+    void RenderCreateGroupPopup();
+    void RenderRenameGroupPopup();
+    void RenderAddSnapshotsToGroupPopup();
 public:
+
+	void RenderAllSnapshotsTab();
+	void RenderGroupedSnapshotsTab();
+	void LoadSnapshotGroups();
+	void SaveSnapshotGroups();
+
 
 	void RenderSettings() override; // Uncomment if you wanna render your own tab in the settings menu
 	void Render(CanvasWrapper canvas);

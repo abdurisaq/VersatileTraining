@@ -291,7 +291,7 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(nameLength & 0xFF);  
         LOG("writing name length : {} to file", nameLength & 0xFF);
-        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NAME_LEN_BITS);//max 30 character name
+        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NAME_LEN_BITS);
         //bitstream.push_back((nameLength >> 8) & 0xFF);  
         //bitstream.push_back(nameLength & 0xFF);         
 
@@ -340,6 +340,23 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         LOG("byte 2: {:#010b}", binaryDataToWrite[1]);
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 12); // 13 bits for the magnitude
 
+        std::vector<int> magnitudesAng;
+        for (const auto& vec : data.extendedStartingAngularVelocities) {
+            int magnitude = static_cast<int>(vec.magnitude());
+            LOG("extended starting velocity magnitude: {}", magnitude);
+            LOG("float velocity magnitude: {}", vec.magnitude());
+            LOG("velocity: {} {} {}", vec.X, vec.Y, vec.Z);
+            magnitudesAng.push_back(magnitude);
+        }
+        std::pair<int, int> magnitudeBoundsAng = getMinMaxAmount(magnitudesAng);
+        magnitudeBoundsAng.first++;
+        magnitudeBoundsAng.second++;
+        //since max is only like 6, fear of it being quantized by too much
+
+        binaryDataToWrite.clear();
+        binaryDataToWrite.push_back((magnitudeBoundsAng.second) & 0xFF);       
+        LOG("writing 8-bit value: {}", magnitudeBoundsAng.second);
+        byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 8);
         std::vector<int> xVals;
         std::vector<int> zVals;
 
@@ -444,6 +461,21 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
             byte = CompressIntegers(data.startingVelocity, boundaryVelocities.first, boundaryVelocities.second, bitstream, bitIndexInByte, byte, "velocity");
         }
         byte = CompressVectors(data.extendedStartingVelocities, magnitudeBounds.second, bitstream, bitIndexInByte, byte, "extended starting velocity");
+
+        std::vector<bool> hasAngularVelocity;
+        std::vector<Vector> angularVelocitiesToSave;
+        for (const auto& vec : data.extendedStartingAngularVelocities) {
+            if (vec.X != 0 || vec.Y != 0 || vec.Z != 0) {
+				hasAngularVelocity.push_back(true);
+				angularVelocitiesToSave.push_back(vec);
+			}
+            else {
+				hasAngularVelocity.push_back(false);
+			}
+		}
+
+        byte = CompressBits(hasAngularVelocity, bitstream, bitIndexInByte, byte, false);
+        byte = CompressVectors(angularVelocitiesToSave, magnitudeBoundsAng.second, bitstream, bitIndexInByte, byte, "extended starting angular velocity");
 
         for (int val : xVals) {
             LOG("x vals writing : {}", val);
@@ -552,6 +584,8 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         size_t maxMagnitude = ReadBits(bitstream, bitIndex, 12);
         LOG("maxMagnitude : {}", maxMagnitude);
 
+        size_t maxMagnitudeAng = ReadBits(bitstream, bitIndex, 8);
+        LOG("maxMagnitude Ang : {}", maxMagnitudeAng);
 
         size_t minGoalBlockX = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
         LOG("min goalblocker X : {}", minGoalBlockX);
@@ -611,6 +645,33 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         else {
 			DecompressVectors(trainingData.extendedStartingVelocities, maxMagnitude, bitstream, bitIndex, "extended starting velocity");
         }
+
+        std::vector<bool> hasAngularVelocity(trainingData.extendedStartingAngularVelocities.size());
+        DecompressBits(hasAngularVelocity, bitstream, bitIndex);
+        size_t numAngVelocities = 0;
+        for (auto hasAng : hasAngularVelocity) {
+            if (hasAng) {
+                numAngVelocities++;
+            }
+        }
+        if (numAngVelocities > 0) {
+            std::vector<Vector> angularVelocities(numAngVelocities);
+            DecompressVectors(angularVelocities, maxMagnitudeAng, bitstream, bitIndex, "extended starting angular velocity");
+            for (size_t i = 0; i < trainingData.extendedStartingAngularVelocities.size(); i++) {
+                if (hasAngularVelocity[i]) {
+                    trainingData.extendedStartingAngularVelocities[i] = angularVelocities[i];
+                }
+                else {
+                    trainingData.extendedStartingAngularVelocities[i] = Vector(0, 0, 0);
+                }
+            }
+		}
+        else {
+            std::fill(trainingData.extendedStartingAngularVelocities.begin(), trainingData.extendedStartingAngularVelocities.end(), Vector(0, 0, 0));
+		}
+        
+
+
         size_t numGoalBlockers = numShots; // or whatever your logic should be
         trainingData.goalBlockers.resize(numGoalBlockers);
 

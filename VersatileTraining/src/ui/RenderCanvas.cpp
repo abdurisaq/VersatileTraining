@@ -43,11 +43,14 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
         statusLines.push_back("Velocity Val: " + std::to_string(currentShotState.startingVelocity));
         
         if (isInTrainingEditor()) {
-            if (!playTestStarted) {
-                std::string sceneKey = getBoundKeyOrUnbound("lockScene");
-                statusLines.push_back(lockScene ? "Scene: Locked (" + sceneKey + ")" : "Scene: Unlocked (" + sceneKey + ")");
-            } else {
-                statusLines.push_back(lockScene ? "Scene: Locked" : "Scene: Unlocked");
+            if (isCarRotatable) {
+                if (!playTestStarted) {
+                    std::string sceneKey = getBoundKeyOrUnbound("lockScene");
+                    statusLines.push_back(lockScene ? "Scene: Locked (" + sceneKey + ")" : "Scene: Unlocked (" + sceneKey + ")");
+                }
+                else {
+                    statusLines.push_back(lockScene ? "Scene: Locked" : "Scene: Unlocked");
+                }
             }
         }
     } else if (!editingGoalBlocker && isInTrainingEditor()) { 

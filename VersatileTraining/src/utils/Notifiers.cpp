@@ -42,6 +42,7 @@ void VersatileTraining::registerNotifiers() {
 		if (!isInTrainingEditor())return;
 		if (lockRotation) {
 			LOG("car unlocked");
+			
 		}
 		else {
 			LOG("car locked");
@@ -87,10 +88,14 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->registerNotifier("lockStartingVelocity", [this](std::vector<std::string> args) {
 		if (!isInTrainingEditor())return;
 		
+		if (!unlockStartingVelocity) {
+			currentShotState.extendedStartingAngularVelocity = Vector(0, 0, 0);
+		}
+		
 		unlockStartingVelocity = !unlockStartingVelocity;
 
 
-		}, "remove car's jump", PERMISSION_ALL);
+		}, "unlock velocity", PERMISSION_ALL);
 
 	
 
@@ -109,9 +114,11 @@ void VersatileTraining::registerNotifiers() {
 				LOG("Shot {}: Starting Velocity: {}", i, value.shots[i].startingVelocity);
 				LOG("Shot {}: Freeze Car: {}", i, static_cast<int>(value.shots[i].freezeCar));
 
-				// Jump state - fixed to use value.shots[i] instead of currentTrainingData
 				LOG("Shot {}: Has Jump: {}", i, static_cast<int>(value.shots[i].hasJump));
 				LOG("Shot {} : starting velocity : {} {} {}", i, value.shots[i].extendedStartingVelocity.X, value.shots[i].extendedStartingVelocity.Y, value.shots[i].extendedStartingVelocity.Z);
+
+				LOG("Shot {} : starting angular velocity : {} {} {}", i, value.shots[i].extendedStartingAngularVelocity.X, value.shots[i].extendedStartingAngularVelocity.Y, value.shots[i].extendedStartingAngularVelocity.Z);
+				
 				// Goal blocker positions
 				LOG("Shot {}: Goal Blocker First Point: X={}, Z={}",
 					i,
@@ -186,7 +193,7 @@ void VersatileTraining::registerNotifiers() {
 
 
 	cvarManager->registerNotifier("startRecording", [this](std::vector<std::string> args) {
-		if (!(isInTrainingEditor() || isInTrainingPack()) && shotReplicationManager.canSpawnBot) return;
+		if (!(isInTrainingEditor()) && shotReplicationManager.canSpawnBot) return;
 		shotReplicationManager.startRecordingShot(gameWrapper.get());
 		}, "start recording", PERMISSION_ALL);
 	
@@ -197,6 +204,8 @@ void VersatileTraining::registerNotifiers() {
 		LOG("current editted shot {}",currentTrainingData.currentEditedShot);
 		LOG("boost amount : {} ", currentShotState.boostAmount);
 		LOG("starting velocity : {} ", currentShotState.startingVelocity);
+		LOG("starting angular velocity : {} {} {}", currentShotState.extendedStartingAngularVelocity.X, currentShotState.extendedStartingAngularVelocity.Y, currentShotState.extendedStartingAngularVelocity.Z);
+		LOG("starting velocity : {} {} {}", currentShotState.extendedStartingVelocity.X, currentShotState.extendedStartingVelocity.Y, currentShotState.extendedStartingVelocity.Z);
 		LOG("freeze car : {} ", currentShotState.freezeCar);
 		LOG("goal blocker x1 : {}, z1 : {} x2 : {}, z2 : {} ", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
 		LOG("goal anchors first : {}, second : {} ", currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
@@ -206,25 +215,12 @@ void VersatileTraining::registerNotifiers() {
 
 		}, "dump recorded inputs", PERMISSION_ALL);
 	
-
-
-	cvarManager->registerNotifier("printCurrentState", [this](std::vector<std::string> args) {
-		if (!isInTrainingEditor())return;
-		LOG("boost : {}", currentShotState.boostAmount);
-		LOG("starting velocity : {}", currentShotState.startingVelocity);
-		LOG("freeze car : {}", currentShotState.freezeCar);
-		LOG("goal blocker x1 : {}, z1 : {} x2 : {}, z2 : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
-		LOG("goal anchors first : {}, second : {}", currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
-		LOG("has jump : {}", currentShotState.hasJump ? "true" : "false");
-
-
-		}, "printing current state", PERMISSION_ALL);
 	
 
 	cvarManager->registerNotifier("saveReplaySnapshot", [this](std::vector<std::string> args) {
 		snapshotManager.takeSnapShot(gameWrapper.get(), focusCarID);
 
-		}, "printing current state", PERMISSION_ALL);
+		}, "saving a scenario from a replay / training pack", PERMISSION_ALL);
 	
 
 }

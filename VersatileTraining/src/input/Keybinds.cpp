@@ -8,15 +8,27 @@ void VersatileTraining::SetDefaultKeybinds() {
     ClearAllKeybinds();
 
     cvarManager->setBind("F3", "open_gallery");
+    currentBindings["open_gallery"] = "F3";
     cvarManager->setBind("X", "unlockCar");
+    currentBindings["unlockCar"] = "X";
     cvarManager->setBind("F", "freezeCar");
+    currentBindings["freezeCar"] = "F";
     cvarManager->setBind("J", "removeJump");
-    cvarManager->setBind("B", "lockStartingVelocity");
+    currentBindings["removeJump"] = "J";
+    cvarManager->setBind("B", "lockStartingVelocity"); 
+    currentBindings["lockStartingVelocity"] = "B";
     cvarManager->setBind("V", "lockScene");
+    currentBindings["lockScene"] = "V";
     cvarManager->setBind("N", "startRecording");
+    currentBindings["startRecording"] = "N";
     cvarManager->setBind("M", "spawnBot");
+    currentBindings["spawnBot"] = "M";
     cvarManager->setBind("G", "editGoalBlocker");
+    currentBindings["editGoalBlocker"] = "G";
     cvarManager->setBind("K", "saveReplaySnapshot");
+    currentBindings["saveReplaySnapshot"] = "K";
+
+    
 }
 
 void VersatileTraining::ClearAllKeybinds() {

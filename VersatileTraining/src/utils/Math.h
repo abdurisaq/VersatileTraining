@@ -23,6 +23,17 @@ Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude);
 
 
 
+struct ClippingCircle {
+    Vector2 center;
+    float radius;
+};
 
-
-void DrawLineClippedByCircle(CanvasWrapper& canvas, const Vector2& a, const Vector2& b, const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D, CameraWrapper cam, RT::Frustum frust, float thickness);
+void DrawLineClippedByCircles(
+    CanvasWrapper& canvas,
+    const Vector& p_start_3D,
+    const Vector& p_end_3D,
+    const std::vector<ClippingCircle>& circles,
+    CameraWrapper& cam,
+    RT::Frustum& frust,
+    float thickness
+);

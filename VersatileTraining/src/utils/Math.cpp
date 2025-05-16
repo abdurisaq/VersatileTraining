@@ -127,7 +127,6 @@ Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude) 
 	float ny = std::cos(pitch_rad) * std::sin(yaw_rad);
 	float nz = std::sin(pitch_rad);
 
-	// Scale by magnitude
 	Vector result;
 	result.X = nx * magnitude;
 	result.Y = ny * magnitude;
@@ -138,47 +137,98 @@ Vector convertRotationAndMagnitudeToVector(const Rotator& rot, float magnitude) 
 }
 
 
-void DrawLineClippedByCircle(CanvasWrapper& canvas, const Vector2& a, const Vector2& b, const Vector2& circleCenter, float radius, const Vector& a3D, const Vector& b3D, CameraWrapper cam, RT::Frustum frust, float thickness) { // Added thickness
-	Vector2 ab = b - a;
-	Vector2 ac = a - circleCenter;
 
-	float A = Dot(ab, ab);
-	float B = 2 * Dot(ac, ab);
-	float C = Dot(ac, ac) - radius * radius;
+void DrawLineClippedByCircles(
+	CanvasWrapper& canvas,
+	const Vector& p_start_3D,
+	const Vector& p_end_3D,
+	const std::vector<ClippingCircle>& circles_to_clip, 
+	CameraWrapper& cam,
+	RT::Frustum& frust,
+	float thickness
+) {
+	std::vector<std::pair<float, float>> visible_segments;
+	visible_segments.push_back({ 0.0f, 1.0f }); 
 
-	float discriminant = B * B - 4 * A * C;
+	Vector2 p_start_2D = canvas.Project(p_start_3D);
+	Vector2 p_end_2D = canvas.Project(p_end_3D);
+	Vector2 ab_2D = p_end_2D - p_start_2D;
+	float line_len_sq_2D = Dot(ab_2D, ab_2D);
 
-	if (discriminant < 0.0f) {
-		RT::Line full(a3D, b3D, RT::GetVisualDistance(canvas, frust, cam, a3D) * 1.5f);
-		full.thickness = thickness; // Apply thickness
-		full.DrawWithinFrustum(canvas, frust);
+	if (line_len_sq_2D < 1e-6f) { 
+		bool point_visible = true;
+		for (const auto& circle : circles_to_clip) {
+			if (Distance(p_start_2D, circle.center) < circle.radius) {
+				point_visible = false;
+				break;
+			}
+		}
+		if (point_visible) {
+			RT::Line line(p_start_3D, p_end_3D, RT::GetVisualDistance(canvas, frust, cam, p_start_3D) * 1.5f);
+			line.thickness = thickness;
+			line.DrawWithinFrustum(canvas, frust);
+		}
 		return;
 	}
 
-	float sqrtDisc = std::sqrt(discriminant);
-	float t1 = (-B - sqrtDisc) / (2 * A);
-	float t2 = (-B + sqrtDisc) / (2 * A);
+	for (const auto& circle : circles_to_clip) {
+		if (visible_segments.empty()) break; 
 
-	t1 = std::clamp(t1, 0.0f, 1.0f);
-	t2 = std::clamp(t2, 0.0f, 1.0f);
+		std::vector<std::pair<float, float>> next_visible_segments_for_this_circle;
+		Vector2 ac_2D = p_start_2D - circle.center;
 
-	// Ensure t1 <= t2
-	if (t1 > t2) std::swap(t1, t2);
+		float A_quad = line_len_sq_2D;
+		float B_quad = 2 * Dot(ac_2D, ab_2D);
+		float C_quad = Dot(ac_2D, ac_2D) - circle.radius * circle.radius;
+		float discriminant = B_quad * B_quad - 4 * A_quad * C_quad;
 
-	Vector v3D = b3D - a3D;
-	Vector p1_3D = a3D + v3D * t1;
-	Vector p2_3D = a3D + v3D * t2;
+		float t_circle_inter_1 = -1.0f, t_circle_inter_2 = -1.0f;
 
-	if (t1 > 0.0f) { // Segment from a3D to p1_3D (first intersection)
-		RT::Line line1(a3D, p1_3D, RT::GetVisualDistance(canvas, frust, cam, a3D) * 1.5f);
-		line1.thickness = thickness; // Apply thickness
-		line1.DrawWithinFrustum(canvas, frust);
+		if (discriminant >= 0.0f) {
+			float sqrtDisc = std::sqrt(discriminant);
+			float rcp2A = 1.0f / (2.0f * A_quad);
+			t_circle_inter_1 = (-B_quad - sqrtDisc) * rcp2A;
+			t_circle_inter_2 = (-B_quad + sqrtDisc) * rcp2A;
+			if (t_circle_inter_1 > t_circle_inter_2) std::swap(t_circle_inter_1, t_circle_inter_2);
+		}
+
+		for (const auto& current_segment_t_pair : visible_segments) {
+			float seg_t_start = current_segment_t_pair.first;
+			float seg_t_end = current_segment_t_pair.second;
+
+			if (seg_t_start >= seg_t_end) continue;
+
+			if (discriminant < 0.0f) { 
+				Vector2 mid_point_seg_2D = p_start_2D + ab_2D * ((seg_t_start + seg_t_end) / 2.0f);
+				if (Distance(mid_point_seg_2D, circle.center) > circle.radius) {
+					next_visible_segments_for_this_circle.push_back(current_segment_t_pair);
+				}
+			}
+			else {
+				
+				float end1 = min(seg_t_end, t_circle_inter_1);
+				if (end1 > seg_t_start) {
+					next_visible_segments_for_this_circle.push_back({ seg_t_start, end1 });
+				}
+
+				
+				float start2 = max(seg_t_start, t_circle_inter_2);
+				if (seg_t_end > start2) {
+					next_visible_segments_for_this_circle.push_back({ start2, seg_t_end });
+				}
+			}
+		}
+		visible_segments = next_visible_segments_for_this_circle;
 	}
-	if (t2 < 1.0f) { // Segment from p2_3D (second intersection) to b3D
-		RT::Line line2(p2_3D, b3D, RT::GetVisualDistance(canvas, frust, cam, b3D) * 1.5f);
-		line2.thickness = thickness; // Apply thickness
-		line2.DrawWithinFrustum(canvas, frust);
+
+	Vector v3D_dir = p_end_3D - p_start_3D;
+	for (const auto& seg_t_pair : visible_segments) {
+		if (seg_t_pair.second > seg_t_pair.first + 1e-4f) { // Ensure valid segment 
+			Vector s = p_start_3D + v3D_dir * seg_t_pair.first;
+			Vector e = p_start_3D + v3D_dir * seg_t_pair.second;
+			RT::Line line(s, e, RT::GetVisualDistance(canvas, frust, cam, s) * 1.5f);
+			line.thickness = thickness;
+			line.DrawWithinFrustum(canvas, frust);
+		}
 	}
 }
-
-

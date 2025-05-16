@@ -113,7 +113,6 @@
     <ClCompile Include="external\IMGUI\imgui_stdlib.cpp" />
     <ClCompile Include="external\imgui\imgui_timeline.cpp" />
     <ClCompile Include="external\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="paramScanning.cpp" />
     <ClCompile Include="external\RenderingTools\Extra\CanvasExtensions.cpp" />
     <ClCompile Include="external\RenderingTools\Extra\RenderingAssistant.cpp" />
     <ClCompile Include="external\RenderingTools\Extra\RenderingMath.cpp" />
@@ -149,8 +148,10 @@
     <ClCompile Include="src\storage\StorageManager.cpp" />
     <ClCompile Include="src\training\CustomTrainingData.cpp" />
     <ClCompile Include="src\training\SnapShotManager.cpp" />
+    <ClCompile Include="src\ui\RenderAllSnapshots.cpp" />
     <ClCompile Include="src\ui\RenderCanvas.cpp" />
     <ClCompile Include="src\ui\RenderGoalBlocker.cpp" />
+    <ClCompile Include="src\ui\RenderGroupedSnapshots.cpp" />
     <ClCompile Include="src\ui\RenderVelocity.cpp" />
     <ClCompile Include="src\utils\Math.cpp" />
     <ClCompile Include="src\utils\MovementUtils.cpp" />

@@ -1,8 +1,6 @@
 #include <pch.h>
 #include "src/core/VersatileTraining.h"
 #include "JsonParser.h"
-// You might need to include a JSON parsing library if you use one, e.g., nlohmann/json
-// #include <nlohmann/json.hpp> 
 
 void VersatileTraining::DownloadTrainingPackById(std::string packId) {
     if (packId.empty()) {
@@ -12,7 +10,7 @@ void VersatileTraining::DownloadTrainingPackById(std::string packId) {
     LOG("Attempting to download training pack with ID: {}", packId);
 
     CurlRequest req;
-    req.url = "http://localhost:3000/api/plugin/download/" + packId;
+    req.url = "https://versatile-training-hub.vercel.app/api/plugin/download/" + packId;
     req.verb = "GET"; 
 
   

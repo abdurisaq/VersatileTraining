@@ -39,9 +39,6 @@
     <ClCompile Include="pch.cpp">
       <Filter>PCH</Filter>
     </ClCompile>
-    <ClCompile Include="paramScanning.cpp">
-      <Filter>Plugin\src</Filter>
-    </ClCompile>
     <ClCompile Include="src\hooks\EditorMovementHooks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -223,6 +220,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\VkConversion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\RenderAllSnapshots.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\RenderGroupedSnapshots.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,10 +1,10 @@
-// plugin_server.cpp
+
 #include "pch.h"
 #include "src/core/VersatileTraining.h"
 #include "src/networking/JsonParser.h"
 #pragma comment(lib, "ws2_32.lib")
 
-// Configuration constants
+
 const int SERVER_PORT = 7437;
 const std::string AUTH_TOKEN = "versatile_training_scanner_token";
 const std::string PLAYER_ID_FILE = "player_id.txt";
@@ -12,7 +12,7 @@ const std::string PLAYER_ID_FILE = "player_id.txt";
 // Global mutex for thread safety
 std::mutex g_mutex;
 
-// Forward declarations for helper functions
+// Forward declaration
 std::string loadPlayerId();
 std::string extractAuthToken(const std::string& request);
 std::string extractHttpMethod(const std::string& request);
@@ -41,7 +41,6 @@ std::filesystem::path myDataFolder;
 
 
 
-// Server thread function that can be controlled externally
 void VersatileTraining::runServer(
     std::atomic<bool>* isRunning,
     std::string playerId,
@@ -53,7 +52,6 @@ void VersatileTraining::runServer(
 
     id = playerId;
 
-    // Initialize Winsock
     WSADATA wsaData;
     int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (result != 0) {
@@ -61,7 +59,6 @@ void VersatileTraining::runServer(
         return;
     }
 
-    // Create socket
     SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listenSocket == INVALID_SOCKET) {
         LOG("Error creating socket: {}", WSAGetLastError());
@@ -69,8 +66,8 @@ void VersatileTraining::runServer(
         return;
     }
 
-    // Set socket to non-blocking mode to allow for controlled shutdown
-    u_long mode = 1;  // 1 = non-blocking
+    
+    u_long mode = 1; //nonblocking
     if (ioctlsocket(listenSocket, FIONBIO, &mode) == SOCKET_ERROR) {
         LOG("Failed to set socket to non-blocking mode: {}", WSAGetLastError());
         closesocket(listenSocket);
@@ -78,13 +75,11 @@ void VersatileTraining::runServer(
         return;
     }
 
-    // Setup the TCP listening socket
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(SERVER_PORT);
 
-    // Bind the socket
     if (bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         LOG("Bind failed: {}", WSAGetLastError());
         closesocket(listenSocket);
@@ -112,7 +107,7 @@ void VersatileTraining::runServer(
         }
         else {
             if (WSAGetLastError() == WSAEWOULDBLOCK) {
-                Sleep(100);  // Sleep for 100ms to avoid busy waiting
+                Sleep(100);  
             }
             else {
                 if (*isRunning) {
@@ -122,7 +117,6 @@ void VersatileTraining::runServer(
             }
         }
 
-        // Clean up completed threads
         for (auto it = clientThreads.begin(); it != clientThreads.end();) {
             if (it->joinable()) {
                 it->join();
@@ -147,7 +141,6 @@ void VersatileTraining::runServer(
     LOG("Server shutdown complete");
 }
 
-// Connection handler for individual clients
 void handleClientConnection(
     SOCKET clientSocket,
     const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr,
@@ -159,7 +152,7 @@ void handleClientConnection(
     int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
     if (bytesReceived > 0) {
-        // Null-terminate the received data
+        
         buffer[bytesReceived] = '\0';
         std::string request(buffer);
 
@@ -168,7 +161,6 @@ void handleClientConnection(
         std::string authToken = extractAuthToken(request);
         std::string response;
 
-        // Log request information
         {
             std::lock_guard<std::mutex> lock(g_mutex);
             if (endpoint != "/status") {
@@ -196,10 +188,10 @@ void handleClientConnection(
             response = handlePackDetailsRequest(authToken, packId, trainingDataPtr);
         }
         else if (endpoint.find("/pack-recording/") == 0 && method == "GET") {
-            // Format: /pack-recording/{packId}
-            std::string packId = endpoint.substr(15); // Remove "/pack-recording/"
+            
+            std::string packId = endpoint.substr(15); 
 
-            // Remove any leading slash from packId
+            
             if (!packId.empty() && (packId[0] == '/' || packId[0] == '\\')) {
                 packId = packId.substr(1);
             }
@@ -208,19 +200,19 @@ void handleClientConnection(
             response = handlePackRecordingRequest(authToken, packId, dataFolder, trainingDataPtr);
         }
         else {
-            // 404 Not Found
+            // 404 
             response = createJsonResponse(404, "{\n\"error\": \"Not found\"\n}");
         }
 
-        // Send response
+        // Send 
         send(clientSocket, response.c_str(), (int)response.length(), 0);
     }
 
-    // Close the client socket
+    
     closesocket(clientSocket);
 }
 
-// Implementation of helper functions
+
 std::string loadPlayerId() {
     return id;
 }
@@ -309,7 +301,7 @@ std::string handleStatusRequest(const std::string& authToken) {
             "}");
     }
     else {
-        // Return minimal status without player ID
+        
         LOG("No auth token found, returning without player ID");
         return createJsonResponse(200,
             "{\n"
@@ -349,7 +341,6 @@ std::string handleLoadPackRequest(const std::string& authToken, const std::strin
         "}");
 }
 
-// New handler to list all available training packs
 std::string handleListPacksRequest(
     const std::string& authToken,
     const std::shared_ptr<std::unordered_map<std::string, CustomTrainingData>>& trainingDataPtr) {
@@ -363,7 +354,6 @@ std::string handleListPacksRequest(
         return createJsonResponse(200, "{\n\"packs\": []\n}");
     }
 
-    // Construct JSON listing all packs with basic info
     std::ostringstream json;
     json << "{\n  \"packs\": [\n";
 
@@ -410,7 +400,7 @@ std::string handlePackDetailsRequest(
 
     const CustomTrainingData& pack = it->second;
 
-    // Construct detailed JSON for the pack
+    
     std::ostringstream json;
     json << "{\n"
         << "  \"id\": \"" << packId << "\",\n"

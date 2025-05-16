@@ -115,7 +115,7 @@ void VersatileTraining::handleStartRound() {
         float y = cosf(pitchRad) * sinf(yawRad);
         float x = cosf(pitchRad) * cosf(yawRad);
         Vector unitVector = { x, y, z };
-        //currentTrainingData.shots[currentTrainingData.currentEditedShot].startingVelocity
+        
         int velocity = currentShotState.startingVelocity;
         if (velocity == 0) return;
         startingVelocityTranslation = unitVector * (float)velocity;

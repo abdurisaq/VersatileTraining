@@ -40,28 +40,8 @@ void VersatileTraining::replayHooks() {
             
 
 
-            if (currentShotState.startingVelocity != 0.f) {
-                float pitch_deg = static_cast<float>(currentShotState.carRotation.Pitch) * (90.0f / 16384.0f);
-                float yaw_deg = static_cast<float>(currentShotState.carRotation.Yaw) * (360.0f / 65536.0f);
-
-
-                float pitch_rad = (float)(pitch_deg * (PI / 180.0f));
-                float yaw_rad = (float)(yaw_deg * (PI / 180.0f));
-
-
-                float x = cosf(pitch_rad) * cosf(yaw_rad);
-                float y = cosf(pitch_rad) * sinf(yaw_rad);
-                float z = sinf(pitch_rad);
-
-
-                Vector direction = Vector(x, y, z);
-                snapshotManager.currentReplayState.carVelocity = direction * (float)currentShotState.startingVelocity;
-
-            }
-            else if (currentShotState.extendedStartingVelocity.X != 0.f || currentShotState.extendedStartingVelocity.Y != 0.f || currentShotState.extendedStartingVelocity.Z != 0.f) {
-
-                snapshotManager.currentReplayState.carVelocity = currentShotState.extendedStartingVelocity;
-            }
+            snapshotManager.currentReplayState.carVelocity = currentShotState.extendedStartingVelocity;
+            snapshotManager.currentReplayState.carAngularVelocity = currentShotState.extendedStartingAngularVelocity;
             auto server = gameWrapper->GetCurrentGameState();
             auto car = server.GetGameCar();
             if (car.IsNull()) {
@@ -142,13 +122,6 @@ void VersatileTraining::replayHooks() {
             savedReplayState.ballSet = true;
         }
         
-        /*LOG("speed: {}", caller->VelocityStartSpeed);
-        LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);*/
-        
-        /*LOG("ball velocity from tick : {}, {}, {}", caller->VelocityStartRotation.Pitch, caller->VelocityStartRotation.Yaw, caller->VelocityStartRotation.Roll);
-        LOG("ball speed from tick : {}", caller->VelocityStartSpeed);
-        LOG("ball rotation from tick : {}, {}, {}", caller->StartRotation.Pitch, caller->StartRotation.Yaw, caller->StartRotation.Roll);*/
-       //this works in other training packs, stuff can be captured this way to get the ball start strength and rotation
 
 
 

@@ -9,8 +9,9 @@ void VersatileTraining::onLoad()
 {
 	_globalCvarManager = cvarManager;
 	 
+
 	LOG("Plugin loaded!!");
-	
+	trainingData = std::make_shared<std::unordered_map<std::string, CustomTrainingData>>();
 	this->loadHooks();
 	registerNotifiers();
 	gameWrapper->RegisterDrawable([this](CanvasWrapper canvas) {
@@ -25,6 +26,22 @@ void VersatileTraining::onLoad()
 	controllerManager.initializeCallBacks();
 
 	 myDataFolder = gameWrapper->GetDataFolder() / "VersatileTraining";
+
+	 if (!std::filesystem::exists(myDataFolder)) {
+		 try {
+			 if (std::filesystem::create_directories(myDataFolder)) {
+				 LOG("Plugin data folder created: {}", myDataFolder.string());
+			 }
+			 else {
+				 
+				 LOG("Plugin data folder may have been created by another process or already existed: {}", myDataFolder.string());
+			 }
+		 }
+		 catch (const std::filesystem::filesystem_error& e) {
+			 LOG("FATAL: Error creating plugin data folder {}: {}. Plugin functionality will be severely limited.", myDataFolder.string(), e.what());
+			 return; 
+		 }
+	 }
 	storageManager.saveTrainingFilePath = myDataFolder / "packs.txt";
 	storageManager.saveReplayStateFilePath = myDataFolder / "replayStates.txt";
 
@@ -38,6 +55,7 @@ void VersatileTraining::onLoad()
 	bool hasBinds = false;
 	for (const auto& command : { "unlockCar", "freezeCar", "removeJump" }) {
 		if (currentBindings.find(command) != currentBindings.end()) {
+			LOG("Found existing binding for command: {}", command);
 			hasBinds = true;
 			break;
 		}
@@ -54,7 +72,7 @@ void VersatileTraining::onLoad()
 	currentBindings["Decrease Velocity"] = getKeyName(specialKeybinds.decreaseVelocity);
 	currentBindings["Increase Velocity"] = getKeyName(specialKeybinds.increaseVelocity);
 
-	trainingData = std::make_shared<std::unordered_map<std::string, CustomTrainingData>>();
+	
 
 	*trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
 	for (auto& [key, value] : *trainingData) {
@@ -63,6 +81,12 @@ void VersatileTraining::onLoad()
 
 	serverRunning = true;
 	
+
+		allSnapshotsSearchBuffer[0] = '\0';
+    allSnapshotsFilterType = 0;
+    allSnapshotsSourceFilter = 0;
+    allSnapshotsSortAscending = true;
+    LoadSnapshotGroups();
 	// Start the server thread with the shared data
 
 	serverThread = std::thread(&VersatileTraining::runServer, this, &serverRunning, gameWrapper->GetUniqueID().str(), trainingData, myDataFolder,std::ref(hasAction), std::ref(pendingAction), std::ref(pendingActionMutex));
@@ -211,11 +235,11 @@ void VersatileTraining::checkPendingActions() {
 			LOG("Reloading all training packs from disk");
 			HWND rocketLeagueWindow = FindWindowA("LaunchUnrealUWindowsClient", "Rocket League (64-bit, DX11, Cooked)");
 			if (rocketLeagueWindow != NULL) {
-					// Show window if minimized
+					
 					if (IsIconic(rocketLeagueWindow)) {
 							ShowWindow(rocketLeagueWindow, SW_RESTORE);
 					}
-					// Bring window to front and focus it
+					
 					SetForegroundWindow(rocketLeagueWindow);
 					LOG("Focused Rocket League window");
 			} else {

@@ -515,10 +515,54 @@ void VersatileTraining::RenderSettings() {
             ImGui::Spacing();
             ImGui::Text("Quick Help Guide");
             ImGui::Separator();
+            if (ImGui::CollapsingHeader("Online Training Pack Hub")) {
+                ImGui::TextWrapped("Share your custom training packs and discover new ones created by the community through the Versatile Training Hub!");
+                ImGui::Separator();
+                ImGui::Spacing();
 
+                ImGui::TextWrapped("Visit the Hub here:");
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.8f, 1.0f, 1.0f)); // Light blue for link
+                ImGui::TextUnformatted("https://versatile-training-hub.vercel.app/");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Click to copy link to clipboard");
+                }
+                if (ImGui::IsItemClicked()) {
+                    ImGui::SetClipboardText("https://versatile-training-hub.vercel.app/");
+                }
+                ImGui::PopStyleColor();
+
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.6f, 1.0f), "Uploading Your Packs:");
+                ImGui::BulletText("Make sure your game is running in the background; the website will connect for any uploading/downloading.");
+                ImGui::BulletText("On the Hub website, create an account.");
+                ImGui::BulletText("Go to 'Upload Pack'.");
+                ImGui::BulletText("Select the training pack you want to upload. Note: If you don't see the training pack, ensure it has been published in-game (it needs a code).");
+                ImGui::BulletText("Fill in the description and any tags you want.");
+
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.6f, 1.0f), "Updating Your Packs:");
+                ImGui::BulletText("To update your training pack, first make sure to save any local modifications in-game.");
+                ImGui::BulletText("Then, head over to the website and go to your profile.");
+                ImGui::BulletText("Under the 'Your Training Packs' tab, navigate to the one you want to update and click 'Update from Plugin'. (Your game must be running for this).");
+
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(0.6f, 1.0f, 0.8f, 1.0f), "Downloading & Playing Packs:");
+                ImGui::BulletText("Visit the Versatile Training Hub website (your game needs to be running).");
+                ImGui::BulletText("Browse or search for packs shared by other users.");
+                ImGui::BulletText("Once you find a pack you like, click 'Load in Game'. The plugin will then download and install it for you, and it should load automatically.");
+
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "About the Versatile Training Hub:");
+                
+                ImGui::BulletText("The Hub is a community platform for sharing and discovering training packs.");
+                ImGui::BulletText("It allows users to upload their pack data, which are then made available for others to download and play directly in-game via this plugin.");
+                ImGui::BulletText("This facilitates a central place for the community to exchange diverse training scenarios, enhancing the utility of the Versatile Training plugin.");
+
+                ImGui::Spacing();
+            }
             if (ImGui::CollapsingHeader("How to Use Goal Blockers")) {
                 ImGui::TextWrapped("1. Enter training editor and press G to enable goal blocker edit mode");
-                ImGui::TextWrapped("2. Look at the goal and click to place the first anchor point");
+                ImGui::TextWrapped("2. Look at the goal and click your middle mouse button to place the first anchor point");
                 ImGui::TextWrapped("3. Click again to place the second anchor point");
                 ImGui::TextWrapped("4. Press G again to exit edit mode");
             }
@@ -541,6 +585,13 @@ void VersatileTraining::RenderSettings() {
 
 void VersatileTraining::RenderWindow() {
     
+    if (packCodeCopyFlashTimer > 0.0f) {
+        packCodeCopyFlashTimer -= ImGui::GetIO().DeltaTime;
+        if (packCodeCopyFlashTimer < 0.0f) {
+            packCodeCopyFlashTimer = 0.0f;
+        }
+    }
+
     ImGuiStyle& style = ImGui::GetStyle();
     float origItemSpacing = style.ItemSpacing.y;
     float origFramePadding = style.FramePadding.y;
@@ -754,10 +805,10 @@ void VersatileTraining::RenderWindow() {
                 if (ImGui::BeginPopup("TrainingPacksHelp")) {
                     ImGui::TextUnformatted("Training Pack Information");
                     ImGui::Separator();
-                    ImGui::TextWrapped("• Published packs have a code and can be played directly");
-                    ImGui::TextWrapped("• Unpublished packs need to be loaded in-game to acquire a code");
-                    ImGui::TextWrapped("• Click on a pack to expand its details");
-                    ImGui::TextWrapped("• Use the search box to filter by name or code");
+                    ImGui::TextWrapped("- Published packs have a code and can be played directly");
+                    ImGui::TextWrapped("- Unpublished packs need to be loaded in-game to acquire a code");
+                    ImGui::TextWrapped("- Click on a pack to expand its details");
+                    ImGui::TextWrapped("- Use the search box to filter by name or code");
                     ImGui::EndPopup();
                 }
             }
@@ -880,6 +931,26 @@ void VersatileTraining::RenderWindow() {
                         ImGui::NextColumn();
                         if (!packData.code.empty()) {
                             ImGui::TextUnformatted(packData.code.c_str());
+                            ImGui::SameLine(0, 5.0f); 
+
+                            bool justCopiedPackCode = (lastCopiedPackCode == packData.code) && (packCodeCopyFlashTimer > 0.0f);
+                            std::string copyButtonId = "CopyCode##" + packKey;
+                            std::string copyButtonText = justCopiedPackCode ? "Copied!" : "Copy";
+
+                            if (justCopiedPackCode) {
+                                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.7f, 0.0f, 0.8f)); 
+                                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.0f, 0.9f)); 
+                            }
+
+                            if (ImGui::Button(copyButtonText.c_str(), ImVec2(justCopiedPackCode ? 70 : 60, 0))) { 
+                                ImGui::SetClipboardText(packData.code.c_str());
+                                lastCopiedPackCode = packData.code;
+                                packCodeCopyFlashTimer = 2.0f;
+                            }
+
+                            if (justCopiedPackCode) {
+                                ImGui::PopStyleColor(2);
+                            }
                         }
                         else {
                             ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Not Available");
@@ -927,13 +998,87 @@ void VersatileTraining::RenderWindow() {
 
                         ImGui::SameLine();
 
+                        std::string deletePopupId = "DeleteConfirmPopup##" + packKey; 
                         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
                         if (ImGui::Button("Delete Pack", ImVec2(buttonWidth, 30))) {
-                            deletePackKey = packKey;
-                            ImGui::OpenPopup("DeleteConfirmPopup");
+                            deletePackKey = packKey; 
+                            ImGui::OpenPopup(deletePopupId.c_str());
                         }
                         ImGui::PopStyleColor(2);
+
+                        
+                        if (ImGui::BeginPopupModal(deletePopupId.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+                            ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "Confirm Pack Deletion");
+                            ImGui::PopFont();
+                            ImGui::Separator();
+
+                            ImGui::TextWrapped("Are you sure you want to delete this pack?");
+                            
+                            ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Pack: %s", packData.name.c_str());
+                            
+                            ImGui::Spacing();
+                            ImGui::Separator();
+                            ImGui::Spacing();
+
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
+                            if (ImGui::Button("Delete Pack##ConfirmDeleteInLoop", ImVec2(120, 30))) { // Unique ID for button
+                                if (!deletePackKey.empty() && trainingData->count(deletePackKey) > 0) {
+                                    
+                                    LOG("Deleting training pack: {}", trainingData->at(deletePackKey).name);
+
+                                    std::filesystem::path packFolderBase = myDataFolder / "TrainingPacks";
+                                    
+                                    std::string packIdentifier = trainingData->at(deletePackKey).code.empty() ?
+                                        trainingData->at(deletePackKey).name : trainingData->at(deletePackKey).code;
+                                   
+                                    if (trainingData->at(deletePackKey).code.empty()) {
+                                        packIdentifier = storageManager.recordingStorage.sanitizeFilename(packIdentifier);
+                                    }
+
+                                    std::filesystem::path specificPackFolder = packFolderBase / packIdentifier;
+
+                                    if (std::filesystem::exists(specificPackFolder)) {
+                                        try {
+                                            std::filesystem::remove_all(specificPackFolder);
+                                            LOG("Successfully deleted folder: {}", specificPackFolder.string());
+                                        }
+                                        catch (const std::filesystem::filesystem_error& e) {
+                                            LOG("Error deleting folder {}: {}", specificPackFolder.string(), e.what());
+                                        }
+                                    } else {
+                                        LOG("Pack folder not found for deletion: {}", specificPackFolder.string());
+                                    }
+
+                                    trainingData->erase(deletePackKey);
+
+                                    
+                                    for (auto& [key_iter, value_iter] : *trainingData) { 
+                                        shiftToPositive(value_iter);
+                                    }
+                                    storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
+                             
+                                }
+
+                                deletePackKey = "";
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::PopStyleColor(2);
+
+                            ImGui::SameLine();
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
+                            if (ImGui::Button("Cancel##ConfirmDeleteInLoop", ImVec2(120, 30))) { 
+                                deletePackKey = ""; 
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::PopStyleColor(2);
+
+                            ImGui::EndPopup();
+                        }
+
 
                         ImGui::Spacing();
                         ImGui::Unindent(10.0f);
@@ -942,70 +1087,6 @@ void VersatileTraining::RenderWindow() {
                     ImGui::PopID();
                     ImGui::Separator();
                 }
-            }
-
-            
-            if (ImGui::BeginPopupModal("DeleteConfirmPopup", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
-                ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "Confirm Pack Deletion");
-                ImGui::PopFont();
-                ImGui::Separator();
-
-                ImGui::TextWrapped("Are you sure you want to delete this pack?");
-                if (!deletePackKey.empty() && trainingData->count(deletePackKey) > 0) {
-                    ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Pack: %s", trainingData->at(deletePackKey).name.c_str());
-                }
-
-                ImGui::Spacing();
-                ImGui::Separator();
-                ImGui::Spacing();
-
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
-                if (ImGui::Button("Delete Pack", ImVec2(120, 30))) {
-                    if (!deletePackKey.empty() && trainingData->count(deletePackKey) > 0) {
-                        
-                        LOG("Deleting training pack: {}", trainingData->at(deletePackKey).name);
-
-                        std::filesystem::path packFolder = myDataFolder / "TrainingPacks";
-                        std::string packIdentifier = trainingData->at(deletePackKey).code.empty() ?
-                            trainingData->at(deletePackKey).name : trainingData->at(deletePackKey).code;
-
-                        std::filesystem::path specificPackFolder = packFolder / packIdentifier;
-
-                        if (std::filesystem::exists(specificPackFolder)) {
-                            try {
-                                std::filesystem::remove_all(specificPackFolder);
-                            }
-                            catch (const std::filesystem::filesystem_error& e) {
-                                LOG("Error deleting folder: {}", e.what());
-                            }
-                        }
-
-                        trainingData->erase(deletePackKey);
-
-                        
-                        for (auto& [key, value] : *trainingData) {
-                            shiftToPositive(value);
-                        }
-                        storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
-                    }
-
-                    deletePackKey = "";
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::PopStyleColor(2);
-
-                ImGui::SameLine();
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.4f, 0.8f));
-                if (ImGui::Button("Cancel", ImVec2(120, 30))) {
-                    deletePackKey = "";
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::PopStyleColor(2);
-
-                ImGui::EndPopup();
             }
 
             ImGui::EndChild();
@@ -1166,386 +1247,27 @@ void VersatileTraining::RenderWindow() {
 
             ImGui::EndTabItem();
         }
-
-        
         if (ImGui::BeginTabItem("Snapshot Gallery")) {
             ImGui::Spacing();
-
-            
-            static char searchBuffer[128] = "";
-            static int filterType = 0;
-            static int sourceFilter = 0;
-            static bool sortAscending = true;
-
-            
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.2f, 0.2f, 0.3f, 0.3f));
-            ImGui::BeginChild("FilterBar", ImVec2(ImGui::GetContentRegionAvail().x, 80), true);
-
-            
-            ImGui::TextUnformatted("Search:");
-            ImGui::SameLine();
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
-            ImGui::InputTextWithHint("##SnapshotSearch", "Search snapshots...", searchBuffer, IM_ARRAYSIZE(searchBuffer));
-            ImGui::PopStyleVar();
-            ImGui::SameLine();
-            if (ImGui::Button("Clear", ImVec2(70, 0))) {
-                searchBuffer[0] = '\0';
-            }
-
-            
-            ImGui::Spacing();
-            ImGui::TextUnformatted("Filter/Sort by:");
-            ImGui::SameLine();
-            ImGui::RadioButton("Name", &filterType, 0);
-            ImGui::SameLine(0, 20);
-            ImGui::RadioButton("Date", &filterType, 1);
-            ImGui::SameLine(0, 20);
-            ImGui::RadioButton("Source", &filterType, 2);
-
-            ImGui::SameLine(0, 20);
-            ImGui::TextUnformatted("Order:");
-            ImGui::SameLine();
-            if (ImGui::Button(sortAscending ? "^##GallerySort" : "v##GallerySort", ImVec2(24, 0))) {
-                sortAscending = !sortAscending;
-            }
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), sortAscending ? "Ascending" : "Descending");
-
-            if (filterType == 2) {
-                ImGui::SameLine(0, 50);
-                ImGui::TextUnformatted("Show:");
-                ImGui::SameLine();
-                ImGui::RadioButton("All##SourceFilter", &sourceFilter, 0);
-                ImGui::SameLine();
-                ImGui::RadioButton("Training", &sourceFilter, 1);
-                ImGui::SameLine();
-                ImGui::RadioButton("Replay", &sourceFilter, 2);
-            }
-
-            ImGui::EndChild();
-            ImGui::PopStyleColor();
-
-            ImGui::Spacing();
-
-            
-            ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Saved Snapshots (%d)", snapshotManager.replayStates.size());
-            ImGui::SameLine(ImGui::GetWindowWidth() - 40);
-            if (ImGui::Button("?##HelpGallery", ImVec2(24, 0))) {
-                ImGui::OpenPopup("GalleryHelp");
-            }
-
-            if (ImGui::BeginPopup("GalleryHelp")) {
-                ImGui::TextUnformatted("Snapshot Gallery Information");
-                ImGui::Separator();
-                ImGui::TextWrapped("• Snapshots capture game state from training or replays");
-                ImGui::TextWrapped("• Use 'Load' to restore a snapshot's game state");
-                ImGui::TextWrapped("• Sort by name, date, or source (training/replay)");
-                ImGui::EndPopup();
-            }
-
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            
-            ImVec2 galleryAreaSize = ImGui::GetContentRegionAvail();
-            ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.15f, 0.5f));
-            ImGui::BeginChild("SnapshotScrollArea", galleryAreaSize, true);
-
-           
-            std::vector<std::pair<size_t, ReplayState>> filteredStates;
-            for (size_t i = 0; i < snapshotManager.replayStates.size(); ++i) {
-                filteredStates.push_back({ i, snapshotManager.replayStates[i] });
-            }
-
-            std::sort(filteredStates.begin(), filteredStates.end(),
-                [&](const auto& a, const auto& b) {
-                    const ReplayState& stateA = a.second;
-                    const ReplayState& stateB = b.second;
-
-                    bool result = false;
-
-                    if (filterType == 0) {  // Name
-                        std::string nameA = stateA.replayName.empty() ? "Unnamed Snapshot" : stateA.replayName;
-                        std::string nameB = stateB.replayName.empty() ? "Unnamed Snapshot" : stateB.replayName;
-
-                        std::string lowerA = nameA;
-                        std::transform(lowerA.begin(), lowerA.end(), lowerA.begin(), ::tolower);
-                        std::string lowerB = nameB;
-                        std::transform(lowerB.begin(), lowerB.end(), lowerB.begin(), ::tolower);
-
-                        result = lowerA < lowerB;
-                    }
-                    else if (filterType == 1) {  // Date
-                        result = stateA.formattedTimeStampOfSaved < stateB.formattedTimeStampOfSaved;
-                    }
-                    else if (filterType == 2) {  // Source
-                        if (stateA.captureSource == stateB.captureSource) {
-                            std::string nameA = stateA.replayName.empty() ? "Unnamed Snapshot" : stateA.replayName;
-                            std::string nameB = stateB.replayName.empty() ? "Unnamed Snapshot" : stateB.replayName;
-                            result = nameA < nameB;
-                        }
-                        else {
-                            result = stateA.captureSource < stateB.captureSource;
-                        }
-                    }
-
-                    return sortAscending ? result : !result;
-                });
-
-            
-            int displayCount = 0;
-
-            for (const auto& [originalIndex, state] : filteredStates) {
-                bool showItem = true;
-                std::string searchStr = searchBuffer;
-                std::string itemName = state.replayName.empty() ? "Unnamed Snapshot" : state.replayName;
-                std::string dateStr = state.formattedTimeStampOfSaved;
-
-                
-                if (filterType == 2 && sourceFilter > 0) {
-                    if (sourceFilter == 1 && state.captureSource != CaptureSource::Training) {
-                        showItem = false;
-                    }
-                    else if (sourceFilter == 2 && state.captureSource != CaptureSource::Replay) {
-                        showItem = false;
-                    }
-                }
-
-                
-                if (showItem && searchStr.length() > 0) {
-                    std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
-
-                    if (filterType == 0) {  // Name search
-                        std::string lowerName = itemName;
-                        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-                        if (lowerName.find(searchStr) == std::string::npos) {
-                            showItem = false;
-                        }
-                    }
-                    else if (filterType == 1) {  // Date search
-                        std::string lowerDate = dateStr;
-                        std::transform(lowerDate.begin(), lowerDate.end(), lowerDate.begin(), ::tolower);
-                        if (lowerDate.find(searchStr) == std::string::npos) {
-                            showItem = false;
-                        }
-                    }
-                }
-
-                if (!showItem) {
-                    continue;
-                }
-
-                displayCount++;
-                ImGui::PushID(static_cast<int>(originalIndex));
-
-                
-                ImGui::PushStyleColor(ImGuiCol_Header, state.captureSource == CaptureSource::Replay ?
-                    ImVec4(0.15f, 0.2f, 0.3f, 0.9f) : ImVec4(0.2f, 0.3f, 0.15f, 0.9f));
-                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, state.captureSource == CaptureSource::Replay ?
-                    ImVec4(0.25f, 0.3f, 0.4f, 0.9f) : ImVec4(0.3f, 0.4f, 0.25f, 0.9f));
-
-                
-                std::string sourceIcon = state.captureSource == CaptureSource::Replay ? "🎥 " : "🎮 ";
-                std::string displayName = sourceIcon + itemName;
-
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 8));
-                bool isOpen = ImGui::CollapsingHeader(displayName.c_str());
-                ImGui::PopStyleVar();
-
-                ImGui::PopStyleColor(2);
-
-                
-                ImGui::SameLine(ImGui::GetWindowWidth() - 220);
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", dateStr.c_str());
-
-                
-                if (isOpen) {
-                    ImGui::Indent(10.0f);
+            if (ImGui::BeginTabBar("SnapshotGallerySubTabs")) {
+                if (ImGui::BeginTabItem("All Snapshots")) {
                     ImGui::Spacing();
-
-                    // replay specific details
-                    if (state.captureSource == CaptureSource::Replay) {
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Replay Info:");
-                        ImGui::Indent(10.0f);
-                        ImGui::Text("Time: %s", state.replayTime.c_str());
-                        ImGui::Text("Remaining: %s", state.timeRemainingInGame.c_str());
-                        ImGui::Text("Player: %s", state.focusPlayerName.c_str());
-                        ImGui::Unindent(10.0f);
-                        ImGui::Spacing();
-                    }
-
-                    
-                    if (ImGui::TreeNode("Car Details")) {
-                        ImGui::Columns(2, "CarDetailsColumns", false);
-                        ImGui::SetColumnWidth(0, 180);
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Location:");
-                        ImGui::NextColumn();
-                        ImGui::Text("(%.1f, %.1f, %.1f)", state.carLocation.X, state.carLocation.Y, state.carLocation.Z);
-                        ImGui::NextColumn();
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Velocity:");
-                        ImGui::NextColumn();
-                        ImGui::Text("(%.1f, %.1f, %.1f)", state.carVelocity.X, state.carVelocity.Y, state.carVelocity.Z);
-                        ImGui::NextColumn();
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Angular Velocity:");
-                        ImGui::NextColumn();
-                        ImGui::Text("(%.1f, %.1f, %.1f)", state.carAngularVelocity.X, state.carAngularVelocity.Y, state.carAngularVelocity.Z);
-                        ImGui::NextColumn();
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Rotation:");
-                        ImGui::NextColumn();
-                        ImGui::Text("(Pitch: %d, Yaw: %d, Roll: %d)", state.carRotation.Pitch, state.carRotation.Yaw, state.carRotation.Roll);
-                        ImGui::NextColumn();
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Boost:");
-                        ImGui::NextColumn();
-                        ImGui::Text("%d", state.boostAmount);
-                        ImGui::NextColumn();
-
-                        ImGui::Columns(1);
-                        ImGui::TreePop();
-                    }
-
-                    if (ImGui::TreeNode("Ball Details")) {
-                        ImGui::Columns(2, "BallDetailsColumns", false);
-                        ImGui::SetColumnWidth(0, 180);
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Location:");
-                        ImGui::NextColumn();
-                        ImGui::Text("(%.1f, %.1f, %.1f)", state.ballLocation.X, state.ballLocation.Y, state.ballLocation.Z);
-                        ImGui::NextColumn();
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Shot Speed:");
-                        ImGui::NextColumn();
-                        ImGui::Text("%.1f", state.ballSpeed);
-                        ImGui::NextColumn();
-
-                        ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Shot Direction:");
-                        ImGui::NextColumn();
-                        ImGui::Text("(Pitch: %d, Yaw: %d)", state.ballRotation.Pitch, state.ballRotation.Yaw);
-                        ImGui::NextColumn();
-
-                        ImGui::Columns(1);
-                        ImGui::TreePop();
-                    }
-
-                    
-                    ImGui::Spacing();
-                    ImGui::Separator();
-                    ImGui::Spacing();
-
-                    float buttonWidth = 100.0f;
-                    float spacing = ImGui::GetStyle().ItemSpacing.x;
-                    float totalWidth = buttonWidth * 3 + spacing * 2;
-                    ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalWidth) * 0.5f + ImGui::GetCursorPosX());
-
-                   
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-                    if (ImGui::Button("Load", ImVec2(buttonWidth, 30))) {
-                        savedReplayState = state;
-                        savedReplayState.ballSet = false;
-                        savedReplayState.carLocationSet = false;
-                        savedReplayState.carRotationSet = false;
-                    }
-                    ImGui::PopStyleColor(2);
-
-                    
-                    ImGui::SameLine();
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.2f, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.3f, 1.0f));
-                    if (ImGui::Button("Rename", ImVec2(buttonWidth, 30))) {
-                        ImGui::OpenPopup("RenameSnapshotPopup");
-                    }
-                    ImGui::PopStyleColor(2);
-
-                   
-                    ImGui::SameLine();
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
-                    if (ImGui::Button("Delete", ImVec2(buttonWidth, 30))) {
-                        snapshotManager.replayStates.erase(snapshotManager.replayStates.begin() + originalIndex);
-                        
-                        
-                        ImGui::PopStyleColor(2);
-                        ImGui::PopID();
-                        continue;
-                    }
-                    ImGui::PopStyleColor(2);
-
-                   
-                    if (ImGui::BeginPopupModal("RenameSnapshotPopup", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-                        ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Rename Snapshot");
-                        ImGui::Separator();
-
-                        static char newName[128] = "";
-                        if (ImGui::IsWindowAppearing()) {
-                            strncpy(newName, itemName.c_str(), sizeof(newName) - 1);
-                            newName[sizeof(newName) - 1] = '\0';
-                        }
-
-                        ImGui::Text("Enter new name:");
-                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 6));
-                        ImGui::InputText("##NewSnapshotName", newName, IM_ARRAYSIZE(newName));
-                        ImGui::PopStyleVar();
-
-                        ImGui::Spacing();
-                        ImGui::Separator();
-                        ImGui::Spacing();
-
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-                        if (ImGui::Button("Save", ImVec2(120, 30))) {
-                            if (strlen(newName) > 0) {
-                                snapshotManager.takeSnapShot(gameWrapper.get(), focusCarID);
-                            }
-                            ImGui::CloseCurrentPopup();
-                        }
-                        ImGui::PopStyleColor(2);
-
-                        ImGui::SameLine();
-
-                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.15f, 0.15f, 0.9f));
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.25f, 0.25f, 0.9f));
-                        if (ImGui::Button("Cancel", ImVec2(120, 30))) {
-                            newName[0] = '\0';
-                            ImGui::CloseCurrentPopup();
-                        }
-                        ImGui::PopStyleColor(2);
-
-                        ImGui::EndPopup();
-                    }
-
-                    ImGui::Unindent(10.0f);
+                    RenderAllSnapshotsTab(); 
+                    ImGui::EndTabItem();
                 }
-
-                ImGui::PopID();
-                ImGui::Separator();
+                if (ImGui::BeginTabItem("Grouped Snapshots")) {
+                    ImGui::Spacing();
+                    RenderGroupedSnapshotsTab(); 
+                    ImGui::EndTabItem();
+                }
+                ImGui::EndTabBar();
             }
-
-           
-
-            if (displayCount == 0) {
-                ImGui::Spacing();
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-                ImGui::TextWrapped("No snapshots match your search criteria. Try adjusting your filters or create new snapshots.");
-                ImGui::PopStyleColor();
-            }
-
-            ImGui::EndChild();
-            ImGui::PopStyleColor();
-            ImGui::PopStyleVar();
-
             ImGui::EndTabItem();
         }
-
+        
         ImGui::EndTabBar();
     }
-
+       
    
     style.ItemSpacing.y = origItemSpacing;
     style.FramePadding.y = origFramePadding;

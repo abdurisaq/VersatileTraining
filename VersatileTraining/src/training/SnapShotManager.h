@@ -1,6 +1,13 @@
 #pragma once
 #include <pch.h>
 
+struct SnapshotGroup {
+    std::string uid; 
+    std::string name;
+    std::vector<size_t> snapshotOriginalIndices;
+    
+};
+
 enum class CaptureSource {
 	Replay,
 	Training,
