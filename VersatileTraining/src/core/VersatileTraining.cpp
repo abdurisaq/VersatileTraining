@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "src/core/VersatileTraining.h"
 
-BAKKESMOD_PLUGIN(VersatileTraining, "write a plugin description here", plugin_version, PLUGINTYPE_FREEPLAY)
+BAKKESMOD_PLUGIN(VersatileTraining, "Train Like Never Before", plugin_version, PLUGINTYPE_FREEPLAY)
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 
@@ -90,7 +90,7 @@ void VersatileTraining::onLoad()
 	serverRunning = true;
 	
 
-		allSnapshotsSearchBuffer[0] = '\0';
+	allSnapshotsSearchBuffer[0] = '\0';
     allSnapshotsFilterType = 0;
     allSnapshotsSourceFilter = 0;
     allSnapshotsSortAscending = true;
@@ -237,6 +237,9 @@ void VersatileTraining::checkPendingActions() {
 			LOG("Reloading all training packs from disk");
 
 			*trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
+			for (auto& [key, value] : *trainingData) {
+				shiftToNegative(value);
+			}
 			
 		}
 		else if (!action.empty()) {
@@ -255,7 +258,15 @@ void VersatileTraining::checkPendingActions() {
 			}
 
 			*trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
-			cvarManager->executeCommand("load_training " + action);
+			for (auto& [key, value] : *trainingData) {
+				shiftToNegative(value);
+			}
+			
+			gameWrapper->SetTimeout([this, action](GameWrapper* gw) {
+				cvarManager->executeCommand("load_training " + action);
+				}, 1.5f);
+			//probably the reason, needs a sec after full screening
+			
 		}
 	}
 

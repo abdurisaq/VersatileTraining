@@ -631,6 +631,7 @@ void VersatileTraining::RenderWindow() {
         ImGui::BulletText("Goal Blocker: Set up custom goal blockers for precision practice (see 'Goal Blockers' tab in the settings).");
         ImGui::BulletText("Recording & Playback: Record your attempts and use them for bot playback (see the 'Playback & Recording' tab in the settings).");
         ImGui::BulletText("Versatile Training Hub: Upload and download training packs from the community (see 'Online Training Pack Hub' in Help).");
+        ImGui::BulletText("Pack Overrides: Customize existing training packs, even those by other creators (see 'Pack Overrides' tab in settings).");
         ImGui::Spacing();
 
         ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Versatile Training Hub:");
@@ -818,7 +819,6 @@ void VersatileTraining::RenderWindow() {
                     if (strlen(packCodeToLoad) > 0) {
                         LOG("Attempting to load pack with code: {}", packCodeToLoad);
                         DownloadTrainingPackById(packCodeToLoad);
-                        return;
                     }
                 }
                 ImGui::PopStyleColor(2);

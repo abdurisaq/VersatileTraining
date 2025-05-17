@@ -165,9 +165,10 @@ struct CustomTrainingData {
 	int boostMin = 0;
 	int maxVelocity = 2300;
 	int minVelocity = -2300;
-	void initCustomTrainingData(int shotAmount, const std::string& packName) {
+	void initCustomTrainingData(int shotAmount, const std::string& packName, const std::string & packCode) {
 		LOG("called initCustomTrainingData");
 		name = packName;
+		code = packCode;
 		numShots = shotAmount;
 		currentEditedShot = 0;
 		shots = std::vector<ShotState>(shotAmount);  // Default-constructed

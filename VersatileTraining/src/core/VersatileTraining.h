@@ -119,7 +119,6 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 
 	// Misc
 	bool isCarRotatable = false;
-	bool test = false;
 	float t = 0.0f;
 	
 	Rotator localRotation = { 0, 0, 0 };

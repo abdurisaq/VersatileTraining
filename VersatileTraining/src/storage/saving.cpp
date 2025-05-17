@@ -5,7 +5,7 @@
 constexpr size_t NAME_LEN_BITS = 5;
 constexpr size_t NUM_SHOTS_BITS = 6;
 constexpr size_t BOOST_MIN_BITS = 7;
-constexpr size_t VELOCITY_MIN_BITS = 13;
+constexpr size_t VELOCITY_MIN_BITS = 12;
 constexpr size_t GOAL_MIN_BITS = 12;
 constexpr size_t NUM_FLOAT_BITS = 16;
 
@@ -315,8 +315,8 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         binaryDataToWrite.push_back((boundaryVelocities.first >>5) & 0xFF);
         binaryDataToWrite.push_back((boundaryVelocities.first) & 0x1F);
         LOG("min velocity {}", boundaryVelocities.first);
-        LOG("writing min velocity : {} to file", (boundaryVelocities.first>>5) & 0xFF);
-        LOG("writing min velocity : {} to file", ((boundaryVelocities.first) & 0x1F));
+        LOG("writing min velocity : {} to file", (boundaryVelocities.first>>4) & 0xFF);
+        LOG("writing min velocity : {} to file", ((boundaryVelocities.first) & 0xF));
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
         

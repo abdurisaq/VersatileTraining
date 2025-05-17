@@ -69,7 +69,7 @@ void VersatileTraining::replayHooks() {
 
             currentShotState.carRotation = car.GetRotation();
             currentShotState.carLocation = car.GetLocation();
-            //snapshotManager.currentReplayState
+           
 		}
 		});
     gameWrapper->HookEventWithCaller<ActorWrapper>("Function TAGame.Ball_GameEditor_TA.EditorMoveToLocation", [this](ActorWrapper cw, void* params, std::string eventName) {

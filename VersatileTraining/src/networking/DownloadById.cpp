@@ -20,6 +20,9 @@ void VersatileTraining::DownloadTrainingPackById(std::string packId) {
             PackInfo pack  = parsePack(responseBody);
             packInfoToLocalStorage(pack, myDataFolder); 
             *trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder); 
+            for (auto& [key, value] : *trainingData) {
+                shiftToNegative(value);
+            }
         }
         else {
             LOG("Error downloading pack ID {}: HTTP status {}", packId, status);

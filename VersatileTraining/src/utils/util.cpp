@@ -452,7 +452,7 @@ int VersatileTraining::shortestAngularDiff(int target, int current, int max_val 
 
 void VersatileTraining::shiftToPositive(CustomTrainingData& data) {
 	for (ShotState& shot : data.shots) {
-		shot.startingVelocity += 2300;
+		shot.startingVelocity += 2000;
 		shot.goalBlocker.first.X += 910;
 		shot.goalBlocker.second.X += 910;
 		shot.goalBlocker.first.Z += 20;
@@ -461,7 +461,7 @@ void VersatileTraining::shiftToPositive(CustomTrainingData& data) {
 }
 void VersatileTraining::shiftToNegative(CustomTrainingData& data) {
 	for (ShotState& shot : data.shots) {
-		shot.startingVelocity -= 2300;
+		shot.startingVelocity -= 2000;
 		shot.goalBlocker.first.X -= 910.f;
 		shot.goalBlocker.second.X -= 910.f;
 		shot.goalBlocker.first.Z -= 20.f;

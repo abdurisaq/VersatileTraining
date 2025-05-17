@@ -109,7 +109,16 @@ void VersatileTraining::registerNotifiers() {
 			LOG("Num Shots: {}", value.numShots);
 			for (int i = 0; i < value.numShots; i++) {
 
-
+				LOG("Shot {}: location: {} {} {}",
+										i,
+										static_cast<int>(value.shots[i].carLocation.X),
+										static_cast<int>(value.shots[i].carLocation.Y),
+										static_cast<int>(value.shots[i].carLocation.Z));
+				LOG("Shot {}: rotation: {} {} {}", 
+										i,
+										value.shots[i].carRotation.Pitch,
+										value.shots[i].carRotation.Yaw,
+										value.shots[i].carRotation.Roll);
 				LOG("Shot {}: Boost Amount: {}", i, value.shots[i].boostAmount);
 				LOG("Shot {}: Starting Velocity: {}", i, value.shots[i].startingVelocity);
 				LOG("Shot {}: Freeze Car: {}", i, static_cast<int>(value.shots[i].freezeCar));
@@ -201,6 +210,9 @@ void VersatileTraining::registerNotifiers() {
 	cvarManager->registerNotifier("currentShotState", [this](std::vector<std::string> args) {
 		
 		LOG("current shot state" );
+		LOG("rotation : {} {} {}", currentShotState.carRotation.Pitch, currentShotState.carRotation.Yaw, currentShotState.carRotation.Roll);
+		LOG("car location : {} {} {}", currentShotState.carLocation.X, currentShotState.carLocation.Y, currentShotState.carLocation.Z);
+
 		LOG("current editted shot {}",currentTrainingData.currentEditedShot);
 		LOG("boost amount : {} ", currentShotState.boostAmount);
 		LOG("starting velocity : {} ", currentShotState.startingVelocity);

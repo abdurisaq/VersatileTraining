@@ -133,7 +133,7 @@ void VersatileTraining::handleStartRound() {
 
 void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params) {
     if (!isInTrainingEditor())return;
-
+    LOG("EditorMoveToLocation called");
     
     struct pExecEditorMoveToLocaction
     {
@@ -231,7 +231,7 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
 
 void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
     if (!isInTrainingEditor()) return;
-
+    LOG("EditorSetRotation called");
     // Set initial rotation if not already set
     if (!savedReplayState.carRotationSet) {
         cw.SetRotation(savedReplayState.carRotation);
