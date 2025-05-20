@@ -13,8 +13,11 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
 
             velocity = currentShotState.extendedStartingVelocity;
         }
+        else {
+            return;
+        }
 
-        else if (currentShotState.startingVelocity != 0.f) {
+        /*else if (currentShotState.startingVelocity != 0.f) {
           
             float pitch_deg = static_cast<float>(currentShotState.carRotation.Pitch) * (90.0f / 16384.0f);
             float yaw_deg = static_cast<float>(currentShotState.carRotation.Yaw) * (360.0f / 65536.0f);
@@ -32,7 +35,7 @@ void VersatileTraining::RenderVelocityOfCar(CanvasWrapper canvas) {
             Vector direction = Vector(x, y, z);
             velocity = direction * (float)currentShotState.startingVelocity;
 
-        }
+        }*/
         
         
         

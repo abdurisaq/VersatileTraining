@@ -139,6 +139,21 @@ void VersatileTraining::setupTrainingEditorHooks() {
             if (!(isInTrainingEditor() || isInTrainingPack())) return;
             if (shotReplicationManager.startRecording) {
                 currentShotState.recording = shotReplicationManager.currentShotRecording;
+                if (currentTrainingData.currentEditedShot < 0) {
+                    LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+                    
+                    return;
+                }
+
+                if (static_cast<size_t>(currentTrainingData.currentEditedShot) >= currentTrainingData.shots.size()) {
+                    LOG("currentEditedShot ({}) is out of bounds or at the end (shots.size {}). Resizing shots to {}.",
+                        currentTrainingData.currentEditedShot,
+                        currentTrainingData.shots.size(),
+                        currentTrainingData.currentEditedShot + 1);
+                    currentTrainingData.shots.resize(currentTrainingData.currentEditedShot + 1);
+           
+                    currentTrainingData.numShots = currentTrainingData.shots.size();
+                }
                 currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
                 if (shotReplicationManager.startRecording && 
                     !currentTrainingData.name.empty() && 
@@ -398,6 +413,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         if (value.name == name) {
             
             if (justOpenedPack) {
+
                 currentTrainingData = value;
                 if (totalRounds == currentTrainingData.shots.size() && currentTrainingData.code.empty() && !code.empty()) {
                     LOG("found a potential code for this training pack");
@@ -417,6 +433,8 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             }
             
             currentTrainingData.customPack = true;
+            cvarManager->executeCommand("sv_training_autoshuffle 0", false);
+            cvarManager->executeCommand("sv_training_allowmirror 0", false);
             currentTrainingData.currentEditedShot = currentShot;
             if (currentTrainingData.shots.size() <= currentShot) {
 				LOG("current shot is out of bounds, resizing");
@@ -432,8 +450,10 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
             float epsilon = 0.01f; 
 
-            if (abs(currentShotState.goalBlocker.first.X) < epsilon && abs(currentShotState.goalBlocker.first.Z) < epsilon && abs(currentShotState.goalBlocker.second.X) < epsilon && abs(currentShotState.goalBlocker.second.Z) < epsilon) {
+            if ((abs(currentShotState.goalBlocker.first.X) < epsilon && abs(currentShotState.goalBlocker.first.Z) < epsilon && abs(currentShotState.goalBlocker.second.X) < epsilon && abs(currentShotState.goalBlocker.second.Z) < epsilon)||
+                abs(currentShotState.goalBlocker.first.X - 910.f) < epsilon && abs(currentShotState.goalBlocker.first.Z - 20.f) < epsilon && abs(currentShotState.goalBlocker.second.X-910.f) < epsilon && abs(currentShotState.goalBlocker.second.Z-20.f) < epsilon) {
 				currentShotState.goalAnchors = { false, false };
+                currentShotState.goalBlocker = { Vector(0, 5140, 0), Vector(0, 5140, 0) };
 			}
             else {
 				currentShotState.goalAnchors = { true, true };
@@ -446,12 +466,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
                 LOG("car is not frozen");
             }
 
-            if (currentShotState.boostAmount == 101) {
-                cvarManager->executeCommand("sv_training_limitboost -1");
-            }
-            else {
-                cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
-            }
+            
 
             found = true;
         }
@@ -477,6 +492,8 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         }
         currentTrainingData.currentEditedShot = currentShot;
         currentShotState = currentTrainingData.shots[currentShot];
+       
+
         LOG("setting shot state");
         LOG("current training data name: {}", currentTrainingData.name);
         LOG("current training data code: {}", currentTrainingData.code);
@@ -484,17 +501,41 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         LOG("starting velocity: {}", currentShotState.startingVelocity);
         LOG("freeze car: {}", currentShotState.freezeCar ? "true" : "false");
         LOG("has jump: {}", currentShotState.hasJump ? "true" : "false");
-        if (currentShotState.boostAmount == 101) {
-            cvarManager->executeCommand("sv_training_limitboost -1");
-        }
-        else {
-            cvarManager->executeCommand("sv_training_limitboost " + std::to_string(currentShotState.boostAmount));
-        }
+        
 
         
 
         
     }
+  
 
+
+    CVarWrapper limitBoostCVar = cvarManager->getCvar("sv_training_limitboost");
+
+    if (!limitBoostCVar) {
+        LOG("Warning: sv_training_limitboost CVar not found");
+        return;
+    }
+
+    // Get the current value
+    int currentValue = limitBoostCVar.getIntValue();
+
+    // Calculate the target value
+    int targetValue = (currentShotState.boostAmount == 101) ? -1 : currentShotState.boostAmount;
+
+    if (currentValue != targetValue) {
+        LOG("Setting boost limit from {} to {}", currentValue, targetValue);
+        cvarManager->executeCommand("sv_training_limitboost " + std::to_string(targetValue));
+    }
+    else {
+        // Value already set correctly, skip command
+        LOG("Boost limit already set to {}. Skipping command.", targetValue);
+    }
+
+    savedReplayState.ballSet = true;
+    savedReplayState.carLocationSet = true;
+    savedReplayState.carRotationSet = true;
+
+    
 
 }

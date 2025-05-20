@@ -26,7 +26,9 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
     if (!shotReplicationManager.testCalledInStartRound && isInTrainingPack() && currentTrainingData.customPack) {
         shouldDrawStatusPanel = true;
-        statusLines.push_back(currentShotState.recording.inputs.empty() ? "No Recording Available" : "Has Recording");
+        if (recordingEnabled) {
+            statusLines.push_back(currentShotState.recording.inputs.empty() ? "No Recording Available" : "Has Recording");
+        }
         statusLines.push_back(currentShotState.hasJump ? "Jump: Enabled" : "Jump: Disabled");
     }
 
@@ -72,7 +74,9 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
             if (!shotReplicationManager.testCalledInStartRound) {
                 statusLines.push_back(currentShotState.hasJump ? "Jump: Enabled" : "Jump: Disabled");
             }
-            statusLines.push_back(shotReplicationManager.recording ? "Recording: On" : "Recording: Off");
+            if (recordingEnabled) {
+                statusLines.push_back(shotReplicationManager.recording ? "Recording: On" : "Recording: Off");
+            }
         }
     }
 
@@ -104,7 +108,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
             textPos.Y += lineHeight;
         }
     }
-    else if (editingGoalBlocker) {
+    if (editingGoalBlocker) {
         CameraWrapper cam = gameWrapper->GetCamera();
         if (cam.IsNull()) return;
 
@@ -136,12 +140,32 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
                     LOG("adding to first anchor point : X {}, Z {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z);
                 }
                 else if (!currentShotState.goalAnchors.second) {
-                    currentShotState.goalBlocker.second = projectedPoint;
-                    rectangleSaved = true;
-                    saveCursorPos = false;
-                    currentShotState.goalAnchors.second = true;
-
-                    LOG("first anchor point : X {}, Z {}, second anchor point : X {} Z {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
+                    float distanceX = abs(projectedPoint.X - currentShotState.goalBlocker.first.X);
+                    float distanceZ = abs(projectedPoint.Z - currentShotState.goalBlocker.first.Z);
+                    
+                    
+                    float minSize = 75.0f; 
+                    
+                    if (distanceX < minSize || distanceZ < minSize) {
+                        
+                        LOG("Rectangle too small (X width: {}, Z height: {}). Minimum size is {}. Clearing goal blocker.", 
+                            distanceX, distanceZ, minSize);
+                        currentShotState.goalBlocker.first = Vector(0, 0, 0);
+                        currentShotState.goalBlocker.second = Vector(0, 0, 0);
+                        currentShotState.goalAnchors.first = false;
+                        currentShotState.goalAnchors.second = false;
+                        rectangleMade = false;
+                        saveCursorPos = false;
+                        rectangleSaved = false;
+                    } else {
+                        currentShotState.goalBlocker.second = projectedPoint;
+                        rectangleSaved = true;
+                        saveCursorPos = false;
+                        currentShotState.goalAnchors.second = true;
+                        LOG("Created goal blocker: first anchor point: X {}, Z {}, second anchor point: X {} Z {}", 
+                            currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, 
+                            currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
+                    }
                 }
                 else {
                     LOG("this else call is being called");
@@ -175,28 +199,47 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
                 BallWrapper ball = gameState.GetBall();
                
 
-
-                 
-                 if (!ball.IsNull()) {
-                    Vector2 ballScreenPos = canvas.Project(ball.GetLocation());
-                    float ballRadius = Distance(ballScreenPos, canvas.Project(ball.GetLocation() + Vector(92.75f, 0, 0)));
-
-                    // Draw enhanced goal blocker with grid and gradients
-                    RenderEnhancedGoalBlocker(canvas, cam, frust, ball, topLeft, topRight, bottomLeft, bottomRight);
+                if (currentShotState.goalAnchors.first && currentShotState.goalAnchors.second) {
+                    RenderInvertedGoalBlocker_OutlinedAndGridded(canvas, cam, frust, ball, topLeft, topRight, bottomLeft, bottomRight);
                 }
                 else {
-                    
                     canvas.SetColor((char)0, (char)255, (char)0, (char)200);
                     RT::Line lineTop(topLeft, topRight, RT::GetVisualDistance(canvas, frust, cam, topLeft) * 1.5f);
                     RT::Line lineRight(topRight, bottomRight, RT::GetVisualDistance(canvas, frust, cam, topRight) * 1.5f);
                     RT::Line lineBottom(bottomRight, bottomLeft, RT::GetVisualDistance(canvas, frust, cam, bottomRight) * 1.5f);
                     RT::Line lineLeft(bottomLeft, topLeft, RT::GetVisualDistance(canvas, frust, cam, bottomLeft) * 1.5f);
 
+                    lineTop.thickness = goalBlockerOutlineThickness;
+                    lineRight.thickness = goalBlockerOutlineThickness;
+                    lineBottom.thickness = goalBlockerOutlineThickness;
+                    lineLeft.thickness = goalBlockerOutlineThickness;
+
                     lineTop.DrawWithinFrustum(canvas, frust);
                     lineRight.DrawWithinFrustum(canvas, frust);
                     lineBottom.DrawWithinFrustum(canvas, frust);
                     lineLeft.DrawWithinFrustum(canvas, frust);
                 }
+                 
+                // if (!ball.IsNull()) {
+                //    Vector2 ballScreenPos = canvas.Project(ball.GetLocation());
+                //    float ballRadius = Distance(ballScreenPos, canvas.Project(ball.GetLocation() + Vector(92.75f, 0, 0)));
+
+                //    // Draw enhanced goal blocker with grid and gradients
+                //    RenderEnhancedGoalBlocker(canvas, cam, frust, ball, topLeft, topRight, bottomLeft, bottomRight);
+                //}
+                //else {
+                //    
+                //    canvas.SetColor((char)0, (char)255, (char)0, (char)200);
+                //    RT::Line lineTop(topLeft, topRight, RT::GetVisualDistance(canvas, frust, cam, topLeft) * 1.5f);
+                //    RT::Line lineRight(topRight, bottomRight, RT::GetVisualDistance(canvas, frust, cam, topRight) * 1.5f);
+                //    RT::Line lineBottom(bottomRight, bottomLeft, RT::GetVisualDistance(canvas, frust, cam, bottomRight) * 1.5f);
+                //    RT::Line lineLeft(bottomLeft, topLeft, RT::GetVisualDistance(canvas, frust, cam, bottomLeft) * 1.5f);
+
+                //    lineTop.DrawWithinFrustum(canvas, frust);
+                //    lineRight.DrawWithinFrustum(canvas, frust);
+                //    lineBottom.DrawWithinFrustum(canvas, frust);
+                //    lineLeft.DrawWithinFrustum(canvas, frust);
+                //}
             }
         }
 
@@ -207,7 +250,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
         int length = 10;
         canvas.DrawLine(Vector2(center.X - length, center.Y), Vector2(center.X + length, center.Y), 1.5f);
         canvas.DrawLine(Vector2(center.X, center.Y - length), Vector2(center.X, center.Y + length), 1.5f);
-    }
+    }else{
 
     // If we don't have a complete goal blocker, return early
     if (!(currentShotState.goalAnchors.first && currentShotState.goalAnchors.second)) return;
@@ -227,6 +270,8 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
     Vector bottomRight(min(currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.second.X), backWall, min(currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.Z));
 
 
-        RenderEnhancedGoalBlocker(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight);
-    
+        // RenderEnhancedGoalBlocker(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight);
+
+        RenderInvertedGoalBlocker_OutlinedAndGridded(canvas, camera, frustum, ball, topLeft, topRight, bottomLeft, bottomRight);
+    }
 }

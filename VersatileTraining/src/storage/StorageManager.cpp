@@ -10,8 +10,13 @@ void StorageManager::saveCompressedTrainingDataWithRecordings(
 
     std::filesystem::path trainingDataPath = dataFolder / "TrainingPacks";
     saveCompressedTrainingData(trainingData, trainingDataPath);
+    CVarWrapper recordingEnabledCvar = _globalCvarManager->getCvar("versatile_recording_enabled");
+    bool recordingFeaturesEnabled = recordingEnabledCvar ? recordingEnabledCvar.getBoolValue() : false;
 
-    recordingStorage.saveAllRecordings(trainingData, trainingDataPath);
+
+    if (recordingFeaturesEnabled) {
+        recordingStorage.saveAllRecordings(trainingData, trainingDataPath);
+    }
 }
 
 std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompressedTrainingDataWithRecordings(
@@ -20,8 +25,13 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
     std::filesystem::path trainingDataPath = dataFolder / "TrainingPacks";
     auto trainingData = loadCompressedTrainingData(trainingDataPath);
 
-    recordingStorage.loadAllRecordings(trainingData, trainingDataPath);
+    CVarWrapper recordingEnabledCvar = _globalCvarManager->getCvar("versatile_recording_enabled");
+    bool recordingFeaturesEnabled = recordingEnabledCvar ? recordingEnabledCvar.getBoolValue() : false;
 
+
+    if (recordingFeaturesEnabled) {
+        recordingStorage.loadAllRecordings(trainingData, trainingDataPath);
+    }
     return trainingData;
 }
 

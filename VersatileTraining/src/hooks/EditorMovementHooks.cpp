@@ -78,9 +78,30 @@ void VersatileTraining::handleStartRound() {
 
     LOG("startround called");
 
-    if (isInTrainingEditor() || isInTrainingPack()) {
-        shotReplicationManager.testCalledInStartRound = true;
 
+
+    if (isInTrainingEditor() || isInTrainingPack()) {
+        ServerWrapper server = gameWrapper->GetCurrentGameState();
+        if (!server) {
+            			LOG("server not found");
+			return;
+        }
+        CarWrapper car = server.GetGameCar();
+        if (!car) {
+
+            		LOG("car not found");
+			return;
+        }
+        shotReplicationManager.testCalledInStartRound = true;
+        RBState playerState;
+        playerState.Location = shotReplicationManager.currentShotRecording.initialState.location;
+        playerState.Quaternion = RotatorToQuat(shotReplicationManager.currentShotRecording.initialState.rotation);
+        if (car.GetOwnerName() == "testplayers" && currentShotState.freezeCar) {
+            car.SetPhysicsState(playerState);
+		}
+        shotReplicationManager.startPlayback = true;
+        
+        
 
 
         //if (!currentTrainingData.customPack) return;
@@ -88,18 +109,8 @@ void VersatileTraining::handleStartRound() {
         frozeZVal = false;
         appliedStartingVelocity = false;
 
-        ServerWrapper server = gameWrapper->GetCurrentGameState();
-        if (!server) {
-            			LOG("server not found");
-			return;
-        }
-        ActorWrapper car = server.GetGameCar();
-        if (!car) {
 
-            		LOG("car not found");
-			return;
-        }
-
+        
 
         if (currentShotState.extendedStartingVelocity.X !=0.f || currentShotState.extendedStartingVelocity.Y != 0.f || currentShotState.extendedStartingVelocity.Z != 0.f) {
             LOG("applying saved replay state in start round");
@@ -107,7 +118,7 @@ void VersatileTraining::handleStartRound() {
             car.SetAngularVelocity(currentShotState.extendedStartingAngularVelocity, 0);
             return;
         }
-        Rotator rot = car.GetRotation();
+        /*Rotator rot = car.GetRotation();
 
         float pitchRad = (float)((rot.Pitch / 16201.0f) * (PI / 2));
         float yawRad = (float)((rot.Yaw / 32768.0f) * PI);
@@ -120,7 +131,10 @@ void VersatileTraining::handleStartRound() {
         if (velocity == 0) return;
         startingVelocityTranslation = unitVector * (float)velocity;
         Vector stickingVelocity = getStickingVelocity(rot);
-        car.SetVelocity(startingVelocityTranslation + stickingVelocity);
+        car.SetVelocity(startingVelocityTranslation + stickingVelocity);*/
+        Rotator rot = car.GetRotation();
+        Vector stickingVelocity = getStickingVelocity(rot);
+        car.SetVelocity( stickingVelocity);
 
         LOG("Calculated new velocity in StartRound");
     }
@@ -133,7 +147,7 @@ void VersatileTraining::handleStartRound() {
 
 void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params) {
     if (!isInTrainingEditor())return;
-    LOG("EditorMoveToLocation called");
+    
     
     struct pExecEditorMoveToLocaction
     {
@@ -217,9 +231,9 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
 
     else if (lockScene) {
 
-        p->NewLocation = currentShotState.carLocation;
-        /*currentShotState.boostAmount = savedReplayState.boostAmount;
-        currentShotState.freezeCar = true;*/
+        
+        p->NewLocation = cw.GetLocation();
+        
         return;
     }
 
@@ -231,7 +245,7 @@ void VersatileTraining::handleEditorMoveToLocation(ActorWrapper cw, void* params
 
 void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
     if (!isInTrainingEditor()) return;
-    LOG("EditorSetRotation called");
+   
     // Set initial rotation if not already set
     if (!savedReplayState.carRotationSet) {
         cw.SetRotation(savedReplayState.carRotation);
@@ -245,10 +259,15 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
 
     // Handle scene locking (prevents any rotation changes)
     if (lockScene) {
-        cw.SetRotation(currentShotState.carRotation);
-        checkForClamping(loc, rot);
-        lockRotation = true;
-        return;
+        if (currentShotState.carRotation.Pitch != 0 || currentShotState.carRotation.Yaw != 0 || currentShotState.carRotation.Roll != 0) {
+
+            cw.SetRotation(currentShotState.carRotation);
+
+
+            checkForClamping(loc, rot);
+            lockRotation = true;
+            return;
+        }
     }
 
     // Update current shot state

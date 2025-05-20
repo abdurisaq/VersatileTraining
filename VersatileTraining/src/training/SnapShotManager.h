@@ -45,12 +45,13 @@ struct ReplayState {
 	bool carLocationSet = false;
 	bool carRotationSet = false;
 
+	bool empty = true;
 	void setBallStartingRotationAndStrength(Rotator rot, float strength);
 	void setBallStartingRotationAndStrength(Vector velocity);
 
 	ReplayState(): replayName(""), formattedTimeStampOfSaved(""), replayTime(""), timeRemainingInGame(""), focusPlayerName(""),
 		captureSource(CaptureSource::Unknown), carVelocity({0,0,0}), carAngularVelocity({0,0,0}), carLocation({0,0,0}), carRotation({0,0,0}),
-		boostAmount(0), jumpTimer(0), hasJump(false), boosting(false), ballLocation({ 0, 0, 0 }), ballSpeed(0), ballRotation({ 0, 0, 0 }), ballSet(true), carLocationSet(true),carRotationSet(true) {}
+		boostAmount(0), jumpTimer(0), hasJump(false), boosting(false), ballLocation({ 0, 0, 0 }), ballSpeed(0), ballRotation({ 0, 0, 0 }), ballSet(true), carLocationSet(true),carRotationSet(true),empty(true) {}
 	
 
 };

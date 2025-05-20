@@ -89,7 +89,15 @@ void VersatileTraining::replayHooks() {
         } else if (lockScene) {
             auto server = gameWrapper->GetCurrentGameState();
             auto ball = server.GetBall();
-            p->NewLocation = snapshotManager.currentReplayState.ballLocation;
+            if (ball.IsNull()) {
+				LOG("Ball is null");
+				return;
+			}
+            
+            p->NewLocation.X = ball.GetLocation().X;
+            p->NewLocation.Y = ball.GetLocation().Y;
+            p->NewLocation.Z = ball.GetLocation().Z;
+            //p->NewLocation = snapshotManager.currentReplayState.ballLocation;
             return;
         }
         

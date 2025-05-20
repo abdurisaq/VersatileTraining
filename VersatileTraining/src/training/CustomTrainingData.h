@@ -237,6 +237,9 @@ struct PackOverrideSettings {
 			cvarManager->executeCommand("sv_training_enabled 0", false);
 		}
 
+		
+
+
 		int boostToSet = overrideBoostLimit ? boostLimit : -1;
 		sprintf(cmdBuffer, "sv_training_limitboost %d", boostToSet);
 		cvarManager->executeCommand(cmdBuffer, false);

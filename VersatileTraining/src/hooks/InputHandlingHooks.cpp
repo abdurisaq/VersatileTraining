@@ -44,7 +44,7 @@ void VersatileTraining::setupInputHandlingHooks() {
 
 
             if (!params) {
-              
+
                 return;
             }
 
@@ -61,100 +61,19 @@ void VersatileTraining::setupInputHandlingHooks() {
                             inputs[0].Throttle, inputs[0].Steer, inputs[0].Pitch, inputs[0].Yaw, inputs[0].Roll, inputs[0].DodgeForward, inputs[0].DodgeStrafe, inputs[0].Handbrake ? "true" : "false", inputs[0].Jump ? "true" : "false", inputs[0].ActivateBoost ? "true" : "false", inputs[0].HoldingBoost ? "true" : "false", inputs[0].Jumped ? "true" : "false");
 
 
-                        INPUT inputsToSend[2] = {};
-
-                        if (inputs[0].Throttle < -0.0000001f) {
-                            LOG("first keypress goes backwards");
-                            // Set up a key down event
-                            inputsToSend[0].type = INPUT_KEYBOARD;
-                            inputsToSend[0].ki.wVk = 'S';  // Virtual-key code for 'W'
-                            inputsToSend[0].ki.dwFlags = 0; // 0 for key press
-
-                            // Set up a key up event
-                            inputsToSend[1].type = INPUT_KEYBOARD;
-                            inputsToSend[1].ki.wVk = 'S';  // Same virtual key code
-                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
-                        }
-                        else if (inputs[0].Steer < -0.00001f) {
-                            LOG("first keypress goes left");
-                            // Set up a key down event
-                            inputsToSend[0].type = INPUT_KEYBOARD;
-                            inputsToSend[0].ki.wVk = 'A';  // Virtual-key code for 'W'
-                            inputsToSend[0].ki.dwFlags = 0; // 0 for key press
-
-                            // Set up a key up event
-                            inputsToSend[1].type = INPUT_KEYBOARD;
-                            inputsToSend[1].ki.wVk = 'A';  // Same virtual key code
-                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
-                        }
-                        else if (inputs[0].Steer > 0.00001f)
-                        {
-                            LOG("first keypress goes right");
-                            // Set up a key down event
-                            inputsToSend[0].type = INPUT_KEYBOARD;
-                            inputsToSend[0].ki.wVk = 'D';  // Virtual-key code for 'W'
-                            inputsToSend[0].ki.dwFlags = 0; // 0 for key press
-
-                            //// Set up a key up event
-                            inputsToSend[1].type = INPUT_KEYBOARD;
-                            inputsToSend[1].ki.wVk = 'D';  // Same virtual key code
-                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
-                        }
-                        else
-                        {
-                            LOG("first keypress goes forward");
-                            // Set up a key down event
-                            inputsToSend[0].type = INPUT_KEYBOARD;
-                            inputsToSend[0].ki.wVk = 'W';  // Virtual-key code for 'W'
-                            inputsToSend[0].ki.dwFlags = 0; // 0 for key pressinputsToSend[1].type = INPUT_KEYBOARD;
-
-                            inputsToSend[1].type = INPUT_KEYBOARD;
-                            inputsToSend[1].ki.wVk = 'W';  // Same virtual key code
-                            inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for release
-
-
-                        }
-
-                        SendInput(2, inputsToSend, sizeof(INPUT));
+                        
 
                         shotReplicationManager.frame = 0;
                         shotReplicationManager.roundStarted = true;
-
-                        *input = NO_INPUT;
-                        if (inputs[shotReplicationManager.frame].Jump) {
-                            car.SetbJumped(true);
-                            return;
-                        }
-                        else if (inputs[shotReplicationManager.frame].ActivateBoost) {//|| inputs[frame].HoldingBoost
-                            //    LOG("first frame is boost, presetting");
-                                //car.ForceBoost(true);
-                                //input->ActivateBoost = true;
-                                //*input = inputs[0];
-                               //return;
-                            //    //return;
-                        }
-                        else if (currentShotState.freezeCar) {
-                            LOG("car is frozen, setting jump to false");
-                            car.SetbDoubleJumped(false);
-
-                            if (std::abs(inputs[0].Throttle) > 0.00001f || std::abs(inputs[0].Steer) > 0.00001f)
-                            {
-                                return;
-                            }
-                            //return;
-                        }
-                        /*if (std::abs(inputs[0].Throttle) > 0.00001f || std::abs(inputs[0].Steer) > 0.00001f)
-                        {
-                            return;
-                        }*/
-                        return;
-                        LOG("any wheel touching ground {}", car.AnyWheelTouchingGround() ? "true" : "false");
-
+                        
                     }
+                    /*else {
+                        *input = inputs[0];
+                    }*/
                 }
                 if (shotReplicationManager.roundStarted) {
                     if (currentShotState.recording.carBody == 0) {
-                        LOG("no inputs to play back, returning" );
+                        LOG("no inputs to play back, returning");
                         return;
                     }
 
@@ -178,6 +97,9 @@ void VersatileTraining::setupInputHandlingHooks() {
                         LOG("Starting recording from first detected input frame is  {}", currentFrame);
                         shotReplicationManager.startRecording = true;
                         shotReplicationManager.primedToStartRecording = false;
+                        shotReplicationManager.currentShotRecording.initialState.location = car.GetLocation();
+                        shotReplicationManager.currentShotRecording.initialState.rotation = car.GetRotation();
+                        shotReplicationManager.currentShotRecording.initialState.velocity = car.GetVelocity();
                         shotReplicationManager.recording = true;
 
                     }
@@ -185,7 +107,7 @@ void VersatileTraining::setupInputHandlingHooks() {
                 if (shotReplicationManager.startRecording && car.GetOwnerName() != "testplayers") {
 
                     inputs.push_back(*input);
-                    ++shotReplicationManager.frame;
+                   
                 }
                 else if (shotReplicationManager.recording) {
                     LOG("ending recording on frame {}", currentFrame);
@@ -237,18 +159,31 @@ void VersatileTraining::handleTrainingEditorActorModified() {
         }
 
         if (GetAsyncKeyState(specialKeybinds.increaseBoost) & 0x8000) {
-            currentShotState.boostAmount++;
-            if (currentShotState.boostAmount > currentTrainingData.boostMax) {
-                currentShotState.boostAmount = currentTrainingData.boostMax;
+            increaseBoostKeyPressCounter++;
+            if (increaseBoostKeyPressCounter >= BOOST_ADJUST_DELAY_FRAMES) {
+                currentShotState.boostAmount++;
+                if (currentShotState.boostAmount > currentTrainingData.boostMax) {
+                    currentShotState.boostAmount = currentTrainingData.boostMax;
+                }
+                increaseBoostKeyPressCounter = 0; 
             }
-            
         }
+        else {
+            increaseBoostKeyPressCounter = 0; 
+        }
+
         if (GetAsyncKeyState(specialKeybinds.decreaseBoost) & 0x8000) {
-            currentShotState.boostAmount--;
-            if (currentShotState.boostAmount < currentTrainingData.boostMin) {
-                currentShotState.boostAmount = currentTrainingData.boostMin;
+            decreaseBoostKeyPressCounter++;
+            if (decreaseBoostKeyPressCounter >= BOOST_ADJUST_DELAY_FRAMES) {
+                currentShotState.boostAmount--;
+                if (currentShotState.boostAmount < currentTrainingData.boostMin) {
+                    currentShotState.boostAmount = currentTrainingData.boostMin;
+                }
+                decreaseBoostKeyPressCounter = 0; // Reset counter after action
             }
-            
+        }
+        else {
+            decreaseBoostKeyPressCounter = 0; 
         }
         
 

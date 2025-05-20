@@ -145,6 +145,21 @@ void VersatileTraining::handleStartPlayTest() {
     
     if (isInTrainingEditor()) {
         LOG("changing shot state ");
+        if (currentTrainingData.currentEditedShot < 0) {
+            LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+
+            return;
+        }
+
+        if (static_cast<size_t>(currentTrainingData.currentEditedShot) >= currentTrainingData.shots.size()) {
+            LOG("currentEditedShot ({}) is out of bounds or at the end (shots.size {}). Resizing shots to {}.",
+                currentTrainingData.currentEditedShot,
+                currentTrainingData.shots.size(),
+                currentTrainingData.currentEditedShot + 1);
+            currentTrainingData.shots.resize(currentTrainingData.currentEditedShot + 1);
+
+            currentTrainingData.numShots = currentTrainingData.shots.size();
+        }
         currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
 
     }
@@ -173,7 +188,21 @@ void VersatileTraining::handleStopEditing() {
 
     LOG("saving to shot in training data {}", currentTrainingData.currentEditedShot);
     LOG("temp boost amount: {}", currentShotState.boostAmount);
+    if (currentTrainingData.currentEditedShot < 0) {
+        LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
 
+        return;
+    }
+
+    if (static_cast<size_t>(currentTrainingData.currentEditedShot) >= currentTrainingData.shots.size()) {
+        LOG("currentEditedShot ({}) is out of bounds or at the end (shots.size {}). Resizing shots to {}.",
+            currentTrainingData.currentEditedShot,
+            currentTrainingData.shots.size(),
+            currentTrainingData.currentEditedShot + 1);
+        currentTrainingData.shots.resize(currentTrainingData.currentEditedShot + 1);
+
+        currentTrainingData.numShots = currentTrainingData.shots.size();
+    }
     currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
     currentShotState.goalBlocker = { { 0, 5140, 0 }, { 0, 5140, 0 } };
     currentShotState.goalAnchors = { false, false };
@@ -212,6 +241,21 @@ void VersatileTraining::handleEndPlayTest() {
         shotReplicationManager.currentShotRecording.carBody);
 
     currentShotState.recording = shotReplicationManager.currentShotRecording;
+    if (currentTrainingData.currentEditedShot < 0) {
+        LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+
+        return;
+    }
+
+    if (static_cast<size_t>(currentTrainingData.currentEditedShot) >= currentTrainingData.shots.size()) {
+        LOG("currentEditedShot ({}) is out of bounds or at the end (shots.size {}). Resizing shots to {}.",
+            currentTrainingData.currentEditedShot,
+            currentTrainingData.shots.size(),
+            currentTrainingData.currentEditedShot + 1);
+        currentTrainingData.shots.resize(currentTrainingData.currentEditedShot + 1);
+
+        currentTrainingData.numShots = currentTrainingData.shots.size();
+    }
     currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
     LOG("After assignment - recording inputs size: {}",
         currentShotState.recording.inputs.size());
@@ -222,7 +266,7 @@ void VersatileTraining::handleEndPlayTest() {
 
 void VersatileTraining::handleFreezeCar(CarWrapper car, Vector loc, Rotator rot) {
     if (rot.Pitch != carRotationUsed.Pitch || rot.Yaw != carRotationUsed.Yaw) {
-
+      
 
         if (!frozeZVal) {
             frozenZVal = loc.Z;
@@ -236,6 +280,21 @@ void VersatileTraining::handleFreezeCar(CarWrapper car, Vector loc, Rotator rot)
         float y = cosf(pitchRad) * sinf(yawRad);
         float x = cosf(pitchRad) * cosf(yawRad);
         Vector unitVector = { x, y, z };
+        if (currentTrainingData.currentEditedShot < 0) {
+            LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+
+            return;
+        }
+
+        if (static_cast<size_t>(currentTrainingData.currentEditedShot) >= currentTrainingData.shots.size()) {
+            LOG("currentEditedShot ({}) is out of bounds or at the end (shots.size {}). Resizing shots to {}.",
+                currentTrainingData.currentEditedShot,
+                currentTrainingData.shots.size(),
+                currentTrainingData.currentEditedShot + 1);
+            currentTrainingData.shots.resize(currentTrainingData.currentEditedShot + 1);
+
+            currentTrainingData.numShots = currentTrainingData.shots.size();
+        }
         int velocity = currentTrainingData.shots[currentTrainingData.currentEditedShot].startingVelocity;
         startingVelocityTranslation = unitVector * (float)velocity;
     }

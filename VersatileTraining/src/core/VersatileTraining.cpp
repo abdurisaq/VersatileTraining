@@ -53,6 +53,12 @@ void VersatileTraining::onLoad()
 	storageManager.saveTrainingFilePath = myDataFolder / "packs.txt";
 	storageManager.saveReplayStateFilePath = myDataFolder / "replayStates.txt";
 
+	cvarManager->registerCvar("versatile_recording_enabled", "0",
+		"Enable experimental recording & playback features", true, true, 0, true, 1)
+		.addOnValueChanged([this](std::string oldValue, CVarWrapper cvar) {
+		recordingEnabled = cvar.getBoolValue();
+		});
+
 	snapshotManager.replayStates = storageManager.loadReplayStates(storageManager.saveReplayStateFilePath);
 	
 	storageManager.packOverrideSettings = storageManager.loadPackOverrideSettings(myDataFolder);

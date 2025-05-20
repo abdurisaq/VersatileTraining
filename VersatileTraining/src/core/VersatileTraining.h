@@ -44,6 +44,9 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	
 	ShotState currentShotState;
 
+	bool recordingEnabled;
+
+
 	StorageManager storageManager;
 	SpecialKeybinds specialKeybinds;
 	std::string getKeyName(int virtualKeyCode);
@@ -85,6 +88,9 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 	bool appliedWallClamping = false;
 	bool appliedJumpState = false;
 
+	int increaseBoostKeyPressCounter = 0;
+	int decreaseBoostKeyPressCounter = 0;
+	const int BOOST_ADJUST_DELAY_FRAMES = 10;
 
 	bool determiningCodeSync = false;
 	std::string pendingCode;
@@ -301,6 +307,16 @@ class VersatileTraining : public BakkesMod::Plugin::BakkesModPlugin
 		const Vector& topRight,
 		const Vector& bottomLeft,
 		const Vector& bottomRight);
+	void RenderInvertedGoalBlocker_OutlinedAndGridded(
+		CanvasWrapper& canvas,
+		CameraWrapper& camera,
+		RT::Frustum& frustum,
+		BallWrapper& ball,
+		const Vector& openingTopLeft,
+		const Vector& openingTopRight,
+		const Vector& openingBottomLeft,
+		const Vector& openingBottomRight
+	);
 
 	Vector LerpVector(const Vector& a, const Vector& b, float t);
 	LinearColor LerpColor(const LinearColor& a, const LinearColor& b, float t);

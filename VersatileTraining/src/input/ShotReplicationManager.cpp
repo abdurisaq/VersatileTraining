@@ -3,6 +3,12 @@
 
 void ShotReplicationManager::startRecordingShot(GameWrapper* gw) {
 	if (botSpawnedTest) return;
+
+	CVarWrapper recordingEnabledCvar = _globalCvarManager->getCvar("versatile_recording_enabled");
+	bool recordingFeaturesEnabled = recordingEnabledCvar ? recordingEnabledCvar.getBoolValue() : false;
+
+
+	if (!recordingFeaturesEnabled) return;
 	if (!startRecording) {
 		if (botSpawnedTest) {
 			botSpawnedTest = false;
@@ -16,9 +22,7 @@ void ShotReplicationManager::startRecordingShot(GameWrapper* gw) {
 		LOG("car body: {}", currentShotRecording.carBody);
 		currentShotRecording.settings = gw->GetSettings().GetGamepadSettings();
 		
-		currentShotRecording.initialState.velocity = car.GetVelocity();
-		currentShotRecording.initialState.location = car.GetLocation();
-		currentShotRecording.initialState.rotation = car.GetRotation();
+		
 
 		currentShotRecording.startState = car.GetRBState();
 		primedToStartRecording = true;
@@ -28,6 +32,11 @@ void ShotReplicationManager::startRecordingShot(GameWrapper* gw) {
 
 
 void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
+	CVarWrapper recordingEnabledCvar = _globalCvarManager->getCvar("versatile_recording_enabled");
+	bool recordingFeaturesEnabled = recordingEnabledCvar ? recordingEnabledCvar.getBoolValue() : false;
+
+
+	if (!recordingFeaturesEnabled) return;
 	if (botSpawnedTest) {
 		LOG("bot already spawned");
 		return;
@@ -47,7 +56,6 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 	if (!server) return;
 	frame = 0;
 	ProfileCameraSettings settings = gameWrapper->GetSettings().GetCameraSettings();
-	std::vector<std::pair<std::string, std::string>> bindings = gameWrapper->GetSettings().GetAllPCBindings();
 	
 	auto car = server.GetGameCar();
 	if (!car) return;
@@ -110,32 +118,43 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 		auto car = server.GetGameCar();
 		RBState state = car.GetRBState();
 
-		/*CameraWrapper cameraWrapper = gw->GetCamera();
-		cameraWrapper.SetCameraState("CameraState_BallCam_TA");  doesnt work
-		cameraWrapper.SetPOV(pov);*/
-
-		ServerWrapper sw = gw->GetGameEventAsServer();
-		if (!sw) return;
-		GameEditorWrapper training = GameEditorWrapper(sw.memory_address);
 		LOG("awake: {} ", car.GetbRigidBodyWasAwake());
-		RBState playerState;
-		playerState.Location = currentShotRecording.initialState.location;
-		playerState.Quaternion = RotatorToQuat(currentShotRecording.initialState.rotation);
-		car.SetPhysicsState(playerState); //currentShotRecording.startState
+		car.SetbRigidBodyWasAwake(true);
+		/*car.SetbMovable(1);
+		car.SetbLockLocation(0);
+		car.SetTickIsDisabled(0);*/
 
+		LOG("awake: {} ", car.GetbRigidBodyWasAwake());
+		 //currentShotRecording.startState
 
+		/*car.SetbDriving(false);*/
 
 		}, 0.5f);
 	gameWrapper->SetTimeout([this, settings](GameWrapper* gw) {
-		if (!startPlayback && canStartPlayback) {
-			frame = 0;
 
-			//roundStarted = true;
-			startPlayback = true;
-			canStartPlayback = false;
-			
-			
-		}
+		auto server = gw->GetCurrentGameState();
+		if (!server) return;
+
+		auto car = server.GetGameCar();
+
+		//car.SetbDriving(true);
+		INPUT inputsToSend[2] = {};
+		inputsToSend[0].type = INPUT_KEYBOARD;
+		inputsToSend[0].ki.wVk = 'W';
+		inputsToSend[0].ki.dwFlags = 0; // Key DOWN
+		inputsToSend[1].type = INPUT_KEYBOARD;
+		inputsToSend[1].ki.wVk = 'W';
+		inputsToSend[1].ki.dwFlags = KEYEVENTF_KEYUP; // Key UP
+		SendInput(2, inputsToSend, sizeof(INPUT));
+		//if (!startPlayback && canStartPlayback) {
+		//	frame = 0;
+
+		//	//roundStarted = true;
+		//	startPlayback = true;
+		//	canStartPlayback = false;
+		//	
+		//	
+		//}
 		}, 1.5f);//0.5 1 
 }
 

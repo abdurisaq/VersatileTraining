@@ -320,6 +320,7 @@ void VersatileTraining::RenderSnapshotDetailsInGroup(SnapshotGroup& group, size_
             if (ImGui::Button("Load Snapshot##DetailsBtn", ImVec2(buttonWidth, 28))) {
                 // Action only if enabled (already checked by canLoadSnapshot)
                 savedReplayState = state;
+                
                 savedReplayState.ballSet = false; savedReplayState.carLocationSet = false; savedReplayState.carRotationSet = false;
                 
                 LOG("Snapshot loaded into savedReplayState for training editor.");

@@ -95,7 +95,7 @@ void VersatileTraining::displaySpecialKeybind(const std::string& label, int& key
 
 
 void VersatileTraining::RenderSettings() {
-    ImGui::Text("Versatile Training Settings");
+    ImGui::Text("Versatile Training Settings - Made by Duri");
 
     ImGui::Spacing();
 
@@ -375,12 +375,178 @@ void VersatileTraining::RenderSettings() {
 
 
         if (ImGui::BeginTabItem("Playback & Recording")) {
-            ImGui::Text("Shot Recording Controls");
+            ImGui::Spacing();
+
+           
+            ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Replay Snapshots");
             ImGui::Separator();
 
-            DisplayKeybind("Start Recording", "startRecording");
-            DisplayKeybind("Spawn Bot for Playback", "spawnBot");
             DisplayKeybind("Save Replay Snapshot", "saveReplaySnapshot");
+
+            ImGui::Spacing();
+            ImGui::TextWrapped("Snapshots capture the state of your car and the ball, allowing you to recreate specific moments from replays or training.");
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Experimental Recording Features");
+
+            CVarWrapper recordingEnabledCvar = cvarManager->getCvar("versatile_recording_enabled");
+            bool recordingFeaturesEnabled = recordingEnabledCvar ? recordingEnabledCvar.getBoolValue() : false;
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.85f, 0.85f, 1.0f));
+            ImGui::TextWrapped("Warning: These features are experimental and may not work consistently in all situations.");
+            ImGui::PopStyleColor();
+
+            ImGui::Spacing();
+
+            
+            if (!recordingFeaturesEnabled) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.8f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.9f, 0.9f));
+                if (ImGui::Button("Enable Experimental Recording Features", ImVec2(300, 30))) {
+                    ImGui::OpenPopup("Experimental Recording Features Confirmation");
+                }
+                ImGui::PopStyleColor(2);
+            }
+            else {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.4f, 0.4f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.5f, 0.5f, 0.9f));
+                if (ImGui::Button("Disable Experimental Recording Features", ImVec2(300, 30))) {
+                    cvarManager->getCvar("versatile_recording_enabled").setValue(false);
+                }
+                ImGui::PopStyleColor(2);
+            }
+
+            
+            if (recordingFeaturesEnabled) {
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "Shot Recording Controls");
+                ImGui::Separator();
+
+                DisplayKeybind("Start Recording", "startRecording");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Records your inputs when taking a shot");
+                }
+
+                DisplayKeybind("Spawn Bot for Playback", "spawnBot");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Spawns a bot that replays your recorded inputs");
+                }
+
+                ImGui::Spacing();
+                ImGui::TextWrapped("These controls let you record your inputs during a shot and play them back with a bot.");
+
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.7f, 0.3f, 1.0f));
+                ImGui::TextWrapped("Note: Recordings may not perfectly replicate all aspects of physics and timing.");
+                ImGui::PopStyleColor();
+            }
+            else {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Enable experimental features above to access recording controls.");
+            }
+
+            
+            ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+            ImVec2 popupSize = ImVec2(550, 300);
+            ImGui::SetNextWindowPos(ImVec2(displaySize.x * 0.5f - popupSize.x * 0.5f,
+                displaySize.y * 0.5f - popupSize.y * 0.5f),
+                ImGuiCond_Appearing);
+            ImGui::SetNextWindowSize(popupSize, ImGuiCond_Appearing);
+
+            if (ImGui::BeginPopupModal("Experimental Recording Features Confirmation", NULL,
+                ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Warning: Experimental Features");
+                ImGui::PopFont();
+
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::TextWrapped("Recording and playback features are experimental and may not work correctly in all scenarios.");
+                ImGui::Spacing();
+
+                ImGui::TextWrapped("Known issues:");
+                ImGui::BulletText("Playback may be inconsistent in some training packs");
+                ImGui::BulletText("Recordings may not work after game updates");
+
+                ImGui::Spacing();
+                ImGui::TextWrapped("By enabling these features, you understand they are a work in progress and may cause unexpected behavior.");
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                float buttonWidth = 150.0f;
+                float windowWidth = ImGui::GetWindowSize().x;
+                float spacing = ImGui::GetStyle().ItemSpacing.x;
+                float totalButtonWidth = buttonWidth * 2 + spacing;
+
+                ImGui::SetCursorPosX((windowWidth - totalButtonWidth) * 0.5f);
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                if (ImGui::Button("Enable Features", ImVec2(buttonWidth, 30))) {
+                    
+                    std::filesystem::path recordingFolderPath = myDataFolder / "Recordings";
+                    if (!std::filesystem::exists(recordingFolderPath)) {
+                        try {
+                            std::filesystem::create_directories(recordingFolderPath);
+                            LOG("Created recordings directory: {}", recordingFolderPath.string());
+                        }
+                        catch (const std::filesystem::filesystem_error& e) {
+                            LOG("Error creating recordings directory: {}", e.what());
+                        }
+                    }
+
+                    
+                    cvarManager->getCvar("versatile_recording_enabled").setValue(true);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::PopStyleColor(2);
+
+                ImGui::SameLine();
+
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+                if (ImGui::Button("Not Now", ImVec2(buttonWidth, 30))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::PopStyleColor(2);
+
+                ImGui::EndPopup();
+            }
+
+            ImGui::Spacing();
+
+         
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            if (ImGui::CollapsingHeader("Recording & Playback Help")) {
+                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "How to Use Snapshots:");
+                ImGui::BulletText("Press the 'Save Replay Snapshot' key while in a replay");
+                ImGui::BulletText("Go to the Snapshot Gallery tab to view, organize, or load your snapshots");
+                ImGui::BulletText("Snapshots can be used to recreate specific situations for training");
+
+                ImGui::Spacing();
+
+                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.9f, 1.0f), "How to Record and Playback:");
+                ImGui::BulletText("Setup your shot in the training editor");
+                ImGui::BulletText("Press the 'Start Recording' key to begin recording your inputs");
+                ImGui::BulletText("Take the shot yourself");
+                ImGui::BulletText("Reset the shot");
+                ImGui::BulletText("Press the 'Spawn Bot for Playback' key to watch a bot replay your inputs");
+
+                ImGui::Spacing();
+
+            }
+
             ImGui::EndTabItem();
         }
 
@@ -565,6 +731,7 @@ void VersatileTraining::RenderSettings() {
                 ImGui::TextWrapped("2. Look at the goal and click your middle mouse button to place the first anchor point");
                 ImGui::TextWrapped("3. Click again to place the second anchor point");
                 ImGui::TextWrapped("4. Press G again to exit edit mode");
+                ImGui::TextWrapped("If you want to get rid of the goal blocker, simply make a square smaller than the ball, and it will be removed automatically.");
             }
 
             if (ImGui::CollapsingHeader("How to Record and Playback")) {
@@ -629,7 +796,7 @@ void VersatileTraining::RenderWindow() {
         ImGui::BulletText("Custom Training Packs: Create, share, and play advanced training scenarios.");
         ImGui::BulletText("Snapshot System: Save and load game states from replays or training (see 'Snapshot Gallery' tab).");
         ImGui::BulletText("Goal Blocker: Set up custom goal blockers for precision practice (see 'Goal Blockers' tab in the settings).");
-        ImGui::BulletText("Recording & Playback: Record your attempts and use them for bot playback (see the 'Playback & Recording' tab in the settings).");
+        ImGui::BulletText("Recording & Playback: Record your attempts and use them for bot playback (Experimental).");
         ImGui::BulletText("Versatile Training Hub: Upload and download training packs from the community (see 'Online Training Pack Hub' in Help).");
         ImGui::BulletText("Pack Overrides: Customize existing training packs, even those by other creators (see 'Pack Overrides' tab in settings).");
         ImGui::Spacing();
@@ -658,7 +825,7 @@ void VersatileTraining::RenderWindow() {
         ImGui::Spacing();
 
         float buttonWidthWelcome = 120.0f;
-        // Center the button
+        
         float windowContentWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
         ImGui::SetCursorPosX((windowContentWidth - buttonWidthWelcome) * 0.5f);
 
@@ -1289,6 +1456,7 @@ void VersatileTraining::RenderWindow() {
 
                         
                         if (shot.goalAnchors.first || shot.goalAnchors.second) {
+                            
                             ImGui::Spacing();
                             ImGui::Separator();
 
