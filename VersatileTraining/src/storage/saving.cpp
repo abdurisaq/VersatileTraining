@@ -29,7 +29,7 @@ uint8_t CompressVectors(
     const float range = 2.0f * maxMagnitude;
 
     if (!debugLabel.empty()) {
-        LOG("Compressing {} with {} bits per float and max magnitude {}", debugLabel, numBits, maxMagnitude);
+         
     }
 
     for (const Vector& v : vectors) {
@@ -37,8 +37,8 @@ uint8_t CompressVectors(
             float clamped = std::clamp(value, -maxMagnitude, maxMagnitude);
             float normalized = (clamped + maxMagnitude) / range;
             uint32_t quantized = static_cast<uint32_t>(std::round(normalized * ((1 << numBits) - 1)));
-            LOG("original Value : {}", value);
-            LOG("quantized value being saved : {}", quantized);
+             
+             
             for (int i = 0; i < numBits; ++i) {
                 bool bit = (quantized >> (numBits - 1 - i)) & 1;
                 currentByte |= (bit << (7 - bitIndexInByte));
@@ -68,7 +68,7 @@ uint8_t CompressIntegers(
     int range = globalMax - globalMin;
     size_t numBits = CalculateRequiredBits(range);
     if (!debugLabel.empty()) {
-        LOG("num bits for {}: {}", debugLabel, numBits);
+         
     }
 
     for (int value : values) {
@@ -96,7 +96,7 @@ uint8_t CompressBits(const std::vector<bool>& freezeCar, std::vector<uint8_t>& b
     
     
     for (bool freeze : freezeCar) {
-        LOG("in compress bits frozen ? {} ", freeze ? "true" : "false");
+         
         if (freeze) {
             currentByte |= (1 <<(7- bitCount));  
         }
@@ -152,7 +152,7 @@ void DecompressVectors(
     const float scale = 1.0f / ((1 << numBits) - 1);
 
     if (!debugLabel.empty()) {
-        LOG("Decompressing {} with {} bits per float and max magnitude {}", debugLabel, numBits, maxMagnitude);
+         
     }
 
     for (size_t i = 0; i < output.size(); ++i) {
@@ -175,7 +175,7 @@ void DecompressIntegers(
     const std::string& debugLabel = ""
 ) {
     if (!debugLabel.empty()) {
-        LOG("Decompressing {} with {} bits and global min {}", debugLabel, numBits, globalMin);
+         
     }
 
     for (size_t i = 0; i < output.size(); ++i) {
@@ -259,7 +259,7 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         
         std::ofstream outFile(packFile, std::ios::binary);
         if (!outFile.is_open()) {
-            LOG("Error: Failed to open file for writing: {}", packFile.string());
+             
             continue;
         }
   
@@ -275,7 +275,7 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
 
         bool hasCode = !data.code.empty() && data.code.length() == TRAINING_CODE_CHARS;
         binaryDataToWrite.push_back(hasCode ? 1 : 0);
-        LOG("Writing code flag: {}", hasCode ? "has code" : "no code");
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, TRAINING_CODE_FLAG_BITS);
 
         if (hasCode) {
@@ -284,20 +284,20 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
                 binaryDataToWrite.push_back(static_cast<uint8_t>(c));
                 byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 8); 
             }
-            LOG("Wrote training code: {}", data.code);
+             
         }
 
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(nameLength & 0xFF);  
-        LOG("writing name length : {} to file", nameLength & 0xFF);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NAME_LEN_BITS);
         //bitstream.push_back((nameLength >> 8) & 0xFF);  
         //bitstream.push_back(nameLength & 0xFF);         
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(data.numShots & 0xFF);
-        LOG("writing num shots : {} to file", data.numShots & 0xFF);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, NUM_SHOTS_BITS);
         
 
@@ -309,24 +309,24 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(boundaryBoosts.first & 0xFF);
-        LOG("writing min boost : {} to file", boundaryBoosts.first & 0xFF);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, BOOST_MIN_BITS);
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back((boundaryVelocities.first >>5) & 0xFF);
         binaryDataToWrite.push_back((boundaryVelocities.first) & 0x1F);
-        LOG("min velocity {}", boundaryVelocities.first);
-        LOG("writing min velocity : {} to file", (boundaryVelocities.first>>4) & 0xFF);
-        LOG("writing min velocity : {} to file", ((boundaryVelocities.first) & 0xF));
+         
+         
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, VELOCITY_MIN_BITS);
 
         
         std::vector<int> magnitudes;
         for (const auto& vec : data.extendedStartingVelocities) {
             int magnitude = static_cast<int>(vec.magnitude());
-            LOG("extended starting velocity magnitude: {}", magnitude);
-            LOG("float velocity magnitude: {}", vec.magnitude());
-            LOG("velocity: {} {} {}", vec.X, vec.Y, vec.Z);
+             
+             
+             
             magnitudes.push_back(magnitude);
         }
         std::pair<int, int> magnitudeBounds = getMinMaxAmount(magnitudes);
@@ -335,17 +335,17 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         binaryDataToWrite.push_back((magnitudeBounds.second >> 4) & 0xFF);            // Top 8 bits (bits 12 to 5)
         binaryDataToWrite.push_back((magnitudeBounds.second & 0xF));            // Lower 5 bits (bits 4 to 0), shifted into high bits of next byte
 
-        LOG("writing 12-bit value: {}", magnitudeBounds.second);
-        LOG("byte 1: {:#010b}", binaryDataToWrite[0]);
-        LOG("byte 2: {:#010b}", binaryDataToWrite[1]);
+         
+         
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 12); // 13 bits for the magnitude
 
         std::vector<int> magnitudesAng;
         for (const auto& vec : data.extendedStartingAngularVelocities) {
             int magnitude = static_cast<int>(vec.magnitude());
-            LOG("extended starting velocity magnitude: {}", magnitude);
-            LOG("float velocity magnitude: {}", vec.magnitude());
-            LOG("velocity: {} {} {}", vec.X, vec.Y, vec.Z);
+             
+             
+             
             magnitudesAng.push_back(magnitude);
         }
         std::pair<int, int> magnitudeBoundsAng = getMinMaxAmount(magnitudesAng);
@@ -355,7 +355,7 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back((magnitudeBoundsAng.second) & 0xFF);       
-        LOG("writing 8-bit value: {}", magnitudeBoundsAng.second);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 8);
         std::vector<int> xVals;
         std::vector<int> zVals;
@@ -375,9 +375,9 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back((boundaryX.first >> 4) & 0xFF);
         binaryDataToWrite.push_back((boundaryX.first) & 0xF);
-        LOG("min goalblocker X: {}", boundaryX.first);
-        LOG("writing min goal blocker X : {} to file", (boundaryX.first >> 4) & 0xFF);
-        LOG("writing min goal blocker X : {} to file", ((boundaryX.first) & 0xF));
+         
+         
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, GOAL_MIN_BITS);
 
         std::pair<int, int> boundaryZ = getMinMaxAmount(zVals);
@@ -385,9 +385,9 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back((boundaryZ.first >> 4) & 0xFF);
         binaryDataToWrite.push_back((boundaryZ.first) & 0xF);
-        LOG("min goalblocker Z: {}", boundaryZ.first);
-        LOG("writing min goal blocker Z : {} to file", (boundaryZ.first >> 4) & 0xFF);
-        LOG("writing min goal blocker Z : {} to file", ((boundaryZ.first) & 0xF));
+         
+         
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, GOAL_MIN_BITS);
 
         //size_t numBitsForBoost = CalculateRequiredBits(boundaryBoosts.second - boundaryBoosts.first);
@@ -419,13 +419,13 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(numBitsForBoost & 0xFF);
-        LOG("writing num bits for boost : {} to file", numBitsForBoost & 0xFF);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 3);
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(numBitsForVelocity & 0xFF);
 
-        LOG("writing num bits for velocity : {} to file", numBitsForVelocity & 0xFF);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
 
         
@@ -435,18 +435,18 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(numBitsForXBlocker & 0xFF);
-        LOG("writing num bits for goal blocker X : {} to file.  minimum {}, max {}", numBitsForXBlocker & 0xFF,boundaryX.first,boundaryX.second);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
 
         binaryDataToWrite.clear();
         binaryDataToWrite.push_back(numBitsForZBlocker & 0xFF);
-        LOG("writing num bits for goal blocker Z : {} to file. minimum {}, max {}", numBitsForZBlocker & 0xFF,boundaryZ.first,boundaryZ.second);
+         
         byte = writeBits(byte, bitIndexInByte, bitstream, binaryDataToWrite, 4);
 
-        LOG("num bits for boost : {}", numBitsForBoost);
-        LOG("num bits for velocity : {}", numBitsForVelocity);
-        LOG("num bits for goal blocker X : {}", numBitsForXBlocker);
-        LOG("num bits for goal blocker Z : {}", numBitsForZBlocker);
+         
+         
+         
+         
        
         for (char c : data.name) {
             std::vector<uint8_t> charBits = { static_cast<uint8_t>(c) };
@@ -478,10 +478,10 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         byte = CompressVectors(angularVelocitiesToSave, magnitudeBoundsAng.second, bitstream, bitIndexInByte, byte, "extended starting angular velocity");
 
         for (int val : xVals) {
-            LOG("x vals writing : {}", val);
+             
         }
         for (int val : zVals) {
-            LOG("z vals writing: {}", val);
+             
         }
         if (numBitsForXBlocker > 0) {
 			byte = CompressIntegers(xVals, boundaryX.first, boundaryX.second, bitstream, bitIndexInByte, byte, "goalblocker X");
@@ -516,13 +516,13 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
 
     std::unordered_map<std::string, CustomTrainingData> trainingDataMap;
 
-    LOG("loading from file");
+     
     if (!std::filesystem::exists(trainingPacksFolder)) {
-        LOG("Training packs folder does not exist: {}", trainingPacksFolder.string());
+         
         return trainingDataMap;
     }
     if (!std::filesystem::is_directory(trainingPacksFolder)) {
-        LOG("Training packs path is not a directory: {}", trainingPacksFolder.string());
+         
         return trainingDataMap;
     }
     
@@ -535,12 +535,12 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         std::filesystem::path packFile = packFolder / "trainingpack.txt";
         
         if (!std::filesystem::exists(packFile)) {
-            LOG("No trainingpack.txt found in folder: {}", packFolder.string());
+             
             continue;
         }
         std::ifstream inFile(packFile, std::ios::binary);
         if (!inFile.is_open()) {
-            LOG("Error: Failed to open file for reading: {}", packFile.string());
+             
             continue;
         }
         
@@ -558,13 +558,13 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         std::vector<uint8_t> bitstream(output.begin(), output.end() - 1);
 
         if (bitstream.empty()) {
-            LOG("Error: Failed to decode base64 line.");
+             
             continue;
         }
 
         size_t bitIndex = 0;
         bool hasCode = ReadBits(bitstream, bitIndex, TRAINING_CODE_FLAG_BITS) != 0;
-        LOG("Read code flag: {}", hasCode ? "has code" : "no code");
+         
 
         std::string code;
         if (hasCode) {
@@ -573,40 +573,40 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
             for (size_t i = 0; i < TRAINING_CODE_CHARS; ++i) {
                 code[i] = static_cast<char>(ReadBits(bitstream, bitIndex, 8));
             }
-            LOG("Read training code: {}", code);
+             
         }
 
 
         size_t nameLength = ReadBits(bitstream, bitIndex, NAME_LEN_BITS);
         if (nameLength == 0) {
-            LOG("Error: Invalid name length in the header.");
+             
             continue;
         }
-        LOG("Name length : {}", nameLength);
+         
 
         size_t numShots = ReadBits(bitstream, bitIndex, NUM_SHOTS_BITS);
-        LOG("numShots : {}", numShots);
+         
         size_t minBoost = ReadBits(bitstream, bitIndex, BOOST_MIN_BITS);
-        LOG("minBoost : {}", minBoost);
+         
         size_t minVelocity = ReadBits(bitstream, bitIndex, VELOCITY_MIN_BITS);
-        LOG("minVelocity : {}", minVelocity);
+         
 
         size_t maxMagnitude = ReadBits(bitstream, bitIndex, 12);
-        LOG("maxMagnitude : {}", maxMagnitude);
+         
 
         size_t maxMagnitudeAng = ReadBits(bitstream, bitIndex, 8);
-        LOG("maxMagnitude Ang : {}", maxMagnitudeAng);
+         
 
         size_t minGoalBlockX = ReadBits(bitstream, bitIndex, GOAL_MIN_BITS);
-        LOG("min goalblocker X : {}", minGoalBlockX);
+         
         size_t minGoalBlockZ = ReadBits(bitstream, bitIndex, GOAL_MIN_BITS);
-        LOG("min goalblocker Z : {}", minGoalBlockZ);
+         
 
         uint8_t packedBits = (uint8_t)ReadBits(bitstream, bitIndex, 7);
         int numBitsForBoost = (packedBits >> 4) & 0x07;
         int numBitsForVelocity = packedBits & 0x0F;
-        LOG("num bits for boost : {}", numBitsForBoost);
-        LOG("num bits for velocity : {}", numBitsForVelocity);
+         
+         
 
         
 
@@ -614,21 +614,21 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         int numBitsForXBlocker = (packedGoalBlockerBits >> 4) & 0x0F;
         int numBitsForZBlocker = packedGoalBlockerBits & 0x0F;
 
-        LOG("num bits for goal blocker X : {}", numBitsForXBlocker);
-        LOG("num bits for goal blocker Z : {}", numBitsForZBlocker);
+         
+         
 
         std::string name(nameLength, '\0');
         for (size_t i = 0; i < nameLength; ++i) {
             name[i] =(char) ReadBits(bitstream, bitIndex, 7);
         }
-        LOG("name : {}", name);
+         
 
         CustomTrainingDataflattened trainingData;
         trainingData.initCustomTrainingData((int)numShots, name);
 
         if (hasCode) {
             trainingData.code = code;
-            LOG("setting training data with name : {} and code : {}", name, code);
+             
         }
 
         if (numBitsForBoost == 0) {
@@ -639,7 +639,7 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         }
 
         for (int boostAmounts : trainingData.boostAmounts) {
-            LOG("boostAmounts : {}", boostAmounts);
+             
         }
 
         if (numBitsForVelocity == 0) {
@@ -703,10 +703,10 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
             DecompressIntegers(zVals, minGoalBlockZ, numBitsForZBlocker, bitstream, bitIndex, "z Goal vals");
         }
         for (int val : xVals) {
-			LOG("x vals reading: {}", val);
+			 
 		}
         for (int val : zVals) {
-            LOG("z vals reading: {}", val);
+             
         }
         // Now populate the goal blockers
         for (int i = 0; i < numGoalBlockers; i++) {
@@ -718,27 +718,27 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
             trainingData.goalBlockers[i].second.Y = 5140.f;
             if (trainingData.goalBlockers[i].first.X == 910.f && trainingData.goalBlockers[i].first.Z == 20.f && trainingData.goalBlockers[i].second.X == 910.f && trainingData.goalBlockers[i].second.Z == 20.f) {
 				trainingData.goalAnchors[i] = { false, false };
-                LOG("setting anchors to false");
+                 
             }
             else {
-                LOG("setting anchor to trues");
+                 
                 trainingData.goalAnchors[i] ={ true, true };
             }
         }
         for (int startingVelocity : trainingData.startingVelocity) {
-            LOG("startingVelocity : {}", startingVelocity);
+             
         }
 
         DecompressBits(trainingData.freezeCar, bitstream, bitIndex);
         for (bool freeze : trainingData.freezeCar) {
-            LOG("freeze : {}", freeze);
+             
         }
         DecompressBits(trainingData.hasStartingJump, bitstream, bitIndex);
         for (bool jump : trainingData.hasStartingJump) {
-			LOG("jump : {}", jump);
+			 
 		}
 
-        LOG("loading training pack with name : {}", name);
+         
         if (!code.empty()) {
             trainingDataMap[code] = trainingData.inflate();
         }
@@ -748,7 +748,7 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
     }
 
     if (trainingDataMap.empty()) {
-        LOG("Warning: No valid training data found in the file after decoding.");
+         
     }
 
     return trainingDataMap;

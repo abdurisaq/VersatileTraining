@@ -49,10 +49,10 @@ void StorageManager::saveSpecialKeybinds(SpecialKeybinds keybinds, const std::fi
         file << keybinds.increaseBoost << std::endl;
         file << keybinds.decreaseVelocity << std::endl;
         file << keybinds.increaseVelocity << std::endl;
-        LOG("Special keybinds saved to: {}", specialBindsPath.string());
+         
     }
     else {
-        LOG("Failed to save special keybinds to: {}", specialBindsPath.string());
+         
     }
 
 }
@@ -72,10 +72,10 @@ SpecialKeybinds StorageManager::loadSpecialKeybinds(const std::filesystem::path&
         if (std::getline(file, line)) specialKeybinds.increaseBoost = std::stoi(line);
         if (std::getline(file, line)) specialKeybinds.decreaseVelocity = std::stoi(line);
         if (std::getline(file, line)) specialKeybinds.increaseVelocity = std::stoi(line);
-        LOG("Special keybinds loaded from: {}", specialBindsPath.string());
+         
     }
     else {
-        LOG("No special keybinds file found, using defaults");
+         
     }
 
     return specialKeybinds;
@@ -85,14 +85,14 @@ SpecialKeybinds StorageManager::loadSpecialKeybinds(const std::filesystem::path&
 
 
 void StorageManager::savePackOverrideSettings(const std::map<std::string, PackOverrideSettings>& overrideSettings, const std::filesystem::path& filePath) {
-    LOG("Saving pack override settings to binary file: {}", filePath.string());
+     
 
     std::filesystem::path packOverRidePath = filePath / "packOverrideSettings.txt";
 
     std::ofstream outFile(packOverRidePath, std::ios::binary | std::ios::trunc);
 
     if (!outFile.is_open()) {
-        LOG("Failed to open pack override settings file for writing: {}", packOverRidePath.string());
+         
         return;
     }
 
@@ -111,27 +111,27 @@ void StorageManager::savePackOverrideSettings(const std::map<std::string, PackOv
             outFile.write(reinterpret_cast<const char*>(&pair.second), sizeof(PackOverrideSettings));
         }
         outFile.close();
-        LOG("Successfully saved {} pack override settings.", numEntries);
+         
     }
     catch (const std::ios_base::failure& e) {
-        LOG("Exception during saving pack override settings: {}", e.what());
+         
         if (outFile.is_open()) outFile.close();
     }
 }
 
 std::map<std::string, PackOverrideSettings> StorageManager::loadPackOverrideSettings(const std::filesystem::path& filePath) {
-    LOG("Loading pack override settings from binary file: {}", filePath.string());
+     
     std::map<std::string, PackOverrideSettings> overrideSettings;
 
     std::filesystem::path packOverRidePath = filePath / "packOverrideSettings.txt";
     if (!std::filesystem::exists(packOverRidePath)) {
-        LOG("Pack override settings file does not exist, returning empty map: {}", packOverRidePath.string());
+         
         return overrideSettings;
     }
 
     std::ifstream inFile(packOverRidePath, std::ios::binary);
     if (!inFile.is_open()) {
-        LOG("Failed to open pack override settings file for reading: {}", packOverRidePath.string());
+         
         return overrideSettings;
     }
 
@@ -140,7 +140,7 @@ std::map<std::string, PackOverrideSettings> StorageManager::loadPackOverrideSett
         size_t numEntries = 0;
         inFile.read(reinterpret_cast<char*>(&numEntries), sizeof(numEntries));
         if (inFile.gcount() != sizeof(numEntries)) {
-            LOG("Failed to read number of entries or file is empty/corrupt.");
+             
             inFile.close();
             return overrideSettings; // Or handle error differently
         }
@@ -151,14 +151,14 @@ std::map<std::string, PackOverrideSettings> StorageManager::loadPackOverrideSett
             size_t keyLength = 0;
             inFile.read(reinterpret_cast<char*>(&keyLength), sizeof(keyLength));
             if (inFile.gcount() != sizeof(keyLength)) {
-                LOG("Failed to read key length for entry {}.", i);
+                 
                 break;
             }
 
             std::string key(keyLength, '\0');
             inFile.read(&key[0], keyLength);
             if (inFile.gcount() != keyLength) {
-                LOG("Failed to read key data for entry {}.", i);
+                 
                 break;
             }
 
@@ -167,17 +167,17 @@ std::map<std::string, PackOverrideSettings> StorageManager::loadPackOverrideSett
             PackOverrideSettings settings;
             inFile.read(reinterpret_cast<char*>(&settings), sizeof(PackOverrideSettings));
             if (inFile.gcount() != sizeof(PackOverrideSettings)) {
-                LOG("Failed to read settings data for entry {}.", i);
+                 
                 break;
             }
 
             overrideSettings[key] = settings;
         }
         inFile.close();
-        LOG("Successfully loaded {} pack override settings.", overrideSettings.size());
+         
     }
     catch (const std::ios_base::failure& e) {
-        LOG("Exception during loading pack override settings: {}. File might be corrupted.", e.what());
+         
         if (inFile.is_open()) inFile.close();
         // Return whatever was successfully loaded, or an empty map
         return overrideSettings;

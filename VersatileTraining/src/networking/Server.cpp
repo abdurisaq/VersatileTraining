@@ -55,13 +55,13 @@ void VersatileTraining::runServer(
     WSADATA wsaData;
     int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (result != 0) {
-        LOG("WSAStartup failed: {}", result);
+         
         return;
     }
 
     SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listenSocket == INVALID_SOCKET) {
-        LOG("Error creating socket: {}", WSAGetLastError());
+         
         WSACleanup();
         return;
     }
@@ -69,7 +69,7 @@ void VersatileTraining::runServer(
     
     u_long mode = 1; //nonblocking
     if (ioctlsocket(listenSocket, FIONBIO, &mode) == SOCKET_ERROR) {
-        LOG("Failed to set socket to non-blocking mode: {}", WSAGetLastError());
+         
         closesocket(listenSocket);
         WSACleanup();
         return;
@@ -81,20 +81,20 @@ void VersatileTraining::runServer(
     serverAddr.sin_port = htons(SERVER_PORT);
 
     if (bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        LOG("Bind failed: {}", WSAGetLastError());
+         
         closesocket(listenSocket);
         WSACleanup();
         return;
     }
 
     if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR) {
-        LOG("Listen failed: {}", WSAGetLastError());
+         
         closesocket(listenSocket);
         WSACleanup();
         return;
     }
 
-    LOG("VersatileTraining plugin server started on port {}", SERVER_PORT);
+     
 
     std::vector<std::thread> clientThreads;
 
@@ -111,7 +111,7 @@ void VersatileTraining::runServer(
             }
             else {
                 if (*isRunning) {
-                    LOG("Accept failed: {}", WSAGetLastError());
+                     
                 }
                 Sleep(100);
             }
@@ -128,7 +128,7 @@ void VersatileTraining::runServer(
         }
     }
 
-    LOG("Server shutting down...");
+     
     closesocket(listenSocket);
 
     for (auto& thread : clientThreads) {
@@ -138,7 +138,7 @@ void VersatileTraining::runServer(
     }
 
     WSACleanup();
-    LOG("Server shutdown complete");
+     
 }
 
 void handleClientConnection(
@@ -164,7 +164,7 @@ void handleClientConnection(
         {
             std::lock_guard<std::mutex> lock(g_mutex);
             if (endpoint != "/status") {
-                LOG("Received {} request for {}", method, endpoint);
+                 
             }
         }
 
@@ -196,7 +196,7 @@ void handleClientConnection(
                 packId = packId.substr(1);
             }
 
-            LOG("Received request for recordings of pack {}", packId);
+             
             response = handlePackRecordingRequest(authToken, packId, dataFolder, trainingDataPtr);
         }
         else {
@@ -302,7 +302,7 @@ std::string handleStatusRequest(const std::string& authToken) {
     }
     else {
         
-        LOG("No auth token found, returning without player ID");
+         
         return createJsonResponse(200,
             "{\n"
             "  \"status\": \"plugin_active\"\n"
@@ -313,8 +313,8 @@ std::string handleStatusRequest(const std::string& authToken) {
 std::string handleLoadPackRequest(const std::string& authToken, const std::string& body, std::filesystem::path dataFolder, std::atomic<bool>& hasAction,
     std::string& pendingAction,
     std::mutex& pendingActionMutex) {
-    LOG("auth token received: {}", authToken);
-    LOG("expected token: {}", AUTH_TOKEN);
+     
+     
     if (authToken != AUTH_TOKEN) {
         return createJsonResponse(401,
             "{\n"
@@ -350,7 +350,7 @@ std::string handleListPacksRequest(
     }
 
     if (!trainingDataPtr || trainingDataPtr->empty()) {
-        LOG("No training packs available to list");
+         
         return createJsonResponse(200, "{\n\"packs\": []\n}");
     }
 
@@ -374,7 +374,7 @@ std::string handleListPacksRequest(
 
     json << "\n  ]\n}";
 
-    LOG("Returning list of {} training packs", trainingDataPtr->size());
+     
     return createJsonResponse(200, json.str());
 }
 
@@ -394,7 +394,7 @@ std::string handlePackDetailsRequest(
 
     auto it = trainingDataPtr->find(packId);
     if (it == trainingDataPtr->end()) {
-        LOG("Training pack not found: {}", packId);
+         
         return createJsonResponse(404, "{\n\"error\": \"Pack not found\"\n}");
     }
 
@@ -429,7 +429,7 @@ std::string handlePackDetailsRequest(
 
     json << "\n  ]\n}";
 
-    LOG("Returning details for pack: {}", packId);
+     
     return createJsonResponse(200, json.str());
 }
 
@@ -444,11 +444,11 @@ std::string handlePackRecordingRequest(
         cleanPackId = cleanPackId.substr(1);
     }
 
-    LOG("Handling pack recording request for pack: {}", cleanPackId);
+     
 
-    LOG("Searching for pack with code: {} in a map with {} entries", cleanPackId, trainingDataPtr->size());
+     
     for (const auto& [key, value] : *trainingDataPtr) {
-        LOG("Available pack: key={}, code={}, name={}", key, value.code, value.name);
+         
     }
 
     if (authToken != AUTH_TOKEN) {
@@ -479,7 +479,7 @@ std::string handlePackRecordingRequest(
             foundPack = &value;
             foundKey = key;
             found = true;
-            LOG("Found training pack with code: {}", cleanPackId);
+             
             break;
         }
 
@@ -493,13 +493,13 @@ std::string handlePackRecordingRequest(
             foundPack = &value;
             foundKey = key;
             found = true;
-            LOG("Found training pack with key: {}", cleanPackId);
+             
             break;
         }
     }
     
     if (!found || !foundPack) {
-        LOG("Training pack not found in memory: {}", cleanPackId);
+         
         return createJsonResponse(404, "{\n\"error\": \"Training pack not found\"\n}");
     }
 
@@ -528,15 +528,15 @@ std::string handlePackRecordingRequest(
             
             encodedTrainingData.resize(size);
             if (file.read(&encodedTrainingData[0], size)) {
-                LOG("Successfully read training data, size: {} bytes", size);
+                 
             } else {
-                LOG("Failed to read training data file");
+                 
                 return createJsonResponse(500, "{\n\"error\": \"Failed to read training data\"\n}");
             }
             file.close();
         }
     } else {
-        LOG("Training data file not found: {}", trainingDataFile.string());
+         
         return createJsonResponse(404, "{\n\"error\": \"Training pack data not found\"\n}");
     }
     
@@ -549,20 +549,20 @@ std::string handlePackRecordingRequest(
 
             shotRecordings.resize(size);
             if (file.read(&shotRecordings[0], size)) {
-                LOG("Successfully read shot recordings, size: {} bytes", size);
+                 
                 for (size_t i = 0; i < shotRecordings.length(); i++) {
                     if (shotRecordings[i] == '\n') {
                         shotRecordings[i] = '.';
                     }
                 }
             } else {
-                LOG("Failed to read recording file");
+                 
                 shotRecordings = "";
             }
             file.close();
         }
     } else {
-        LOG("Recording file not found (this might be normal for packs without recordings)");
+         
     }
     
     std::ostringstream json;
@@ -572,6 +572,6 @@ std::string handlePackRecordingRequest(
         << "  \"shotsRecording\": \"" << (shotRecordings.empty() ? "" : shotRecordings) << "\"\n"
         << "}";
 
-    LOG("Successfully created response with training data and recordings for pack {}", cleanPackId);
+     
     return createJsonResponse(200, json.str());
 }

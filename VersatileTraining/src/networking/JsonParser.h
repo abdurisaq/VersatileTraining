@@ -14,18 +14,18 @@ struct PackInfo {
     std::string recordingDataCompressed;
 
     void print() const {
-        LOG("id {}", id);
-        LOG("name {}", name);
-        LOG("description {}", description);
-        LOG("code {}", code);
-        LOG("difficulty {}", difficulty);
-        LOG("tags:");
+         
+         
+         
+         
+         
+         
         for (const auto& tag : tags) {
-			LOG("  {}", tag);
+			 
 		}
-        LOG("totalShots {}", totalShots);
-		LOG("packMetadataCompressed {}", packMetadataCompressed);
-		LOG("recordingDataCompressed {}", recordingDataCompressed);
+         
+		 
+		 
 	}
 };
 

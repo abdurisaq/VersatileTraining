@@ -100,75 +100,6 @@ void VersatileTraining::registerNotifiers() {
 	
 
 
-	cvarManager->registerNotifier("printDataMap", [this](std::vector<std::string> args) {
-
-		for (auto [key, value] : *trainingData) {
-			LOG("Name: {}", value.name);
-			LOG("ID: {}", key);
-			LOG("Code: {}", value.code);
-			LOG("Num Shots: {}", value.numShots);
-			for (int i = 0; i < value.numShots; i++) {
-
-				LOG("Shot {}: location: {} {} {}",
-										i,
-										static_cast<int>(value.shots[i].carLocation.X),
-										static_cast<int>(value.shots[i].carLocation.Y),
-										static_cast<int>(value.shots[i].carLocation.Z));
-				LOG("Shot {}: rotation: {} {} {}", 
-										i,
-										value.shots[i].carRotation.Pitch,
-										value.shots[i].carRotation.Yaw,
-										value.shots[i].carRotation.Roll);
-				LOG("Shot {}: Boost Amount: {}", i, value.shots[i].boostAmount);
-				LOG("Shot {}: Starting Velocity: {}", i, value.shots[i].startingVelocity);
-				LOG("Shot {}: Freeze Car: {}", i, static_cast<int>(value.shots[i].freezeCar));
-
-				LOG("Shot {}: Has Jump: {}", i, static_cast<int>(value.shots[i].hasJump));
-				LOG("Shot {} : starting velocity : {} {} {}", i, value.shots[i].extendedStartingVelocity.X, value.shots[i].extendedStartingVelocity.Y, value.shots[i].extendedStartingVelocity.Z);
-
-				LOG("Shot {} : starting angular velocity : {} {} {}", i, value.shots[i].extendedStartingAngularVelocity.X, value.shots[i].extendedStartingAngularVelocity.Y, value.shots[i].extendedStartingAngularVelocity.Z);
-				
-				// Goal blocker positions
-				LOG("Shot {}: Goal Blocker First Point: X={}, Z={}",
-					i,
-					static_cast<int>(value.shots[i].goalBlocker.first.X),
-					static_cast<int>(value.shots[i].goalBlocker.first.Z));
-
-				LOG("Shot {}: Goal Blocker Second Point: X={}, Z={}",
-					i,
-					static_cast<int>(value.shots[i].goalBlocker.second.X),
-					static_cast<int>(value.shots[i].goalBlocker.second.Z));
-				LOG("has recording ? {}", value.shots[i].recording.inputs.size() > 0 ? "true" : "false");
-				LOG("number of inputs : {}", value.shots[i].recording.inputs.size());
-
-				// Goal anchors state
-				LOG("Shot {}: Goal Anchors: First={}, Second={}",
-					i,
-					value.shots[i].goalAnchors.first ? "true" : "false",
-					value.shots[i].goalAnchors.second ? "true" : "false");
-			}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
-			LOG("------------------------------");
-		}
-
-
-		}, "print local data map", PERMISSION_ALL);
-
-	
-
-	cvarManager->registerNotifier("printCurrentPack", [this](std::vector<std::string> args) {
-		//if (!isInTrainingEditor())return;
-
-		//currentTrainingData
-		LOG("Name: {}", currentTrainingData.name);
-		LOG("Code: {}", currentTrainingData.code);
-		LOG("Num Shots: {}", currentTrainingData.shots.size());
-		LOG("custom pack ? {}", currentTrainingData.customPack ? "true" : "false");
-		for (int i = 0; i < currentTrainingData.shots.size(); i++) {
-			LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, currentTrainingData.shots[i].boostAmount, currentTrainingData.shots[i].startingVelocity, static_cast<int>(currentTrainingData.shots[i].freezeCar), static_cast<int>(currentTrainingData.shots[i].hasJump));
-			LOG("has recording? {}", currentTrainingData.shots[i].recording.inputs.size() > 0 ? "true" : "false");
-		}//i, value.boostAmounts[i], value.startingVelocity[i], value.freezeCar[i]
-
-		}, "print local data map", PERMISSION_ALL);
 
 
 
@@ -207,26 +138,6 @@ void VersatileTraining::registerNotifiers() {
 		}, "start recording", PERMISSION_ALL);
 	
 
-	cvarManager->registerNotifier("currentShotState", [this](std::vector<std::string> args) {
-		
-		LOG("current shot state" );
-		LOG("rotation : {} {} {}", currentShotState.carRotation.Pitch, currentShotState.carRotation.Yaw, currentShotState.carRotation.Roll);
-		LOG("car location : {} {} {}", currentShotState.carLocation.X, currentShotState.carLocation.Y, currentShotState.carLocation.Z);
-
-		LOG("current editted shot {}",currentTrainingData.currentEditedShot);
-		LOG("boost amount : {} ", currentShotState.boostAmount);
-		LOG("starting velocity : {} ", currentShotState.startingVelocity);
-		LOG("starting angular velocity : {} {} {}", currentShotState.extendedStartingAngularVelocity.X, currentShotState.extendedStartingAngularVelocity.Y, currentShotState.extendedStartingAngularVelocity.Z);
-		LOG("starting velocity : {} {} {}", currentShotState.extendedStartingVelocity.X, currentShotState.extendedStartingVelocity.Y, currentShotState.extendedStartingVelocity.Z);
-		LOG("freeze car : {} ", currentShotState.freezeCar);
-		LOG("goal blocker x1 : {}, z1 : {} x2 : {}, z2 : {} ", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
-		LOG("goal anchors first : {}, second : {} ", currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
-		LOG("has jump : {} ", currentShotState.hasJump ? "true" : "false");
-		LOG("has recording ? {}", currentShotState.recording.inputs.size() > 0 ? "true" : "false");
-		LOG("number of inputs : {}", currentShotState.recording.inputs.size());
-
-		}, "dump recorded inputs", PERMISSION_ALL);
-	
 	
 
 	cvarManager->registerNotifier("saveReplaySnapshot", [this](std::vector<std::string> args) {

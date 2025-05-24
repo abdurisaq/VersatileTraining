@@ -54,7 +54,7 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
     Vector loc = car.GetLocation();
 
     if (!appliedWallClamping) {
-        LOG("applying clamping to wall");
+        
         Vector loc2 = getClampChange(loc, rot);
         car.SetLocation(loc2);
         appliedWallClamping = true;
@@ -76,20 +76,19 @@ void VersatileTraining::handleUpdateCarData(ActorWrapper cw) {
 
 void VersatileTraining::handleStartRound() {
 
-    LOG("startround called");
 
 
 
     if (isInTrainingEditor() || isInTrainingPack()) {
         ServerWrapper server = gameWrapper->GetCurrentGameState();
         if (!server) {
-            			LOG("server not found");
+            			
 			return;
         }
         CarWrapper car = server.GetGameCar();
         if (!car) {
 
-            		LOG("car not found");
+            
 			return;
         }
         shotReplicationManager.testCalledInStartRound = true;
@@ -113,7 +112,7 @@ void VersatileTraining::handleStartRound() {
         
 
         if (currentShotState.extendedStartingVelocity.X !=0.f || currentShotState.extendedStartingVelocity.Y != 0.f || currentShotState.extendedStartingVelocity.Z != 0.f) {
-            LOG("applying saved replay state in start round");
+             
             car.SetVelocity(currentShotState.extendedStartingVelocity);
             car.SetAngularVelocity(currentShotState.extendedStartingAngularVelocity, 0);
             return;
@@ -136,10 +135,10 @@ void VersatileTraining::handleStartRound() {
         Vector stickingVelocity = getStickingVelocity(rot);
         car.SetVelocity( stickingVelocity);
 
-        LOG("Calculated new velocity in StartRound");
+         
     }
     else {
-        LOG("not in training editor or pack");
+         
     }
     
 }
@@ -336,7 +335,7 @@ void VersatileTraining::handleEditorSetRotation(ActorWrapper cw) {
     // Handle editing variances with rotation unlocked
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
-            LOG("Server not found");
+             
             return;
         }
 
@@ -383,7 +382,7 @@ void VersatileTraining::handleGetRotateActorCameraOffset(ActorWrapper cw) {
     if (!isInTrainingEditor()) return;
     if (editingVariances && !lockRotation) {
         if (!cw || cw.IsNull()) {
-            LOG("Server not found");
+             
             return;
         }
 

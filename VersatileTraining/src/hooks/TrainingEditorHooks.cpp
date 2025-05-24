@@ -20,7 +20,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
             std::string code_from_game = data.GetCode().ToString();
             std::string name_from_game = data.GetTM_Name().ToString();
 
-            LOG("HandleAddTrainingData: Game pack name: '{}', Game pack code: '{}'", name_from_game, code_from_game);
+             
 
             std::string oldKey_in_map = "";
             CustomTrainingData* existing_pack_in_map_ptr = nullptr; // Pointer to the actual object in the map
@@ -60,24 +60,24 @@ void VersatileTraining::setupTrainingEditorHooks() {
                     } else {
                          current_disk_folder_identifier = storageManager.recordingStorage.sanitizeFilename(pack_to_move.name);
                     }
-                     LOG("Ambiguous old folder: using identifier '{}' based on oldKey_in_map '{}' and pack_to_move.code '{}'", current_disk_folder_identifier, oldKey_in_map, pack_to_move.code);
+                      
                 }
 
                 std::filesystem::path old_pack_disk_folder = myDataFolder / "TrainingPacks" / current_disk_folder_identifier;
 
                 bool proceed_with_map_update = false;
                 if (std::filesystem::exists(old_pack_disk_folder)) {
-                    LOG("Attempting to delete old pack folder: {}", old_pack_disk_folder.string());
+                     
                     try {
                         std::filesystem::remove_all(old_pack_disk_folder);
-                        LOG("Successfully deleted old pack folder.");
+                         
                         proceed_with_map_update = true;
                     } catch (const std::filesystem::filesystem_error& e) {
-                        LOG("Error deleting old pack folder {}: {}. Reorganization aborted.", old_pack_disk_folder.string(), e.what());
+                         
                         return false; // Critical error, stop.
                     }
                 } else {
-                    LOG("Old pack folder '{}' not found. Proceeding with map update without deleting old folder.", old_pack_disk_folder.string());
+                     
                     // If the folder wasn't found, it might be an orphaned in-memory entry or first time code assignment.
                     proceed_with_map_update = true;
                 }
@@ -96,13 +96,13 @@ void VersatileTraining::setupTrainingEditorHooks() {
                     storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
                     *trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
                     for (auto& [key_iter, value_iter] : *trainingData) { shiftToNegative(value_iter); }
-                    LOG("Reorganization successful. Pack '{}' now keyed by '{}'", name_from_game, code_from_game);
+                     
                 }
 
             } else if (existing_pack_in_map_ptr && !code_from_game.empty() && existing_pack_in_map_ptr->code.empty()) {
                 // Pack found by name (so oldKey_in_map is the name), game provides a code, and pack in map currently has no code.
                 // This is assigning a code for the first time.
-                LOG("Assigning code '{}' to pack '{}' (was keyed by name).", code_from_game, name_from_game);
+                 
                 CustomTrainingData pack_to_update = *existing_pack_in_map_ptr; // Make a copy
                 trainingData->erase(oldKey_in_map); // Erase entry keyed by name
                 pack_to_update.code = code_from_game; // Assign new code to the copy
@@ -116,7 +116,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
                 storageManager.saveCompressedTrainingDataWithRecordings(*trainingData, myDataFolder);
                 *trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
                 for (auto& [key_iter, value_iter] : *trainingData) { shiftToNegative(value_iter); }
-                LOG("Pack '{}' now has code and is keyed by '{}'", name_from_game, code_from_game);
+                 
             }
         });
 
@@ -140,7 +140,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
             if (shotReplicationManager.startRecording) {
                 currentShotState.recording = shotReplicationManager.currentShotRecording;
                 if (currentTrainingData.currentEditedShot < 0) {
-                    LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+                     
                     
                     return;
                 }
@@ -195,9 +195,9 @@ void VersatileTraining::setupTrainingEditorHooks() {
             for (int i = 0; i < cars.Count(); ++i) {
                 auto car = cars.Get(i);
                 if (!car) continue;
-                LOG("car name : {}", car.GetOwnerName());
+                 
                 if (car.GetOwnerName() == "testplayers") {
-                    LOG("destroying car");
+                     
                     auto controller = car.GetAIController();
                     car.Destroy();
                     server.RemovePlayer(controller);
@@ -241,7 +241,7 @@ void VersatileTraining::setupTrainingEditorHooks() {
 
 
 void VersatileTraining::handleTrainingEditorEnter() {
-    LOG("Training editor enter");
+     
     currentTrainingData.currentEditedShot = -1;
     lockScene = false;
     justOpenedPack = true;
@@ -255,10 +255,10 @@ void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::stri
     VersatileTraining::getTrainingData(cw, params, eventName);
     
     shotReplicationManager.canSpawnBot = true;
-    LOG("setting can spawn bot to true");
+     
     
     freezeForShot = currentShotState.freezeCar;
-    LOG("setting freeze to shot to {} ", freezeForShot ? "true" : "false");
+     
     frozeZVal = !currentShotState.freezeCar;
     lockRotation = true;
     appliedStartingVelocity = false;
@@ -269,7 +269,7 @@ void VersatileTraining::handleLoadRound(ActorWrapper cw, void* params, std::stri
 }
 
 void VersatileTraining::handleTrainingEditorExit() {
-    LOG("reset is benig called");
+     
 
     /*std::filesystem::path trainingDataPath = myDataFolder / "TrainingPacks";
     storageManager.recordingStorage.loadAllRecordings(trainingData, trainingDataPath);*/
@@ -299,11 +299,11 @@ void VersatileTraining::handleTrainingSave() {
     if (currentTrainingData.currentEditedShot != -1) {
         
 
-        LOG("amount of shots: {}", currentTrainingData.shots.size());
+         
 
         if (currentTrainingData.shots.empty()) {
             
-            LOG("Training data has no shots, not saving anything");
+             
             return;
         }
 
@@ -324,11 +324,11 @@ void VersatileTraining::handleTrainingSave() {
         }
 
 
-        LOG("Adding new pack with key: {}", searchKey);
+         
         (*trainingData)[searchKey] = currentTrainingData;
         
 
-        LOG("saving num shots: {}", currentTrainingData.shots.size());
+         
 
         // Rest of save process
         for (auto& [key, value] : *trainingData) {
@@ -347,7 +347,7 @@ void VersatileTraining::handleTrainingSave() {
 }
 
 void VersatileTraining::handleStartEditing(ActorWrapper cw) {
-    LOG("new training pack opened and editing started--------------");
+     
     isCarRotatable = true;
     goalBlockerEligbleToBeEdited = true;
 
@@ -362,26 +362,26 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
 
 
-    LOG("getTrainingData called, looking for custom training pack");
+     
     auto tw = ((TrainingEditorWrapper)cw.memory_address);
     GameEditorSaveDataWrapper data = tw.GetTrainingData();
     TrainingEditorSaveDataWrapper td = data.GetTrainingData();
-    LOG("Training pack code: {}", td.GetCode().ToString());
+     
     std::string name = td.GetTM_Name().ToString();
 
-    LOG("Training pack name: {}", name);
+     
     /*GetCreatorName();
     GetDescription();*/
-    LOG("Training pack type: {}", td.GetType());
-    LOG("Training pack difficulty: {}", td.GetDifficulty());
-    LOG("Training pack creator name: {}", td.GetCreatorName().ToString());
-    LOG("Training pack description: {}", td.GetDescription().ToString());
-    LOG("training pack created at: {}", td.GetCreatedAt());
+     
+     
+     
+     
+     
     int totalRounds = tw.GetTotalRounds();
-    LOG("Training num rounds: {}", totalRounds);
+     
 
     int currentShot = tw.GetActiveRoundNumber();
-    LOG("Training current shot : {}", currentShot);
+     
 
 
     
@@ -399,9 +399,9 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     if (!code.empty() && storageManager.packOverrideSettings.count(code)) {
         currentOverrides = storageManager.packOverrideSettings.at(code);
         foundSpecificOverrides = true;
-        LOG("Applying custom CVar overrides for pack code: {}", code);
+         
     } else {
-        LOG("No specific pack overrides for code '{}', or code is empty. Applying default CVar values.", code);
+         
         
     }
     currentOverrides.ApplyCVars(cvarManager);
@@ -416,7 +416,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 
                 currentTrainingData = value;
                 if (totalRounds == currentTrainingData.shots.size() && currentTrainingData.code.empty() && !code.empty()) {
-                    LOG("found a potential code for this training pack");
+                     
                     pendingCode = code;
                     pendingKey = key;
                     determiningCodeSync = true;
@@ -426,9 +426,9 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
                 }
                 justOpenedPack = false;
             }
-            LOG("num shots in found training pack: {}", currentTrainingData.shots.size());
+             
             if (totalRounds < currentTrainingData.numShots) {
-                LOG("resizing because num shots in training pack is less than the saved version");
+                 
                 currentTrainingData.shots.resize(totalRounds);
             }
             
@@ -437,16 +437,16 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
             cvarManager->executeCommand("sv_training_allowmirror 0", false);
             currentTrainingData.currentEditedShot = currentShot;
             if (currentTrainingData.shots.size() <= currentShot) {
-				LOG("current shot is out of bounds, resizing");
+				 
 				currentTrainingData.shots.resize(currentShot + 1);
 			}
-            LOG("currentTraining data recording size : {}", currentTrainingData.shots[currentShot].recording.inputs.size());
+             
             currentShotState = currentTrainingData.shots[currentShot];
             shotReplicationManager.currentShotRecording = currentShotState.recording;
-            LOG("shot replication current shot recording size: {}", shotReplicationManager.currentShotRecording.inputs.size());
-            LOG("setting active boost amount to {}", currentShotState.boostAmount);
-            LOG("setting active starting velocity to {}", currentShotState.startingVelocity);
-            LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
+             
+             
+             
+             
 
             float epsilon = 0.01f; 
 
@@ -460,10 +460,10 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
 			}
            
             if (currentShotState.freezeCar) {
-                LOG("car is frozen");
+                 
             }
             else {
-                LOG("car is not frozen");
+                 
             }
 
             
@@ -472,10 +472,10 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         }
     }
     if (!found) {
-        LOG("didn't find this traini pack in training data");
+         
         
         if (justOpenedPack) {
-            LOG("just opened pack, initializing new training data");
+             
             currentTrainingData.initCustomTrainingData(totalRounds, name,code);
             cvarManager->executeCommand("sv_training_limitboost -1");
             justOpenedPack = false;
@@ -494,13 +494,13 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         currentShotState = currentTrainingData.shots[currentShot];
        
 
-        LOG("setting shot state");
-        LOG("current training data name: {}", currentTrainingData.name);
-        LOG("current training data code: {}", currentTrainingData.code);
-        LOG("boost amount: {}", currentShotState.boostAmount);
-        LOG("starting velocity: {}", currentShotState.startingVelocity);
-        LOG("freeze car: {}", currentShotState.freezeCar ? "true" : "false");
-        LOG("has jump: {}", currentShotState.hasJump ? "true" : "false");
+         
+         
+         
+         
+         
+         
+         
         
 
         
@@ -513,7 +513,7 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     CVarWrapper limitBoostCVar = cvarManager->getCvar("sv_training_limitboost");
 
     if (!limitBoostCVar) {
-        LOG("Warning: sv_training_limitboost CVar not found");
+         
         return;
     }
 
@@ -524,12 +524,12 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     int targetValue = (currentShotState.boostAmount == 101) ? -1 : currentShotState.boostAmount;
 
     if (currentValue != targetValue) {
-        LOG("Setting boost limit from {} to {}", currentValue, targetValue);
+         
         cvarManager->executeCommand("sv_training_limitboost " + std::to_string(targetValue));
     }
     else {
         // Value already set correctly, skip command
-        LOG("Boost limit already set to {}. Skipping command.", targetValue);
+         
     }
 
     savedReplayState.ballSet = true;

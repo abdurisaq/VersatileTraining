@@ -57,11 +57,6 @@ void VersatileTraining::setupTrainingShotHooks() {
             handleGameEditorActorEditingEnd();
         });
 
-    gameWrapper->HookEvent(
-        "Function TAGame.GameEvent_TrainingEditor_TA.EndPlayTest",
-        [this](std::string eventName) {
-            handleEndPlayTest();
-        });
 }
 
 
@@ -69,20 +64,20 @@ void VersatileTraining::setupTrainingShotHooks() {
 void VersatileTraining::handleExistingTrainingData(int currentShot, int totalRounds) {
 
 
-    LOG("already loaded, skipping searching training data");
-    LOG("currentShot: {}", currentTrainingData.currentEditedShot);
-    LOG("amount of shots in found training data existing: {}", currentTrainingData.shots.size());
+     
+     
+     
     while (currentTrainingData.shots.size() <= currentShot) {
-        LOG("adding shots to fill");
+         
 
         currentTrainingData.addShot();
     }
 
     
     currentShotState = currentTrainingData.shots[currentShot];
-    LOG("current recording size {}", currentShotState.recording.inputs.size());
+     
     shotReplicationManager.currentShotRecording = currentShotState.recording;
-    LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
+     
     float epsilon = 0.01f;
     
     if (abs(currentShotState.goalBlocker.first.X) < epsilon && abs(currentShotState.goalBlocker.first.Z) < epsilon && abs(currentShotState.goalBlocker.second.X) < epsilon && abs(currentShotState.goalBlocker.second.Z) < epsilon) {
@@ -101,12 +96,12 @@ void VersatileTraining::handleExistingTrainingData(int currentShot, int totalRou
 }
 
 void VersatileTraining::handleNewTrainingData(int currentShot) {
-    LOG("currentShot: {}", currentShot);
-    LOG("amount of shots in found training data new : {}", currentTrainingData.shots.size());
+     
+     
 
    
     currentShotState = currentTrainingData.shots[currentShot];
-    LOG("pulled goalblocker, x1:{}, z1:{} x2:{} z2{}. setting anchor first to : {}, and send to : {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z, currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
+     
 }
 
 void VersatileTraining::handleCreateRound() {
@@ -116,37 +111,37 @@ void VersatileTraining::handleCreateRound() {
 void VersatileTraining::handleDeleteRound(TrainingEditorWrapper cw) {
     int shotToRemove = cw.GetActiveRoundNumber();
     if (shotToRemove >= 0 && shotToRemove < currentTrainingData.shots.size()) {
-        LOG("Removing shot: {}", shotToRemove);
+         
 
         currentTrainingData.shots.erase(currentTrainingData.shots.begin() + shotToRemove);
    
         int totalRounds = cw.GetTotalRounds();
         if (totalRounds < currentTrainingData.shots.size()) {
-            LOG("resizing");
+             
             currentTrainingData.shots.resize(totalRounds);
             currentTrainingData.numShots = totalRounds;
         }
         
     }
     else {
-        LOG("Invalid shot index: {}, numShots = {}", shotToRemove, currentTrainingData.shots.size());
+         
     }
 }
 
 void VersatileTraining::handleDuplicateRound(TrainingEditorWrapper cw) {
     int currentShot = cw.GetActiveRoundNumber();
     int numRounds = cw.GetTotalRounds();
-    LOG("duplicating shot {}", currentShot);
-    LOG("num rounds {}", numRounds);
+     
+     
     currentTrainingData.addShot(currentTrainingData.shots[currentShot]);
 }
 
 void VersatileTraining::handleStartPlayTest() {
     
     if (isInTrainingEditor()) {
-        LOG("changing shot state ");
+         
         if (currentTrainingData.currentEditedShot < 0) {
-            LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+             
 
             return;
         }
@@ -170,7 +165,7 @@ void VersatileTraining::handleStartPlayTest() {
 void VersatileTraining::handleStopEditing() {
     if (!currentTrainingData.customPack) return;
     lockScene = false;
-    LOG("stopped editing");
+     
     isCarRotatable = false;
     lockRotation = true;
     editingVariances = false;
@@ -182,14 +177,14 @@ void VersatileTraining::handleStopEditing() {
     }
 
     if (currentTrainingData.currentEditedShot == -1) {
-        LOG("currentTrainingDataUsed is null");
+         
         return;
     }
 
-    LOG("saving to shot in training data {}", currentTrainingData.currentEditedShot);
-    LOG("temp boost amount: {}", currentShotState.boostAmount);
+     
+     
     if (currentTrainingData.currentEditedShot < 0) {
-        LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+         
 
         return;
     }
@@ -215,7 +210,7 @@ void VersatileTraining::handleStopEditing() {
 }
 
 void VersatileTraining::handleBallEditingEnd() {
-    LOG("car is being edited");
+     
     editingVariances = true;
     ballBeingEdited= false;
 }
@@ -226,7 +221,7 @@ void VersatileTraining::handleEditorModeEndState() {
 }
 
 void VersatileTraining::handleGameEditorActorEditingEnd() {
-    LOG("ball is being edited");
+     
     editingVariances = false;
     lockRotation = true;
     ballBeingEdited = true;
@@ -235,31 +230,23 @@ void VersatileTraining::handleGameEditorActorEditingEnd() {
 void VersatileTraining::handleEndPlayTest() {
     isCarRotatable = true;
 
-    LOG("handleEndPlayTest - recording inputs size: {}",
-        shotReplicationManager.currentShotRecording.inputs.size());
-    LOG("handleEndPlayTest - carBody: {}",
-        shotReplicationManager.currentShotRecording.carBody);
+    goalBlockerEligbleToBeEdited = true;
 
     currentShotState.recording = shotReplicationManager.currentShotRecording;
     if (currentTrainingData.currentEditedShot < 0) {
-        LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+         
 
         return;
     }
 
     if (static_cast<size_t>(currentTrainingData.currentEditedShot) >= currentTrainingData.shots.size()) {
-        LOG("currentEditedShot ({}) is out of bounds or at the end (shots.size {}). Resizing shots to {}.",
-            currentTrainingData.currentEditedShot,
-            currentTrainingData.shots.size(),
-            currentTrainingData.currentEditedShot + 1);
+        
         currentTrainingData.shots.resize(currentTrainingData.currentEditedShot + 1);
 
         currentTrainingData.numShots = currentTrainingData.shots.size();
     }
     currentTrainingData.shots[currentTrainingData.currentEditedShot] = currentShotState;
-    LOG("After assignment - recording inputs size: {}",
-        currentShotState.recording.inputs.size());
-
+    
 }
 
 
@@ -281,16 +268,13 @@ void VersatileTraining::handleFreezeCar(CarWrapper car, Vector loc, Rotator rot)
         float x = cosf(pitchRad) * cosf(yawRad);
         Vector unitVector = { x, y, z };
         if (currentTrainingData.currentEditedShot < 0) {
-            LOG("Error: currentEditedShot ({}) is negative. Cannot save shot state.", currentTrainingData.currentEditedShot);
+             
 
             return;
         }
 
         if (static_cast<size_t>(currentTrainingData.currentEditedShot) >= currentTrainingData.shots.size()) {
-            LOG("currentEditedShot ({}) is out of bounds or at the end (shots.size {}). Resizing shots to {}.",
-                currentTrainingData.currentEditedShot,
-                currentTrainingData.shots.size(),
-                currentTrainingData.currentEditedShot + 1);
+            
             currentTrainingData.shots.resize(currentTrainingData.currentEditedShot + 1);
 
             currentTrainingData.numShots = currentTrainingData.shots.size();
@@ -301,14 +285,13 @@ void VersatileTraining::handleFreezeCar(CarWrapper car, Vector loc, Rotator rot)
 
     Vector loc2 = getClampChange(loc, rot);
     if (loc2.X != 0 || loc2.Y != 0 || loc2.Z != 0) {
-        /*LOG("old location - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);
-        LOG("new location - X: {}, Y: {}, Z: {}", loc2.X, loc2.Y, loc2.Z);*/
+   
         car.SetLocation(loc2);
     }
 
     car.SetAngularVelocity(Vector{ 0, 0, 0 }, false);
     Vector vel = car.GetVelocity();
-    car.SetVelocity({ vel.X, vel.Y, 5 });//5
+    car.SetVelocity({ vel.X, vel.Y, 5 });// need some z velocity because for some reason the car still starts falling if its at 0
 
 
 }

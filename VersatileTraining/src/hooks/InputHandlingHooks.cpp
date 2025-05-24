@@ -73,7 +73,7 @@ void VersatileTraining::setupInputHandlingHooks() {
                 }
                 if (shotReplicationManager.roundStarted) {
                     if (currentShotState.recording.carBody == 0) {
-                        LOG("no inputs to play back, returning");
+                         
                         return;
                     }
 
@@ -85,7 +85,7 @@ void VersatileTraining::setupInputHandlingHooks() {
                     }
                     else {
 
-                        LOG("Frame {} out of bounds, size: {}", shotReplicationManager.frame, inputs.size());
+                         
 
                         shotReplicationManager.roundStarted = false;
                     }
@@ -94,7 +94,7 @@ void VersatileTraining::setupInputHandlingHooks() {
             else {
                 if (shotReplicationManager.primedToStartRecording) {
                     if (shotReplicationManager.testCalledInStartRound) {//hasAnyInput(input) &&
-                        LOG("Starting recording from first detected input frame is  {}", currentFrame);
+                         
                         shotReplicationManager.startRecording = true;
                         shotReplicationManager.primedToStartRecording = false;
                         shotReplicationManager.currentShotRecording.initialState.location = car.GetLocation();
@@ -110,7 +110,7 @@ void VersatileTraining::setupInputHandlingHooks() {
                    
                 }
                 else if (shotReplicationManager.recording) {
-                    LOG("ending recording on frame {}", currentFrame);
+                     
                     shotReplicationManager.recording = false;
                 }
             }

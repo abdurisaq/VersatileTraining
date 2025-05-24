@@ -40,7 +40,7 @@ void VersatileTraining::replayHooks() {
             if (secondBar != std::string::npos) {
                 focusCarID = actorName.substr(firstBar + 1, secondBar - firstBar - 1);
             }
-            //LOG("Focus actor name: {}", focusCarID);
+            // 
         });
 
     gameWrapper->HookEventWithCallerPost<ActorWrapper>("Function GameEvent_TrainingEditor_TA.Countdown.Tick", [this](ActorWrapper cw, void* params, std::string eventName) {
@@ -53,12 +53,12 @@ void VersatileTraining::replayHooks() {
             auto server = gameWrapper->GetCurrentGameState();
             auto car = server.GetGameCar();
             if (car.IsNull()) {
-				LOG("Car is null");
+				 
 				return;
 			}
             BoostWrapper boost = car.GetBoostComponent();
             if (boost.IsNull()) {
-                LOG("Boost component is null");
+                 
                 return;
             }
             snapshotManager.currentReplayState.boostAmount = (boost.GetCurrentBoostAmount())*100.f;
@@ -90,7 +90,7 @@ void VersatileTraining::replayHooks() {
             auto server = gameWrapper->GetCurrentGameState();
             auto ball = server.GetBall();
             if (ball.IsNull()) {
-				LOG("Ball is null");
+				 
 				return;
 			}
             
@@ -123,7 +123,7 @@ void VersatileTraining::replayHooks() {
         snapshotManager.currentReplayState.ballLocation = caller->StartLocation;
         snapshotManager.currentReplayState.ballRotation = caller->VelocityStartRotation;
         
-        //LOG("ball location from tick : {}, {}, {}", caller->StartLocation.X, caller->StartLocation.Y, caller->StartLocation.Z);
+        // 
 
         if (!isInTrainingEditor())return;
         if (savedReplayState.ballSet) return;
@@ -173,7 +173,7 @@ void VersatileTraining::replayHooks() {
         auto * p = reinterpret_cast<pReplicationRotation*>(params);
 
         currentRotationInTrainingEditor = p->rot;
-        //LOG("rotation12: {}, {}, {}", p->rot.Pitch, p->rot.Yaw, p->rot.Roll);
+        // 
         //p->rot.Pitch = 2000;
         });
 }
@@ -189,15 +189,15 @@ void VersatileTraining::handleGetFocusCar() {
         /*int32_t* paramsAsSignedInts = reinterpret_cast<int32_t*>(params);
 
         for (int i = 0; i < 15; i++) {
-            LOG("Param {} (signed): {}", i, paramsAsSignedInts[i]);
+             
         }*/
-        /*LOG("Param 0 (signed): {}", paramsAsSignedInts[0]);
-        LOG("Param 1 (signed): {}", paramsAsSignedInts[1]);
-        LOG("Param 2 (signed): {}", paramsAsSignedInts[2]);
-        LOG("Param 3 (signed): {}", paramsAsSignedInts[3]);*/
+        /* 
+         
+         
+         */
 
-        /*LOG("setting rotation");
-        LOG("rotation: {}, {}, {}", cw.GetRotation().Pitch, cw.GetRotation().Yaw, cw.GetRotation().Roll);
+        /* 
+         
         cw.SetRotation(Rotator(8192, 0, 0));
         int numBytes = 256;
         uint8_t* bytes = static_cast<uint8_t*>(params);
@@ -206,4 +206,4 @@ void VersatileTraining::handleGetFocusCar() {
         for (size_t i = 0; i < numBytes; ++i) {
             oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(bytes[i]) << " ";
         }
-        LOG("{}", oss.str());*/
+         */

@@ -19,6 +19,7 @@ void VersatileTraining::setupGoalBlockerHooks() {
         [this](ActorWrapper cw, void* params, std::string eventName) {
             handleUpdateFlyPOV();
         });
+
     //add when start play test is called, to save goalblocker for the currently edited shot
 }
 
@@ -51,8 +52,8 @@ void VersatileTraining::handleUpdateFlyPOV() {
             savedPastCamera = true;
         }
 
-        /*LOG("Camera - Pitch: {}, Yaw: {}, Roll: {}", rot.Pitch, rot.Yaw, rot.Roll);
-        LOG("Camera - X: {}, Y: {}, Z: {}", loc.X, loc.Y, loc.Z);*/
+        /* 
+         */
 
         loc.Y = 4000.f;
         loc.X = 0.f;
@@ -90,7 +91,7 @@ void VersatileTraining::handleUpdateFlyPOV() {
         }
     }
     else if (!editingGoalBlocker && savedPastCamera) {
-        LOG("applying previous camera location and rotation, and setting saved to false");
+         
         gameWrapper->GetCamera().SetLocation(previousLocBeforeGoalEdit);
         gameWrapper->GetCamera().SetRotation(previousRotBeforeGoalEdit);
         previousLocBeforeGoalEdit = { 0, 0, 0 };

@@ -34,26 +34,26 @@ void VersatileTraining::SetDefaultKeybinds() {
 void VersatileTraining::ClearAllKeybinds() {
     
     for (const auto& [command, key] : currentBindings) {
-        LOG("Removing bind: {} -> {}", key, command);
+         
         cvarManager->removeBind(key);
     }
 
     currentBindings.clear();
-    LOG("All plugin keybinds cleared");
+     
 }
 
 void VersatileTraining::readCurrentBindings() {
     
     const char* appdata = std::getenv("APPDATA");
     if (appdata == nullptr) {
-        LOG("Failed to get APPDATA environment variable");
+         
         return;
     }
     std::string path = std::string(appdata) + "\\bakkesmod\\bakkesmod\\cfg\\binds.cfg";
 
     std::ifstream file(path);
     if (!file.is_open()) {
-        LOG("Failed to open binds.cfg file: {}", path);
+         
         return;
     }
 

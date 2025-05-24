@@ -21,10 +21,10 @@ void RecordingStorage::saveAllRecordings(const std::unordered_map<std::string, C
         else {
 			sanitizedId = data.code;
 		}
-        LOG("Num Shots: {}", data.numShots);
+         
         /*for (int i = 0; i < data.numShots; i++) {
-            LOG("Shot {}: Boost Amount: {}, Starting Velocity: {}, Freeze Car: {}, has jump: {}", i, data.shots[i].boostAmount, data.shots[i].startingVelocity, static_cast<int>(data.shots[i].freezeCar), static_cast<int>(data.shots[i].hasJump));
-            LOG("has recording? {}", data.shots[i].recording.inputs.size() > 0 ? "true" : "false");
+             
+             
         }*/
         std::filesystem::path packFolder = basePath / sanitizedId;
         std::filesystem::create_directories(packFolder);
@@ -32,7 +32,7 @@ void RecordingStorage::saveAllRecordings(const std::unordered_map<std::string, C
         savePackRecordings(packId, data, packFolder);
     }
 
-    LOG("All shot recordings saved successflly.");
+     
 }
 
 void RecordingStorage::savePackRecordings(const std::string& packId, const CustomTrainingData& data,
@@ -48,7 +48,7 @@ void RecordingStorage::savePackRecordings(const std::string& packId, const Custo
     std::ofstream outFile(recordingsFile);
 
     if (!outFile) {
-        LOG("Failed to create recordings file for pack {}", packId);
+         
         return;
     }
 
@@ -62,14 +62,14 @@ void RecordingStorage::savePackRecordings(const std::string& packId, const Custo
 
         
         if (recording.carBody == 0) {
-            LOG("Recording is empty, skipping shot {} in pack {}", i, packId);
+             
             
             outFile << "EMPTY\n";
             continue;
         }
 
         std::vector<uint8_t> compressed = compressShotRecording(recording);
-        LOG("Compressed data size for shot {}: {} bytes", i, compressed.size());
+         
 
         char* base64Out = new char[compressed.size() * 2]; // Ensure enough space (4/3 ratio)
         size_t base64OutLen = 0;
@@ -82,7 +82,7 @@ void RecordingStorage::savePackRecordings(const std::string& packId, const Custo
     }
 
     outFile.close();
-    LOG("Saved {} valid recordings for pack {}", validShotCount, packId);
+     
 }
 
 void RecordingStorage::loadAllRecordings(std::unordered_map<std::string, CustomTrainingData>& trainingData,
@@ -90,7 +90,7 @@ void RecordingStorage::loadAllRecordings(std::unordered_map<std::string, CustomT
     
 
     if (!std::filesystem::exists(basePath)) {
-        LOG("No recordings directory found at {}", basePath.string());
+         
         return;
     }
 
@@ -100,7 +100,7 @@ void RecordingStorage::loadAllRecordings(std::unordered_map<std::string, CustomT
 
         std::string packId = entry.path().filename().string();
 
-        LOG("entry.path : {}", entry.path().string());
+         
 
         
         if (trainingData.find(packId) != trainingData.end()) {
@@ -108,7 +108,7 @@ void RecordingStorage::loadAllRecordings(std::unordered_map<std::string, CustomT
         }
     }
 
-    LOG("All shot recordings loaded successfully.");
+     
 }
 
 void RecordingStorage::loadPackRecordings(const std::string& packId, CustomTrainingData& data,
@@ -117,13 +117,13 @@ void RecordingStorage::loadPackRecordings(const std::string& packId, CustomTrain
     std::filesystem::path recordingsFile = packFolder / "shots.rec";
 
     if (!std::filesystem::exists(recordingsFile)) {
-        LOG("No recordings file found for pack {}", packId);
+         
         return;
     }
 
     std::ifstream inFile(recordingsFile);
     if (!inFile) {
-        LOG("Failed to open recordings file for pack {}", packId);
+         
         return;
     }
 
@@ -133,7 +133,7 @@ void RecordingStorage::loadPackRecordings(const std::string& packId, CustomTrain
     int totalShots = std::stoi(countLine);
 
     if (data.shots.size() < totalShots) {
-        LOG("Expanding shots array from {} to {}", data.shots.size(), totalShots);
+         
         data.shots.resize(totalShots);
     }
 
@@ -143,7 +143,7 @@ void RecordingStorage::loadPackRecordings(const std::string& packId, CustomTrain
 
     while (std::getline(inFile, line) && shotIndex < totalShots) {
         if (line == "EMPTY") {
-            LOG("Shot {} marked as empty", shotIndex);
+             
             shotIndex++;
             continue;
         }
@@ -255,7 +255,7 @@ ShotRecording RecordingStorage::decompressShotRecording(const std::vector<uint8_
 
     // gotta be bigger than what a header is atleast
     if (compressedData.size() < 60) {
-        LOG("Compressed data too small to contain a valid header (size: {})", compressedData.size());
+         
         return recording;
     }
     recording.carBody = (compressedData[0] << 24) |
@@ -352,7 +352,7 @@ ShotRecording RecordingStorage::decompressShotRecording(const std::vector<uint8_
 std::filesystem::path RecordingStorage::getRecordingPath(const std::filesystem::path& packFolder, int shotIndex) {
     std::filesystem::path path = packFolder / (std::to_string(shotIndex) + ".rec");
     std::string pathStr = path.string();
-    LOG("saving at path: {}", pathStr);  // debug pathing
+       // debug pathing
     return packFolder / (std::to_string(shotIndex) + ".rec");
 }
 

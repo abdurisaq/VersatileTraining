@@ -215,7 +215,7 @@ void VersatileTraining::RenderAllSnapshotsTab() {
                         savedReplayState.carLocationSet = false;
                         savedReplayState.carRotationSet = false;
                         
-                        LOG("Snapshot loaded into savedReplayState for training editor from All Snapshots tab.");
+                         
                     }
                 }
                 ImGui::PopStyleColor(2);

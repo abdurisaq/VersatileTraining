@@ -75,7 +75,7 @@ void VersatileTraining::RenderGroupedSnapshotsTab() {
         
         std::string addSnapshotsPopupId = "AddSnapshotsToGroup_Popup##" + group.uid;
         if (ImGui::Button("Add Snapshots##GroupedBtn", ImVec2(addSnapshotsButtonWidth, 0))) {
-            LOG("Add Snapshots button pressed for group: %s (UID: %s)", group.name.c_str(), group.uid.c_str());
+             
             
             if (snapshotManager.replayStates.empty()) {
                 snapshotSelectionForAdding.clear();
@@ -91,7 +91,7 @@ void VersatileTraining::RenderGroupedSnapshotsTab() {
         // Rename Button & Popup
         std::string renamePopupId = "RenameSnapshotGroup_Popup##" + group.uid;
         if (ImGui::Button("Rename##GroupedBtn", ImVec2(renameButtonWidth, 0))) {
-            LOG("Rename button pressed for group: %s (UID: %s)", group.name.c_str(), group.uid.c_str());
+             
             // groupToRenameUid = group.uid; // Context for the popup
             strncpy(renameGroupNameInput, group.name.c_str(), IM_ARRAYSIZE(renameGroupNameInput) - 1);
             renameGroupNameInput[IM_ARRAYSIZE(renameGroupNameInput) - 1] = '\0';
@@ -198,7 +198,7 @@ void VersatileTraining::RenderGroupedSnapshotsTab() {
                 }
                 else {
                     if (gameWrapper) gameWrapper->Toast("Rename Group Error", "New name cannot be empty.", "versatile_training", 5.0f, ToastType_Error);
-                    LOG("Rename group error: New name empty.");
+                     
                 }
             }
             ImGui::SameLine();
@@ -323,7 +323,7 @@ void VersatileTraining::RenderSnapshotDetailsInGroup(SnapshotGroup& group, size_
                 
                 savedReplayState.ballSet = false; savedReplayState.carLocationSet = false; savedReplayState.carRotationSet = false;
                 
-                LOG("Snapshot loaded into savedReplayState for training editor.");
+                 
             }
             ImGui::PopStyleColor(2);
         }
@@ -376,7 +376,7 @@ void VersatileTraining::RenderCreateGroupPopup() {
             }
             else {
                 if (gameWrapper) gameWrapper->Toast("Group Name Empty", "Group name cannot be empty.", "versatile_training", 5.0f, ToastType_Error);
-                LOG("Group name cannot be empty.");
+                 
             }
         }
         ImGui::SameLine();
@@ -392,15 +392,15 @@ void VersatileTraining::RenderCreateGroupPopup() {
 void VersatileTraining::LoadSnapshotGroups() {
     // Assuming myDataFolderInitialized is a member variable indicating if myDataFolder is set
     // if (!myDataFolderInitialized) { 
-    //     LOG("myDataFolder not initialized. Cannot load snapshot groups.");
+    //      
     //     return;
     // }
     std::filesystem::path groupsFilePath = myDataFolder / "snapshot_groups.txt";
-    LOG("Attempting to load snapshot groups from: {}", groupsFilePath.string());
+     
 
     std::ifstream inFile(groupsFilePath);
     if (!inFile.is_open()) {
-        LOG("Failed to open snapshot groups file for reading: {}. No groups loaded or file doesn't exist.", groupsFilePath.string());
+         
         snapshotGroups.clear();
         return;
     }
@@ -464,12 +464,12 @@ void VersatileTraining::LoadSnapshotGroups() {
             }
         }
         catch (const std::invalid_argument& ia) {
-            LOG("Invalid argument during parsing snapshot groups file: {}. Line: '{}'", ia.what(), line);
+             
             state = ParseState::UID;
             currentGroup = {};
         }
         catch (const std::out_of_range& oor) {
-            LOG("Out of range during parsing snapshot groups file: {}. Line: '{}'", oor.what(), line);
+             
             state = ParseState::UID;
             currentGroup = {};
         }
@@ -488,26 +488,26 @@ end_loading:
     }
 
     inFile.close();
-    LOG("Snapshot groups loaded. Total groups: {}", snapshotGroups.size());
+     
     for (const auto& group_log : snapshotGroups) { // Renamed to avoid conflict with loop var
-        LOG("Loaded Group UID: {}, Name: {}, Indices: {}", group_log.uid, group_log.name, group_log.snapshotOriginalIndices.size());
+         
     }
 }
 
 void VersatileTraining::SaveSnapshotGroups() {
     // Assuming myDataFolderInitialized is a member variable
     // if (!myDataFolderInitialized) {
-    //     LOG("myDataFolder not initialized. Cannot save snapshot groups.");
+    //      
     //     return;
     // }
     std::filesystem::path groupsFilePath = myDataFolder / "snapshot_groups.txt";
-    LOG("Saving snapshot groups to: {}", groupsFilePath.string());
+     
 
     std::filesystem::create_directories(groupsFilePath.parent_path());
     std::ofstream outFile(groupsFilePath);
 
     if (!outFile.is_open()) {
-        LOG("Failed to open snapshot groups file for writing: {}", groupsFilePath.string());
+         
         return;
     }
 
@@ -526,7 +526,7 @@ void VersatileTraining::SaveSnapshotGroups() {
     outFile << "---END_OF_GROUPS---\n";
 
     outFile.close();
-    LOG("Snapshot groups saved successfully. Total groups: {}", snapshotGroups.size());
+     
 }
 
 void VersatileTraining::UpdateGroupIndicesAfterSnapshotDeletion(size_t deletedOriginalIndex) {

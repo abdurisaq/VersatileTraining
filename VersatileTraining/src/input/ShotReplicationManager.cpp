@@ -19,7 +19,7 @@ void ShotReplicationManager::startRecordingShot(GameWrapper* gw) {
 		
 		currentShotRecording = ShotRecording();
 		currentShotRecording.carBody = car.GetLoadoutBody();
-		LOG("car body: {}", currentShotRecording.carBody);
+		 
 		currentShotRecording.settings = gw->GetSettings().GetGamepadSettings();
 		
 		
@@ -38,16 +38,16 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 
 	if (!recordingFeaturesEnabled) return;
 	if (botSpawnedTest) {
-		LOG("bot already spawned");
+		 
 		return;
 	}
-	LOG("car body: {}", currentShotRecording.carBody);
+	 
 	if (currentShotRecording.inputs.empty()) {
-		LOG("inputs are empty");
+		 
 		return;
 	}
 	if (currentShotRecording.inputs.size() == 0) {
-		LOG("no inputs to play");
+		 
 		return;
 	}
 
@@ -61,8 +61,8 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 	if (!car) return;
 	Vector carLoc = car.GetLocation();
 	Rotator carRot = car.GetRotation();
-	LOG(" car location: {:.7f}, {:.7f}, {:.7f}", car.GetLocation().X, car.GetLocation().Y, car.GetLocation().Z);
-	LOG(" rotation : {}, {}, {}", car.GetRotation().Pitch, car.GetRotation().Yaw, car.GetRotation().Roll);
+	 
+	 
 	server.DestroyCars();
 	gameWrapper->SetTimeout([this, settings](GameWrapper* gw) {
 		auto server = gw->GetCurrentGameState();
@@ -118,13 +118,13 @@ void ShotReplicationManager::spawnBot(GameWrapper* gameWrapper) {
 		auto car = server.GetGameCar();
 		RBState state = car.GetRBState();
 
-		LOG("awake: {} ", car.GetbRigidBodyWasAwake());
+		 
 		car.SetbRigidBodyWasAwake(true);
 		/*car.SetbMovable(1);
 		car.SetbLockLocation(0);
 		car.SetTickIsDisabled(0);*/
 
-		LOG("awake: {} ", car.GetbRigidBodyWasAwake());
+		 
 		 //currentShotRecording.startState
 
 		/*car.SetbDriving(false);*/

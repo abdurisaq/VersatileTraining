@@ -76,7 +76,7 @@ void packInfoToLocalStorage(const PackInfo packInfo,std::filesystem::path dataFo
         file.close();
 	}
     else {
-        LOG("Failed to open file: {}", customTrainingDataPath.string());
+         
     }
     std::filesystem::path recordingDataPath = packPath / "shots.rec";
     std::ofstream recordingFile(recordingDataPath);
@@ -85,7 +85,7 @@ void packInfoToLocalStorage(const PackInfo packInfo,std::filesystem::path dataFo
 		recordingFile.close();
 	}
     else {
-		LOG("Failed to open file: {}", recordingDataPath.string());
+		 
 	}
 
     std::filesystem::path metaDataPath = packPath / "metadata.json";
@@ -105,7 +105,7 @@ void packInfoToLocalStorage(const PackInfo packInfo,std::filesystem::path dataFo
 		metaDataFile.close();
 	}
     else {
-		LOG("Failed to open file: {}", metaDataPath.string());
+		 
 	}
 
 
@@ -128,7 +128,7 @@ void packInfoToLocalStorage(const PackInfo packInfo, std::filesystem::path dataF
         file.close();
     }
     else {
-        LOG("Failed to open file: {}", customTrainingDataPath.string());
+         
     }
     std::filesystem::path recordingDataPath = packPath / "shots.rec";
     std::ofstream recordingFile(recordingDataPath);
@@ -137,7 +137,7 @@ void packInfoToLocalStorage(const PackInfo packInfo, std::filesystem::path dataF
         recordingFile.close();
     }
     else {
-        LOG("Failed to open file: {}", recordingDataPath.string());
+         
     }
 
     std::filesystem::path metaDataPath = packPath / "metadata.json";
@@ -157,7 +157,7 @@ void packInfoToLocalStorage(const PackInfo packInfo, std::filesystem::path dataF
         metaDataFile.close();
     }
     else {
-        LOG("Failed to open file: {}", metaDataPath.string());
+         
     }
 
 

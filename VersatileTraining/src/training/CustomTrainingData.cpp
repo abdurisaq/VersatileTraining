@@ -17,13 +17,9 @@ CustomTrainingDataflattened CustomTrainingData::deflate() {
 		flatData.hasStartingJump.push_back(shot.hasJump);
         flatData.extendedStartingVelocities.push_back(shot.extendedStartingVelocity);
         flatData.extendedStartingAngularVelocities.push_back(shot.extendedStartingAngularVelocity);
-		LOG("jump state being pushed back: {}", shot.hasJump ? "true" : "false");
+		
 	}
 
-    LOG("extendedStartingVelocities size: {}", flatData.extendedStartingVelocities.size());
-    for (auto velocity  :flatData.extendedStartingVelocities) {
-		LOG("extendedStartingVelocity: {} {} {}", velocity.X, velocity.Y, velocity.Z);
-	}
 
 	return flatData;
 }
@@ -35,7 +31,6 @@ CustomTrainingData CustomTrainingDataflattened::inflate() {
     inflatedData.numShots = numShots;
     inflatedData.currentEditedShot = currentEditedShot;
 
-    // Make sure all arrays have the right size
     if (hasStartingJump.size() != numShots) {
         LOG("Warning: hasStartingJump size mismatch, resizing");
         hasStartingJump.resize(numShots, true); // Default to true

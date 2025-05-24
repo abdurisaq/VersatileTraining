@@ -124,7 +124,7 @@ void VersatileTraining::RenderSettings() {
                     cvarManager->setBind(newBind, "open_gallery");
                     pastBinding = newBind;
                     currentBindings["open_gallery"] = newBind;
-                    LOG("UI bind set to: {}", newBind);
+                     
                 }
                 isBindingInterfaceKey = false;
                 break;
@@ -172,7 +172,7 @@ void VersatileTraining::RenderSettings() {
                     
                     if (!currentBind.empty()) {
                         cvarManager->removeBind(currentBind);
-                        LOG("Removed old bind: {} -> {}", currentBind, command);
+                         
                     }
 
                     
@@ -180,7 +180,7 @@ void VersatileTraining::RenderSettings() {
                     if (!newBind.empty()) {
                         cvarManager->setBind(newBind, command);
                         currentBindings[command] = newBind;
-                        LOG("Set new bind: {} -> {}", newBind, command);
+                         
                     }
 
                     isBinding = false;
@@ -200,7 +200,7 @@ void VersatileTraining::RenderSettings() {
         if (ImGui::Button(("Clear##" + command).c_str(), ImVec2(50, 0))) {
             if (!currentBind.empty()) {
                 cvarManager->removeBind(currentBind);
-                LOG("Removed bind: {} -> {}", currentBind, command);
+                 
                 currentBindings.erase(command);
             }
         }
@@ -497,10 +497,10 @@ void VersatileTraining::RenderSettings() {
                     if (!std::filesystem::exists(recordingFolderPath)) {
                         try {
                             std::filesystem::create_directories(recordingFolderPath);
-                            LOG("Created recordings directory: {}", recordingFolderPath.string());
+                             
                         }
                         catch (const std::filesystem::filesystem_error& e) {
-                            LOG("Error creating recordings directory: {}", e.what());
+                             
                         }
                     }
 
@@ -894,20 +894,20 @@ void VersatileTraining::RenderWindow() {
             trainingData->erase(pendingKey);
             (*trainingData)[pendingCode] = packData;
 
-            LOG("deleting training pack folder: {}", packData.name);
+             
             std::filesystem::path packFolder = myDataFolder / "TrainingPacks" / packData.name;
 
             if (!std::filesystem::exists(packFolder)) {
-                LOG("Training pack folder not found: {}", packFolder.string());
+                 
             }
             else {
                 try {
-                    LOG("Deleting training pack folder: {}", packFolder.string());
+                     
                     std::size_t removedCount = std::filesystem::remove_all(packFolder);
-                    LOG("Removed {} files/directories", removedCount);
+                     
                 }
                 catch (const std::filesystem::filesystem_error& e) {
-                    LOG("Error deleting training pack folder: {}", e.what());
+                     
                 }
             }
             for (auto& [key, value] : *trainingData) {
@@ -984,7 +984,7 @@ void VersatileTraining::RenderWindow() {
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.5f, 0.9f, 1.0f));
                 if (ImGui::Button("Load Pack", ImVec2(120, 0))) {
                     if (strlen(packCodeToLoad) > 0) {
-                        LOG("Attempting to load pack with code: {}", packCodeToLoad);
+                         
                         DownloadTrainingPackById(packCodeToLoad);
                     }
                 }
@@ -1272,7 +1272,7 @@ void VersatileTraining::RenderWindow() {
                             if (ImGui::Button("Delete Pack##ConfirmDeleteInLoop", ImVec2(120, 30))) { // Unique ID for button
                                 if (!deletePackKey.empty() && trainingData->count(deletePackKey) > 0) {
                                     
-                                    LOG("Deleting training pack: {}", trainingData->at(deletePackKey).name);
+                                     
 
                                     std::filesystem::path packFolderBase = myDataFolder / "TrainingPacks";
                                     
@@ -1288,13 +1288,13 @@ void VersatileTraining::RenderWindow() {
                                     if (std::filesystem::exists(specificPackFolder)) {
                                         try {
                                             std::filesystem::remove_all(specificPackFolder);
-                                            LOG("Successfully deleted folder: {}", specificPackFolder.string());
+                                             
                                         }
                                         catch (const std::filesystem::filesystem_error& e) {
-                                            LOG("Error deleting folder {}: {}", specificPackFolder.string(), e.what());
+                                             
                                         }
                                     } else {
-                                        LOG("Pack folder not found for deletion: {}", specificPackFolder.string());
+                                         
                                     }
 
                                     trainingData->erase(deletePackKey);

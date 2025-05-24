@@ -28,7 +28,7 @@ std::vector<std::vector<bool>> RecordingStorage::bitunpack_bools(const std::vect
 std::vector<uint8_t> RecordingStorage::decompress_data(const std::vector<uint8_t>& compressed) {
     //gotta be bigger than header size
     if (compressed.size() < sizeof(uLong)) {
-        LOG("Compressed data too small to contain header: {} bytes", compressed.size());
+         
         return {};
     }
 
@@ -40,7 +40,7 @@ std::vector<uint8_t> RecordingStorage::decompress_data(const std::vector<uint8_t
 
     // no world it goes over 10mb, so throw error if so, really should be 1mb error throwing, but change later
     if (uncompressedSize > 10 * 1024 * 1024) { 
-        LOG("Unreasonable uncompressed size: {} bytes", uncompressedSize);
+         
         return {};
     }
 
@@ -65,11 +65,11 @@ std::vector<uint8_t> RecordingStorage::decompress_data(const std::vector<uint8_t
 
 std::vector<ShotRecording> RecordingStorage::decode_recordings(const std::vector<uint8_t>& data, uint32_t inputCount) {
     if (data.empty() || inputCount == 0) {
-        LOG("Empty data or zero input count provided to decoder");
+         
         return { ShotRecording() };
     }
 
-    LOG("Decoding {} inputs from {} bytes of data", inputCount, data.size());
+     
 
     std::vector<ShotRecording> result(1);
     result[0].inputs.resize(inputCount);

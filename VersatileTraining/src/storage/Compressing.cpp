@@ -85,7 +85,7 @@ std::vector<uint8_t> RecordingStorage::compress_data(const std::vector<uint8_t>&
     memcpy(result.data(), &originalSize, sizeof(uLong));
 
     if (compress(result.data() + sizeof(uLong), &compressed_size, data.data(), data.size()) != Z_OK) {
-        LOG("Compression failed");
+         
         return {};
     }
     float ratio = originalSizeOfData > 0 ? (float)compressed_size / originalSizeOfData : 0.0f;

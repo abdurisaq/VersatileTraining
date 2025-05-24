@@ -127,17 +127,17 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
 
             
             if (saveCursorPos) {
-                LOG("current anchors first: {}, second: {}", currentShotState.goalAnchors.first ? "true" : "false", currentShotState.goalAnchors.second ? "true" : "false");
-                LOG("current anchor firs : X {} Z {}, second : X {} Z {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z, currentShotState.goalBlocker.second.X, currentShotState.goalBlocker.second.Z);
-                LOG("projected point : X {} Z {}", projectedPoint.X, projectedPoint.Z);
+                 
+                 
+                 
                 if (!currentShotState.goalAnchors.first) {
-                    LOG("entered this function");
+                     
                     currentShotState.goalBlocker.first = projectedPoint;
                     saveCursorPos = false;
                     rectangleMade = false;
                     rectangleSaved = false;
                     currentShotState.goalAnchors.first = true;
-                    LOG("adding to first anchor point : X {}, Z {}", currentShotState.goalBlocker.first.X, currentShotState.goalBlocker.first.Z);
+                     
                 }
                 else if (!currentShotState.goalAnchors.second) {
                     float distanceX = abs(projectedPoint.X - currentShotState.goalBlocker.first.X);
@@ -168,7 +168,7 @@ void VersatileTraining::Render(CanvasWrapper canvas) {
                     }
                 }
                 else {
-                    LOG("this else call is being called");
+                     
                     currentShotState.goalBlocker.first = projectedPoint;
                     currentShotState.goalBlocker.second = { 0, 0, 0 };
                     currentShotState.goalAnchors.first = true;
