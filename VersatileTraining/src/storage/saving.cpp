@@ -1,6 +1,7 @@
 #include "pch.h"
+
 #include "src/storage/StorageManager.h"
-#include "include/base64.h"
+
 
 constexpr size_t NAME_LEN_BITS = 5;
 constexpr size_t NUM_SHOTS_BITS = 6;
@@ -495,9 +496,13 @@ void StorageManager::saveCompressedTrainingData(const std::unordered_map<std::st
         byte = CompressBits(data.hasStartingJump, bitstream, bitIndexInByte, byte,true);
       
 
-        // base64
-        std::string base64Encoded = base64_encode(bitstream.data(), (int)bitstream.size());
+        char* base64Out = new char[bitstream.size() * 2]; 
+        size_t base64OutLen = 0;
+        base64_encode((const char*)bitstream.data(), bitstream.size(), base64Out, &base64OutLen, 0);
+        std::string base64Encoded(base64Out, base64OutLen);
+        delete[] base64Out;
 
+            
         
         outFile.write(base64Encoded.c_str(), base64Encoded.size());
 
@@ -545,7 +550,13 @@ std::unordered_map<std::string, CustomTrainingData> StorageManager::loadCompress
         
         if (line.empty()) continue;
 
-        std::vector<uint8_t> bitstream = base64_decode_bytearr(line);
+        char* decodedOut = new char[line.size()]; 
+        size_t decodedOutLen = 0;
+        base64_decode(line.c_str(), line.size(), decodedOut, &decodedOutLen, 0);
+        std::string output(decodedOut, decodedOutLen);
+        delete[] decodedOut;
+        std::vector<uint8_t> bitstream(output.begin(), output.end() - 1);
+
         if (bitstream.empty()) {
             LOG("Error: Failed to decode base64 line.");
             continue;

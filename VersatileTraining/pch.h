@@ -42,6 +42,9 @@
 //vcpkg includes
 #include <zlib.h>
 
+#define BASE64_EXPORTS
+#include <libbase64.h>
+
 // Math constants
 #define PI 3.14159265358979323846
 

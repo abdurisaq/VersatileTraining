@@ -157,7 +157,6 @@
     <ClCompile Include="src\ui\RenderGroupedSnapshots.cpp" />
     <ClCompile Include="src\ui\RenderVelocity.cpp" />
     <ClCompile Include="src\utils\Math.cpp" />
-    <ClCompile Include="src\utils\MovementUtils.cpp" />
     <ClCompile Include="src\utils\Notifiers.cpp" />
     <ClCompile Include="src\utils\util.cpp" />
     <ClCompile Include="src\core\VersatileTraining.cpp" />
@@ -166,7 +165,6 @@
     <ClCompile Include="src\utils\VkConversion.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\base64.h" />
     <ClInclude Include="external\imgui\imconfig.h" />
     <ClInclude Include="external\imgui\imgui.h" />
     <ClInclude Include="external\imgui\imguivariouscontrols.h" />
@@ -212,7 +210,6 @@
     <ClInclude Include="src\training\CustomTrainingData.h" />
     <ClInclude Include="src\training\SnapShotManager.h" />
     <ClInclude Include="src\utils\Math.h" />
-    <ClInclude Include="src\utils\MovementUtils.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>

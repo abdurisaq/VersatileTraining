@@ -40,7 +40,8 @@ void VersatileTraining::RenderEnhancedGoalBlocker(
         Vector carExtent = car.GetLocalCollisionExtent();
 
         
-        float carWorldRadiusApproximation = max(carExtent.X, carExtent.Y, carExtent.Z); 
+        float carWorldRadiusApproximation = max(carExtent.X, carExtent.Y);
+        carWorldRadiusApproximation = max(carWorldRadiusApproximation, carExtent.Z);
         
 
         
@@ -165,7 +166,8 @@ void VersatileTraining::RenderInvertedGoalBlocker_OutlinedAndGridded(
         Vector carWorldPos = car.GetLocation();
         Vector2 carScreenPos = canvas.Project(carWorldPos);
         Vector carExtent = car.GetLocalCollisionExtent();
-        float carWorldRadiusApproximation = max(carExtent.X, carExtent.Y, carExtent.Z);
+        float carWorldRadiusApproximation = max(carExtent.X, carExtent.Y);
+        carWorldRadiusApproximation = max(carWorldRadiusApproximation, carExtent.Z);
         Vector carEdgeWorldForClip = carWorldPos + cameraRightVector * carWorldRadiusApproximation;
         Vector2 carEdgeScreenForClip = canvas.Project(carEdgeWorldForClip);
         float carScreenSpaceRadius = Distance(carScreenPos, carEdgeScreenForClip);

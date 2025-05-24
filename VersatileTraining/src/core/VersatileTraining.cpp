@@ -154,12 +154,12 @@ void VersatileTraining::onUnload() {
 void VersatileTraining::CleanUp() {
 	for (auto& controller : controllerManager.controllers) {
 		if (controller) {
-			controller->Unacquire(); // Unacquire before release
-			controller->Release();   // Release the DirectInput device
+			controller->Unacquire();
+			controller->Release(); 
 			controller = nullptr;
 		}
 	}
-	controllerManager.controllers.clear(); // Clear the vector
+	controllerManager.controllers.clear(); 
 	LOG("All controllers cleaned up.");
 
 	if (controllerManager.dinput) {
@@ -239,7 +239,7 @@ void VersatileTraining::checkPendingActions() {
 		}
 
 		if (action == "RELOAD") {
-			// Reload all training packs
+			
 			LOG("Reloading all training packs from disk");
 
 			*trainingData = storageManager.loadCompressedTrainingDataWithRecordings(myDataFolder);
@@ -258,7 +258,7 @@ void VersatileTraining::checkPendingActions() {
 					}
 					
 					SetForegroundWindow(rocketLeagueWindow);
-					LOG("Focused Rocket League window");
+					
 			} else {
 					LOG("Could not find Rocket League window");
 			}
@@ -270,7 +270,7 @@ void VersatileTraining::checkPendingActions() {
 			
 			gameWrapper->SetTimeout([this, action](GameWrapper* gw) {
 				cvarManager->executeCommand("load_training " + action);
-				}, 1.5f);
+				}, 0.5f);
 			//probably the reason, needs a sec after full screening
 			
 		}

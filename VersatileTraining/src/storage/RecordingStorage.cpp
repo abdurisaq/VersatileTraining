@@ -1,6 +1,7 @@
 #include "pch.h"
+
 #include "RecordingStorage.h"
-#include "include/base64.h"
+
 
 void RecordingStorage::saveAllRecordings(const std::unordered_map<std::string, CustomTrainingData>& trainingData,
     const std::filesystem::path& basePath) {
@@ -70,8 +71,12 @@ void RecordingStorage::savePackRecordings(const std::string& packId, const Custo
         std::vector<uint8_t> compressed = compressShotRecording(recording);
         LOG("Compressed data size for shot {}: {} bytes", i, compressed.size());
 
-        
-        std::string base64Data = base64_encode(compressed.data(), compressed.size());
+        char* base64Out = new char[compressed.size() * 2]; // Ensure enough space (4/3 ratio)
+        size_t base64OutLen = 0;
+        base64_encode((const char*)compressed.data(), compressed.size(), base64Out, &base64OutLen, 0);
+        std::string base64Data(base64Out, base64OutLen);
+        delete[] base64Out;
+     
         outFile << base64Data << "\n";
         validShotCount++;
     }
@@ -143,7 +148,15 @@ void RecordingStorage::loadPackRecordings(const std::string& packId, CustomTrain
             continue;
         }
 
-        std::vector<uint8_t> compressed = base64_decode_bytearr(line);
+ 
+
+        char* decodedOut = new char[line.size()];
+        size_t decodedOutLen = 0;
+        base64_decode(line.c_str(), line.size(), decodedOut, &decodedOutLen, 0);
+        std::string output(decodedOut, decodedOutLen);
+        delete[] decodedOut;
+
+        std::vector<uint8_t> compressed(output.begin(), output.end() - 1);
 
         if (!compressed.empty()) {
             ShotRecording recording = decompressShotRecording(compressed);
