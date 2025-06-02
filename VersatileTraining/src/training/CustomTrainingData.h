@@ -171,7 +171,7 @@ struct CustomTrainingData {
 		code = packCode;
 		numShots = shotAmount;
 		currentEditedShot = 0;
-		shots = std::vector<ShotState>(shotAmount);  // Default-constructed
+		shots = std::vector<ShotState>(shotAmount); 
 	}
 
 	void addShot(const ShotState& state = ShotState()) {
