@@ -405,7 +405,11 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         
     }
     currentOverrides.ApplyCVars(cvarManager);
-    if (foundSpecificOverrides) return;
+    if (foundSpecificOverrides) {
+        currentShotState.extendedStartingAngularVelocity = Vector(0, 0, 0);
+        currentShotState.extendedStartingVelocity = Vector(0, 0, 0);
+        return;
+    }
     
     
     bool found = false;
@@ -473,11 +477,11 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     }
     if (!found) {
          
-        
         if (justOpenedPack) {
              
             currentTrainingData.initCustomTrainingData(totalRounds, name,code);
             cvarManager->executeCommand("sv_training_limitboost -1");
+
             justOpenedPack = false;
 
             if (td.GetCode().ToString().empty()) {
@@ -492,19 +496,8 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         }
         currentTrainingData.currentEditedShot = currentShot;
         currentShotState = currentTrainingData.shots[currentShot];
-       
-
-         
-         
-         
-         
-         
-         
-         
-        
-
-        
-
+        currentShotState.extendedStartingAngularVelocity = Vector(0, 0, 0);
+        currentShotState.extendedStartingVelocity = Vector(0, 0, 0);
         
     }
   
