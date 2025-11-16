@@ -370,13 +370,6 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     std::string name = td.GetTM_Name().ToString();
 
      
-    /*GetCreatorName();
-    GetDescription();*/
-     
-     
-     
-     
-     
     int totalRounds = tw.GetTotalRounds();
      
 
@@ -496,8 +489,6 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
         }
         currentTrainingData.currentEditedShot = currentShot;
         currentShotState = currentTrainingData.shots[currentShot];
-        currentShotState.extendedStartingAngularVelocity = Vector(0, 0, 0);
-        currentShotState.extendedStartingVelocity = Vector(0, 0, 0);
         
     }
   
@@ -526,6 +517,8 @@ void VersatileTraining::getTrainingData(ActorWrapper cw, void* params, std::stri
     }
 
     savedReplayState.ballSet = true;
+    savedReplayState.ballLocationSet = true;
+    savedReplayState.ballRotationSet = true;
     savedReplayState.carLocationSet = true;
     savedReplayState.carRotationSet = true;
 

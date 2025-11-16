@@ -26,8 +26,10 @@ Rotator VersatileTraining::blendPitchRollClampSmooth(int pitch, int roll, int ex
 
 Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 
-	//LOG("rotation : {}", rot.Roll);
-	//LOG("location Z: {}", loc.Z);
+	//need to add support for when the car has a pitch of 16384 or -16384. calculate the combination of roll and pitch to get a combined value for a car perpendicular to the ground.
+	//only difference for when its 16384 , calculation should be calculated pitch is (roll + yaw )% 65536, when its -16384, calculation is (65536-roll- yaw)% 65536 (should be, not sure)
+
+
 	auto inThreshold = [](int value, int center, int threshold) {
 		return value >= (center - threshold) && value <= (center + threshold);
 		};
@@ -81,7 +83,8 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	bool roll3 = inThreshold(roll, east, tolerance) || inThreshold(roll, -east, tolerance);
 	bool roll4 = inThreshold(roll, west, tolerance) || inThreshold(roll, -end, tolerance);
 	bool pitch1 = inThreshold(pitch, 0, 2500);
-
+	bool pitch2 = inThreshold(pitch, 16384, 1500); 
+	bool pitch3 = inThreshold(pitch, -16384, 1500);
 
 	//diagonal values
 
@@ -111,12 +114,12 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	else if (loc.Y < -(currentYBound-10)) {
 		if ( yaw1 && (roll2) ) {
 			clampVal = 2;
-			return Rotator{ pitch,1 ,expectedRoll2 };//16384
+			return Rotator{ pitch,1 ,expectedRoll2 };
 		}
 		if ( yaw2 && (roll1) ) {
-			//LOG("clamped to blue back wall");
+			
 			clampVal = 2;
-			return Rotator{ pitch,32768 ,expectedRoll1 };//south
+			return Rotator{ pitch,32768 ,expectedRoll1 };
 
 		}
 
@@ -124,16 +127,13 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	else if (loc.X > currentXBound-10) {
 		if (yaw3 && (roll1))
 		{
-			/*LOG("clamped on the left wall");
-			LOG("expected roll :{} ", expectedRoll1);*/
 			clampVal = 3;
-			//(pRoll1 || nRoll2)
+
 			return Rotator{ pitch,south ,expectedRoll1 };
 		}
 		else if (yaw4 && (roll2))
 		{
-			/*LOG("clamped on the left wall");
-			LOG("expected roll :{} ", expectedRoll2);*/
+
 			clampVal = 3;
 
 			return Rotator{ pitch,16384 ,expectedRoll2 };
@@ -143,7 +143,7 @@ Rotator VersatileTraining::checkForClamping(Vector loc, Rotator rot) {
 	{
 		if (yaw3 && (roll2))
 		{
-			//LOG("clamped on the right wall");
+
 			clampVal = 4;
 			return Rotator{ pitch,south ,expectedRoll2 };
 		}
@@ -234,7 +234,6 @@ std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int ext
 		extra += 20;
 	}
 
-	//LOG("roll from getAxisBreakDown: {}", rot.Roll);
 	// Determine how much of the extra should go to Z vs the axis
 	auto getZWeight = [this](int roll) -> float {
 		int center = 0;
@@ -250,8 +249,6 @@ std::pair <float, float> VersatileTraining::getAxisBreakDown(Rotator rot,int ext
 	float zExtra = extra * zWeight;
 	float axisExtra = extra * (1.0f - zWeight);
 
-	//LOG("clampVal: {}", clampVal);
-	//LOG("axisExtra: {}, zExtra: {}", axisExtra, zExtra);
 	if (!isCeiling) {
 		zExtra *= -1;
 	}
@@ -307,38 +304,24 @@ Vector VersatileTraining::getClampChange(Vector loc,Rotator rot) {
 		return Vector{ loc.X,loc.Y,2050 };
 		break;
 	}
-		  //6 p->NewLocation.X + p->NewLocation.Y < -diagBound bottom right
-	//7 diagBound < p->NewLocation.X + p->NewLocation.Y top left
-	//8 (p->NewLocation.X - p->NewLocation.Y) > diagBound top right
-	//9 (p->NewLocation.Y - p->NewLocation.X) > diagBound down left
 	case 6: {
-		//double m, double b, double a, double b0
-		//LOG("x : {}, y: {}, diagBound: {}", loc.X, loc.Y, cornerVal);
 		std::pair<float, float> result = perpendicularProjection(-1, -cornerVal, loc.X, loc.Y);
-		//LOG("going to clamp on back right wall now");
-		//LOG("result.first: {}, result.second: {}, diagBound: {}", result.first, result.second, -cornerVal);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}
 	case 7: {
 
 		std::pair<float, float> result = perpendicularProjection(-1, cornerVal, loc.X, loc.Y);
-		//LOG("going to clamp on front left wall now");
-		//LOG("result.first: {}, result.second: {}", result.first, result.second);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}
 	case 8: {
 		std::pair<float, float> result = perpendicularProjection(1, cornerVal, loc.X, loc.Y);
-		//LOG("going to clamp on top right wall now");
-		//LOG("result.first: {}, result.second: {}", result.first, result.second);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}
 	case 9: {
 		std::pair<float, float> result = perpendicularProjection(1, -cornerVal, loc.X, loc.Y);
-		//LOG("going to clamp on back left wall now");
-		//LOG("result.first: {}, result.second: {}", result.first, result.second);
 		return Vector{ result.first,result.second,loc.Z };
 		break;
 	}

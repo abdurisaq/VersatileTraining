@@ -1,10 +1,10 @@
 #include "pch.h"
 #include "src/core/versatileTraining.h"
 
-
+//EventTrainingEditorActorModified
 void VersatileTraining::setupInputHandlingHooks() {
     gameWrapper->HookEvent(
-        "Function TAGame.PlayerController_TA.EventTrainingEditorActorModified",
+        "Function TAGame.PlayerInput_TA.PlayerInput",
         [this](std::string eventName) {
             handleTrainingEditorActorModified();
         });

@@ -212,6 +212,8 @@ void VersatileTraining::RenderAllSnapshotsTab() {
                     if (originalIndex < snapshotManager.replayStates.size()) {
                         savedReplayState = snapshotManager.replayStates[originalIndex];
                         savedReplayState.ballSet = false;
+                        savedReplayState.ballLocationSet = false;
+                        savedReplayState.ballRotationSet = false;
                         savedReplayState.carLocationSet = false;
                         savedReplayState.carRotationSet = false;
                         

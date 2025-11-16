@@ -42,6 +42,8 @@ struct ReplayState {
 	Rotator ballRotation;
 
 	bool ballSet = false;
+	bool ballLocationSet = false;
+	bool ballRotationSet = false;
 	bool carLocationSet = false;
 	bool carRotationSet = false;
 
