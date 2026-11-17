@@ -1,7 +1,7 @@
 # Versatile Training
 ## Advanced Training Tools for Rocket League
 
-[**Download Here**](https://bakkesplugins.com/plugins/view/559)
+[**Download Here**](https://bakkesplugins.com/plugin/559)
 
 ![Versatile Training Banner](/assets/banner.png) 
 *(Banner concept credit: [dark penguin](https://www.reddit.com/r/RocketLeague/comments/65w06v/things_i_would_love_to_see_in_custom_training/))*
